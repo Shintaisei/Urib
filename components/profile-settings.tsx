@@ -1,0 +1,162 @@
+"use client"
+
+import { useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { School, Shield, Bell, Eye, Save, Check } from "lucide-react"
+
+export function ProfileSettings() {
+  const [nickname, setNickname] = useState("匿名ユーザー #A1B2")
+  const [notifications, setNotifications] = useState(true)
+  const [showOnlineStatus, setShowOnlineStatus] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+
+  const handleSave = async () => {
+    setIsSaving(true)
+
+    // Simulate API call
+    setTimeout(() => {
+      setIsSaving(false)
+      setIsSaved(true)
+      setTimeout(() => setIsSaved(false), 2000)
+    }, 1000)
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* University Information */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <School className="w-5 h-5 text-primary" />
+            <CardTitle>大学情報</CardTitle>
+          </div>
+          <CardDescription>認証済みの大学アカウント情報</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+            <div>
+              <p className="font-medium text-foreground">東京大学</p>
+              <p className="text-sm text-muted-foreground">user@s.u-tokyo.ac.jp</p>
+            </div>
+            <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+              <Shield className="w-3 h-3 mr-1" />
+              認証済み
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            大学のメールアドレスで認証されています。この情報は他のユーザーには表示されません。
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Anonymous Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>匿名設定</CardTitle>
+          <CardDescription>匿名での表示に関する設定</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="nickname">匿名ニックネーム</Label>
+            <Input
+              id="nickname"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="匿名ユーザー #A1B2"
+              maxLength={20}
+            />
+            <p className="text-xs text-muted-foreground">
+              他のユーザーに表示される匿名の名前です。いつでも変更できます。
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="online-status">オンライン状態を表示</Label>
+              <p className="text-sm text-muted-foreground">DMでオンライン状態を他のユーザーに表示します</p>
+            </div>
+            <Switch id="online-status" checked={showOnlineStatus} onCheckedChange={setShowOnlineStatus} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notification Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Bell className="w-5 h-5 text-primary" />
+            <CardTitle>通知設定</CardTitle>
+          </div>
+          <CardDescription>アプリからの通知に関する設定</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="notifications">プッシュ通知</Label>
+              <p className="text-sm text-muted-foreground">新しいメッセージや返信の通知を受け取ります</p>
+            </div>
+            <Switch id="notifications" checked={notifications} onCheckedChange={setNotifications} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Privacy & Safety */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Eye className="w-5 h-5 text-primary" />
+            <CardTitle>プライバシーと安全</CardTitle>
+          </div>
+          <CardDescription>アカウントの安全性に関する設定</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <Button variant="outline" className="w-full justify-start bg-transparent">
+              ブロックしたユーザーを管理
+            </Button>
+            <Button variant="outline" className="w-full justify-start bg-transparent">
+              報告履歴を確認
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start text-destructive hover:text-destructive bg-transparent"
+            >
+              アカウントを削除
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={isSaving || isSaved} className="min-w-[120px]">
+          {isSaved ? (
+            <>
+              <Check className="w-4 h-4 mr-2" />
+              保存済み
+            </>
+          ) : isSaving ? (
+            <>
+              <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              保存中...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              設定を保存
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  )
+}
