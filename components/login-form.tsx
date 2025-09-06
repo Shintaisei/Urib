@@ -1,21 +1,28 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail, Loader2 } from "lucide-react"
+import type { AuthState } from "@/types"
 
-export function LoginForm() {
-  const [email, setEmail] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isEmailSent, setIsEmailSent] = useState(false)
+interface LoginFormState {
+  email: string
+  isLoading: boolean
+  isEmailSent: boolean
+  authState: AuthState
+}
+
+export function LoginForm(): React.ReactElement {
+  const [email, setEmail] = useState<string>("")
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isEmailSent, setIsEmailSent] = useState<boolean>(false)
   const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
 
     if (!email.includes("@") || (!email.includes(".ac.jp") && !email.includes(".edu"))) {
@@ -25,10 +32,19 @@ export function LoginForm() {
 
     setIsLoading(true)
 
-    setTimeout(() => {
+    setTimeout((): void => {
       setIsLoading(false)
       setIsEmailSent(true)
     }, 2000)
+  }
+
+  const handleReset = (): void => {
+    setIsEmailSent(false)
+    setEmail("")
+  }
+
+  const handleNavigateHome = (): void => {
+    router.push("/home")
   }
 
   if (isEmailSent) {
@@ -46,17 +62,10 @@ export function LoginForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button className="w-full" onClick={() => router.push("/home")}>
+          <Button className="w-full" onClick={handleNavigateHome}>
             ホームに進む
           </Button>
-          <Button
-            variant="outline"
-            className="w-full bg-transparent"
-            onClick={() => {
-              setIsEmailSent(false)
-              setEmail("")
-            }}
-          >
+          <Button variant="outline" className="w-full bg-transparent" onClick={handleReset}>
             別のメールアドレスでログイン
           </Button>
         </CardContent>
@@ -77,7 +86,7 @@ export function LoginForm() {
               type="email"
               placeholder="example@university.ac.jp"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>): void => setEmail(e.target.value)}
               required
               className="w-full"
             />

@@ -3,8 +3,23 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Users, MessageSquare, Clock } from "lucide-react"
 import Link from "next/link"
+import type React from "react"
 
-const boardData = [
+interface BoardData {
+  id: number
+  category: string
+  title: string
+  description: string
+  memberCount: number
+  recentPosts: number
+  lastActivity: string
+}
+
+type CategoryColorMap = {
+  [key: string]: string
+}
+
+const boardData: BoardData[] = [
   {
     id: 1,
     category: "学部",
@@ -61,20 +76,24 @@ const boardData = [
   },
 ]
 
-const categoryColors = {
+const categoryColors: CategoryColorMap = {
   学部: "bg-blue-100 text-blue-800 border-blue-200",
   学科: "bg-green-100 text-green-800 border-green-200",
   サークル: "bg-purple-100 text-purple-800 border-purple-200",
 }
 
-export function BoardGrid() {
+interface BoardGridProps {
+  boards?: BoardData[]
+}
+
+export function BoardGrid({ boards = boardData }: BoardGridProps): React.ReactElement {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {boardData.map((board) => (
+      {boards.map((board: BoardData) => (
         <Card key={board.id} className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between mb-2">
-              <Badge variant="outline" className={categoryColors[board.category as keyof typeof categoryColors]}>
+              <Badge variant="outline" className={categoryColors[board.category] || categoryColors["学部"]}>
                 {board.category}
               </Badge>
               <div className="flex items-center text-xs text-muted-foreground">
