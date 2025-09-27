@@ -1,0 +1,55 @@
+services:
+  # PostgreSQL データベース
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: uriv_db
+      POSTGRES_USER: uriv_user
+      POSTGRES_PASSWORD: uriv_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uriv_user -d uriv_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI バックエンド
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      - DATABASE_URL=postgresql://uriv_user:uriv_password@db:5432/uriv_db
+      - ENV=development
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+  # Next.js フロントエンド
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

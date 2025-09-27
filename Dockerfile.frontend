@@ -1,0 +1,57 @@
+# Node.js 18 Alpine imageを使用
+FROM node:18-alpine AS base
+
+# 依存関係をインストールするステージ
+FROM base AS deps
+WORKDIR /app
+
+# pnpmをインストール
+RUN npm install -g pnpm
+
+# package.jsonをコピー
+COPY package.json ./
+
+# 依存関係をインストール
+RUN pnpm install --no-frozen-lockfile
+
+# ビルドステージ
+FROM base AS builder
+WORKDIR /app
+
+# pnpmをインストール
+RUN npm install -g pnpm
+
+# 依存関係をコピー
+COPY --from=deps /app/node_modules ./node_modules
+
+# ソースコードをコピー
+COPY . .
+
+# ビルドを実行
+RUN pnpm build
+
+# 本番用イメージ
+FROM base AS runner
+WORKDIR /app
+
+# 本番用ユーザーを作成
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# 必要なファイルをコピー
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# ユーザーを切り替え
+USER nextjs
+
+# ポート3000を公開
+EXPOSE 3000
+
+# 環境変数を設定
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# アプリケーションを起動
+CMD ["node", "server.js"]
