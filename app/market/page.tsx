@@ -2,7 +2,7 @@
 
 import { Header } from "@/components/header"
 import { MarketBoard } from "@/components/market-board"
-import { ProtectedRoute } from "@/components/ProtectedRoute"
+import ProtectedRoute from "@/components/ProtectedRoute"
 
 export default function MarketPage() {
   return (
