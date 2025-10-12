@@ -6,6 +6,7 @@ import { PostList } from "@/components/post-list"
 import { PostForm } from "@/components/post-form"
 import { useState, useEffect } from "react"
 import { use } from "react"
+import { useSearchParams } from "next/navigation"
 
 interface BoardPageProps {
   params: Promise<{
@@ -49,6 +50,8 @@ const boardInfo = {
 
 export default function BoardPage({ params }: BoardPageProps) {
   const resolvedParams = use(params)
+  const searchParams = useSearchParams()
+  const highlightPostId = searchParams.get('post_id')
   const board = boardInfo[resolvedParams.id as keyof typeof boardInfo] || boardInfo["1"]
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -66,7 +69,7 @@ export default function BoardPage({ params }: BoardPageProps) {
 
         <div className="mt-8 space-y-6">
           <PostForm boardId={resolvedParams.id} onPostCreated={handlePostCreated} />
-          <PostList boardId={resolvedParams.id} refreshKey={refreshKey} />
+          <PostList boardId={resolvedParams.id} refreshKey={refreshKey} highlightPostId={highlightPostId} />
         </div>
       </main>
     </div>

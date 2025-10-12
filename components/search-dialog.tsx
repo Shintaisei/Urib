@@ -229,7 +229,7 @@ export function SearchDialog() {
                       {result.reply_count}
                     </div>
                   </div>
-                  <Link href={`/board/${result.board_id}`} onClick={() => setOpen(false)}>
+                  <Link href={`/board/${result.board_id}?post_id=${result.post_id}`} onClick={() => setOpen(false)}>
                     <Button variant="ghost" size="sm" className="text-xs">
                       投稿を見る →
                     </Button>

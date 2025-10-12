@@ -37,6 +37,7 @@ interface Reply {
 interface PostListProps {
   boardId: string
   refreshKey?: number
+  highlightPostId?: string | null
 }
 
 function getTimeDiff(dateString: string): string {
@@ -54,7 +55,7 @@ function getTimeDiff(dateString: string): string {
   return postDate.toLocaleDateString('ja-JP')
 }
 
-export function PostList({ boardId, refreshKey }: PostListProps) {
+export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -182,6 +183,24 @@ export function PostList({ boardId, refreshKey }: PostListProps) {
     fetchPosts()
   }, [boardId, refreshKey])
 
+  // ハイライト対象の投稿を自動的に開く
+  useEffect(() => {
+    if (highlightPostId && posts.length > 0) {
+      const postId = parseInt(highlightPostId)
+      if (!isNaN(postId)) {
+        // 投稿を開く
+        setExpandedPostId(postId)
+        // 少し遅延させてからスクロール
+        setTimeout(() => {
+          const element = document.getElementById(`post-${postId}`)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 500)
+      }
+    }
+  }, [highlightPostId, posts])
+
   const handleLike = async (postId: number) => {
     try {
       const userId = localStorage.getItem('user_id')
@@ -286,8 +305,16 @@ export function PostList({ boardId, refreshKey }: PostListProps) {
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-foreground">最新の投稿</h2>
 
-      {posts.map((post) => (
-        <Card key={post.id} className="bg-card border-border hover:shadow-sm transition-shadow">
+      {posts.map((post) => {
+        const isHighlighted = highlightPostId && parseInt(highlightPostId) === post.id
+        return (
+        <Card 
+          key={post.id} 
+          id={`post-${post.id}`}
+          className={`bg-card border-border hover:shadow-sm transition-all ${
+            isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
+          }`}
+        >
           <CardContent className="p-6">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-2">
@@ -434,7 +461,8 @@ export function PostList({ boardId, refreshKey }: PostListProps) {
             )}
           </CardContent>
         </Card>
-      ))}
+      )
+      })}
     </div>
   )
 }
