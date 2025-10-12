@@ -5,11 +5,15 @@ import models
 import os
 from datetime import datetime, timedelta
 
-# データベースURL（環境変数から取得、デフォルトはPostgreSQL）
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://uriv_user:uriv_password@db:5432/uriv_db")
+# データベースURL（環境変数から取得、デフォルトはSQLite）
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./uriv.db")
 
 # SQLAlchemyエンジンの作成
-engine = create_engine(DATABASE_URL)
+# SQLiteの場合はcheck_same_threadをFalseに設定
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL)
 
 # セッションファクトリの作成
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -29,15 +33,23 @@ def get_user_by_email(db: Session, email: str):
 def save_verification_code(db: Session, email: str, code: str):
     """認証コードを保存"""
     user = get_user_by_email(db, email)
+    
+    # メールアドレスから大学ドメインを抽出
+    domain = email.split("@")[-1] if "@" in email else ""
+    
     if user:
         user.verification_code = code
         user.updated_at = datetime.utcnow()
+        # 大学情報が未設定の場合は設定
+        if not user.university and domain:
+            user.university = domain
     else:
         # 新規ユーザーを作成
         new_user = models.User(
             email=email,
             verification_code=code,
-            is_verified=False
+            is_verified=False,
+            university=domain
         )
         db.add(new_user)
     db.commit()

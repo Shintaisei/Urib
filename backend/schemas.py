@@ -11,6 +11,22 @@ class UserVerify(BaseModel):
     email: EmailStr  # ユーザーの大学メールアドレス
     code: str        # 認証コード
 
+# 簡易ユーザー登録用スキーマ（認証なし）
+class UserQuickRegister(BaseModel):
+    email: Optional[str] = None
+    nickname: str
+    university: str
+    year: str
+    department: str
+
+# ユーザー登録レスポンス
+class UserRegisterResponse(BaseModel):
+    user_id: int
+    anonymous_name: str
+    university: str
+    year: str
+    department: str
+
 # 市場掲示板関連のスキーマ
 class MarketItemCreate(BaseModel):
     title: str
@@ -57,3 +73,34 @@ class MarketStats(BaseModel):
     sell_items: int
     free_items: int
     categories: dict
+
+# 掲示板投稿関連のスキーマ
+class BoardPostCreate(BaseModel):
+    board_id: str
+    content: str
+
+class BoardPostResponse(BaseModel):
+    id: int
+    board_id: str
+    content: str
+    author_name: str
+    author_year: Optional[str] = None  # 学年
+    author_department: Optional[str] = None  # 学部
+    like_count: int
+    reply_count: int
+    created_at: str
+    is_liked: bool = False
+
+class BoardReplyCreate(BaseModel):
+    content: str
+
+class BoardReplyResponse(BaseModel):
+    id: int
+    post_id: int
+    content: str
+    author_name: str
+    author_year: Optional[str] = None  # 学年
+    author_department: Optional[str] = None  # 学部
+    like_count: int = 0
+    is_liked: bool = False
+    created_at: str

@@ -16,35 +16,97 @@ interface LoginFormState {
   authState: AuthState
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 export function LoginForm(): React.ReactElement {
   const [email, setEmail] = useState<string>("")
+  const [code, setCode] = useState<string>("")
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isEmailSent, setIsEmailSent] = useState<boolean>(false)
+  const [devCode, setDevCode] = useState<string>("")
+  const [error, setError] = useState<string>("")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault()
+    setError("")
 
     if (!email.includes("@") || (!email.includes(".ac.jp") && !email.includes(".edu"))) {
-      alert("大学のメールアドレスを入力してください")
+      setError("大学のメールアドレスを入力してください")
       return
     }
 
     setIsLoading(true)
 
-    setTimeout((): void => {
-      setIsLoading(false)
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.detail || '認証リクエストに失敗しました')
+      }
+
+      // 開発モードの認証コードを保存
+      if (data.dev_code) {
+        setDevCode(data.dev_code)
+      }
+
       setIsEmailSent(true)
-    }, 2000)
+    } catch (err: any) {
+      setError(err.message || '認証リクエストに失敗しました')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleVerifyCode = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, code }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.detail || '認証コードが正しくありません')
+      }
+
+      // 認証成功 - ローカルストレージに保存
+      localStorage.setItem('user_email', email)
+      localStorage.setItem('user_id', data.user_id)
+      localStorage.setItem('university', data.university || '')
+      localStorage.setItem('access_token', data.access_token || 'authenticated')
+
+      // ホームページに遷移
+      router.push('/home')
+    } catch (err: any) {
+      setError(err.message || '認証に失敗しました')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleReset = (): void => {
     setIsEmailSent(false)
     setEmail("")
-  }
-
-  const handleNavigateHome = (): void => {
-    router.push("/home")
+    setCode("")
+    setDevCode("")
+    setError("")
   }
 
   if (isEmailSent) {
@@ -54,20 +116,48 @@ export function LoginForm(): React.ReactElement {
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
             <Mail className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="text-xl">メールを送信しました</CardTitle>
+          <CardTitle className="text-xl">認証コードを入力</CardTitle>
           <CardDescription>
-            {email} に認証リンクを送信しました。
-            <br />
-            メールをご確認ください。
+            {email} に認証コードを送信しました。
+            {devCode && (
+              <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded text-yellow-800 dark:text-yellow-200">
+                <strong>開発モード：</strong> 認証コード: <strong className="text-lg">{devCode}</strong>
+              </div>
+            )}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Button className="w-full" onClick={handleNavigateHome}>
-            ホームに進む
-          </Button>
-          <Button variant="outline" className="w-full bg-transparent" onClick={handleReset}>
-            別のメールアドレスでログイン
-          </Button>
+        <CardContent>
+          <form onSubmit={handleVerifyCode} className="space-y-4">
+            <div className="space-y-2">
+              <Input
+                type="text"
+                placeholder="認証コード (6桁)"
+                value={code}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>): void => setCode(e.target.value)}
+                required
+                maxLength={6}
+                className="w-full text-center text-2xl tracking-widest"
+              />
+            </div>
+            {error && (
+              <div className="text-sm text-red-500 text-center">
+                {error}
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={isLoading || code.length !== 6}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  認証中...
+                </>
+              ) : (
+                "ログイン"
+              )}
+            </Button>
+            <Button variant="outline" className="w-full bg-transparent" onClick={handleReset} type="button">
+              別のメールアドレスでログイン
+            </Button>
+          </form>
         </CardContent>
       </Card>
     )
@@ -91,6 +181,11 @@ export function LoginForm(): React.ReactElement {
               className="w-full"
             />
           </div>
+          {error && (
+            <div className="text-sm text-red-500 text-center">
+              {error}
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={isLoading || !email}>
             {isLoading ? (
               <>
@@ -98,7 +193,7 @@ export function LoginForm(): React.ReactElement {
                 送信中...
               </>
             ) : (
-              "認証リンクを送信"
+              "認証コードを送信"
             )}
           </Button>
         </form>

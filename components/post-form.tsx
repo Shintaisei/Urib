@@ -8,9 +8,17 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Send, Loader2 } from "lucide-react"
 
-export function PostForm() {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+interface PostFormProps {
+  boardId: string
+  onPostCreated?: () => void
+}
+
+export function PostForm({ boardId, onPostCreated }: PostFormProps) {
   const [content, setContent] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,13 +26,44 @@ export function PostForm() {
     if (!content.trim()) return
 
     setIsSubmitting(true)
+    setError("")
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false)
+    try {
+      // ユーザーIDを取得
+      const userId = localStorage.getItem('user_id')
+      if (!userId) {
+        throw new Error('ユーザーIDが見つかりません。再度登録してください。')
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/board/posts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+        },
+        body: JSON.stringify({
+          board_id: boardId,
+          content: content.trim(),
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.detail || '投稿に失敗しました')
+      }
+
+      // 成功したらフォームをクリア
       setContent("")
-      // In real app, this would refresh the post list
-    }, 1000)
+      
+      // 親コンポーネントに通知
+      if (onPostCreated) {
+        onPostCreated()
+      }
+    } catch (err: any) {
+      setError(err.message || '投稿に失敗しました')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -41,6 +80,12 @@ export function PostForm() {
             className="min-h-[120px] resize-none"
             maxLength={500}
           />
+
+          {error && (
+            <div className="text-sm text-red-500">
+              {error}
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground">{content.length}/500文字</div>

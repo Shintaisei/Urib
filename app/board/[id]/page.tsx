@@ -1,12 +1,16 @@
+"use client"
+
 import { Header } from "@/components/header"
 import { BoardHeader } from "@/components/board-header"
 import { PostList } from "@/components/post-list"
 import { PostForm } from "@/components/post-form"
+import { useState, useEffect } from "react"
+import { use } from "react"
 
 interface BoardPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 // Mock data for different boards
@@ -29,7 +33,14 @@ const boardInfo = {
 }
 
 export default function BoardPage({ params }: BoardPageProps) {
-  const board = boardInfo[params.id as keyof typeof boardInfo] || boardInfo["1"]
+  const resolvedParams = use(params)
+  const board = boardInfo[resolvedParams.id as keyof typeof boardInfo] || boardInfo["1"]
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const handlePostCreated = () => {
+    // 投稿が作成されたら、PostListを更新
+    setRefreshKey(prev => prev + 1)
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,8 +50,8 @@ export default function BoardPage({ params }: BoardPageProps) {
         <BoardHeader title={board.title} description={board.description} memberCount={board.memberCount} />
 
         <div className="mt-8 space-y-6">
-          <PostForm />
-          <PostList />
+          <PostForm boardId={resolvedParams.id} onPostCreated={handlePostCreated} />
+          <PostList boardId={resolvedParams.id} refreshKey={refreshKey} />
         </div>
       </main>
     </div>

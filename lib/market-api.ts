@@ -17,8 +17,8 @@ const getHeaders = () => {
     'Content-Type': 'application/json',
   };
 
-  // 開発環境ではX-Dev-Emailヘッダーを追加
-  const devEmail = localStorage.getItem('dev_user_email');
+  // ユーザーのメールアドレスを取得（dev_user_emailまたはuser_email）
+  const devEmail = localStorage.getItem('dev_user_email') || localStorage.getItem('user_email');
   if (devEmail) {
     headers['X-Dev-Email'] = `dev:${devEmail}`;
   }

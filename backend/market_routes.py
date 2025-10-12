@@ -47,6 +47,15 @@ def generate_anonymous_name():
     """匿名表示名を生成（例: 匿名ユーザー #A1B2）"""
     return f"匿名ユーザー #{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
 
+def get_or_create_anonymous_name(user, db: Session):
+    """ユーザーの固定匿名名を取得または生成"""
+    if not user.anonymous_name:
+        # 匿名名が未設定の場合は生成して保存
+        user.anonymous_name = generate_anonymous_name()
+        db.commit()
+        db.refresh(user)
+    return user.anonymous_name
+
 @router.get("/items", response_model=List[schemas.MarketItemResponse])
 def get_market_items(
     request: Request,
@@ -188,6 +197,9 @@ def create_market_item(
             detail="ユーザーが見つかりません"
         )
     
+    # ユーザーの固定匿名名を取得または生成
+    anonymous_name = get_or_create_anonymous_name(current_user, db)
+    
     # 画像をJSON文字列に変換
     images_json = json.dumps(item_data.images) if item_data.images else None
     
@@ -201,7 +213,7 @@ def create_market_item(
         category=item_data.category,
         images=images_json,
         author_id=current_user.id,
-        author_name=generate_anonymous_name(),
+        author_name=anonymous_name,
         contact_method=item_data.contact_method,
         is_available=True
     )

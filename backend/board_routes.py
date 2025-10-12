@@ -1,0 +1,388 @@
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from sqlalchemy.orm import Session
+from sqlalchemy import desc, and_
+from typing import List
+from datetime import datetime
+import models, schemas, database
+import random
+import string
+
+router = APIRouter(prefix="/board", tags=["board"])
+
+def get_current_user_id(request: Request):
+    """現在のユーザーのIDを取得"""
+    # X-User-Id ヘッダーから取得
+    user_id = request.headers.get("X-User-Id")
+    if user_id:
+        try:
+            return int(user_id)
+        except:
+            pass
+    
+    # 旧方式: X-Dev-Email ヘッダーから取得（後方互換性）
+    dev_email = request.headers.get("X-Dev-Email")
+    if dev_email:
+        if dev_email.startswith("dev:"):
+            dev_email = dev_email[4:]
+        user = get_user_by_email(None, dev_email)
+        if user:
+            return user.id
+    
+    return None
+
+def get_user_by_email(db: Session, email: str):
+    """emailでユーザーを取得"""
+    if not db:
+        # dbがNoneの場合は新しいセッションを作成
+        db = database.SessionLocal()
+        try:
+            return db.query(models.User).filter(models.User.email == email).first()
+        finally:
+            db.close()
+    return db.query(models.User).filter(models.User.email == email).first()
+
+def get_user_by_id(db: Session, user_id: int):
+    """IDでユーザーを取得"""
+    return db.query(models.User).filter(models.User.id == user_id).first()
+
+def generate_anonymous_name():
+    """匿名表示名を生成（例: 匿名ユーザー #A1B2）"""
+    return f"匿名ユーザー #{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
+
+def get_or_create_anonymous_name(user, db: Session):
+    """ユーザーの固定匿名名を取得または生成"""
+    if not user.anonymous_name:
+        # 匿名名が未設定の場合は生成して保存
+        user.anonymous_name = generate_anonymous_name()
+        db.commit()
+        db.refresh(user)
+    return user.anonymous_name
+
+@router.get("/posts/{board_id}", response_model=List[schemas.BoardPostResponse])
+def get_board_posts(
+    board_id: str,
+    request: Request,
+    limit: int = Query(50, description="取得件数"),
+    offset: int = Query(0, description="オフセット"),
+    db: Session = Depends(database.get_db)
+):
+    """掲示板の投稿一覧を取得"""
+    
+    # 投稿を取得
+    posts = db.query(models.BoardPost).filter(
+        models.BoardPost.board_id == board_id
+    ).order_by(desc(models.BoardPost.created_at)).offset(offset).limit(limit).all()
+    
+    # 現在のユーザーを取得
+    current_user_id = get_current_user_id(request)
+    current_user = get_user_by_id(db, current_user_id) if current_user_id else None
+    
+    # レスポンス形式に変換
+    result = []
+    for post in posts:
+        # いいねしているかチェック
+        is_liked = False
+        if current_user:
+            is_liked = db.query(models.BoardPostLike).filter(
+                and_(
+                    models.BoardPostLike.post_id == post.id,
+                    models.BoardPostLike.user_id == current_user.id
+                )
+            ).first() is not None
+        
+        result.append(schemas.BoardPostResponse(
+            id=post.id,
+            board_id=post.board_id,
+            content=post.content,
+            author_name=post.author_name,
+            author_year=post.author.year if post.author else None,
+            author_department=post.author.department if post.author else None,
+            like_count=post.like_count,
+            reply_count=post.reply_count,
+            created_at=post.created_at.isoformat(),
+            is_liked=is_liked
+        ))
+    
+    return result
+
+@router.post("/posts", response_model=schemas.BoardPostResponse)
+def create_board_post(
+    post_data: schemas.BoardPostCreate,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """新しい投稿を作成"""
+    
+    # 現在のユーザーを取得
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="ユーザーIDが見つかりません"
+        )
+    
+    current_user = get_user_by_id(db, current_user_id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ユーザーが見つかりません"
+        )
+    
+    # ユーザーの固定匿名名を取得または生成
+    anonymous_name = get_or_create_anonymous_name(current_user, db)
+    
+    # 新しい投稿を作成
+    new_post = models.BoardPost(
+        board_id=post_data.board_id,
+        content=post_data.content,
+        author_id=current_user.id,
+        author_name=anonymous_name
+    )
+    
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    
+    return schemas.BoardPostResponse(
+        id=new_post.id,
+        board_id=new_post.board_id,
+        content=new_post.content,
+        author_name=new_post.author_name,
+        author_year=current_user.year,
+        author_department=current_user.department,
+        like_count=new_post.like_count,
+        reply_count=new_post.reply_count,
+        created_at=new_post.created_at.isoformat(),
+        is_liked=False
+    )
+
+@router.post("/posts/{post_id}/like")
+def toggle_post_like(
+    post_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """投稿のいいねを切り替え"""
+    
+    # 現在のユーザーを取得
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="ユーザーIDが見つかりません"
+        )
+    
+    current_user = get_user_by_id(db, current_user_id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ユーザーが見つかりません"
+        )
+    
+    # 投稿を取得
+    post = db.query(models.BoardPost).filter(models.BoardPost.id == post_id).first()
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="投稿が見つかりません"
+        )
+    
+    # 既存のいいねをチェック
+    existing_like = db.query(models.BoardPostLike).filter(
+        and_(
+            models.BoardPostLike.post_id == post_id,
+            models.BoardPostLike.user_id == current_user.id
+        )
+    ).first()
+    
+    if existing_like:
+        # いいねを削除
+        db.delete(existing_like)
+        post.like_count = max(0, post.like_count - 1)
+        is_liked = False
+    else:
+        # いいねを追加
+        new_like = models.BoardPostLike(
+            post_id=post_id,
+            user_id=current_user.id
+        )
+        db.add(new_like)
+        post.like_count += 1
+        is_liked = True
+    
+    db.commit()
+    
+    return {
+        "message": "いいねを更新しました",
+        "is_liked": is_liked,
+        "like_count": post.like_count
+    }
+
+@router.get("/posts/{post_id}/replies", response_model=List[schemas.BoardReplyResponse])
+def get_post_replies(
+    post_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """投稿への返信一覧を取得"""
+    
+    # 返信を取得
+    replies = db.query(models.BoardReply).filter(
+        models.BoardReply.post_id == post_id
+    ).order_by(models.BoardReply.created_at).all()
+    
+    # 現在のユーザーを取得
+    current_user_id = get_current_user_id(request)
+    current_user = get_user_by_id(db, current_user_id) if current_user_id else None
+    
+    result = []
+    for reply in replies:
+        # いいねしているかチェック
+        is_liked = False
+        if current_user:
+            is_liked = db.query(models.BoardReplyLike).filter(
+                and_(
+                    models.BoardReplyLike.reply_id == reply.id,
+                    models.BoardReplyLike.user_id == current_user.id
+                )
+            ).first() is not None
+        
+        result.append(schemas.BoardReplyResponse(
+            id=reply.id,
+            post_id=reply.post_id,
+            content=reply.content,
+            author_name=reply.author_name,
+            author_year=reply.author.year if reply.author else None,
+            author_department=reply.author.department if reply.author else None,
+            like_count=reply.like_count,
+            is_liked=is_liked,
+            created_at=reply.created_at.isoformat()
+        ))
+    
+    return result
+
+@router.post("/posts/{post_id}/replies", response_model=schemas.BoardReplyResponse)
+def create_reply(
+    post_id: int,
+    reply_data: schemas.BoardReplyCreate,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """投稿に返信を追加"""
+    
+    # 現在のユーザーを取得
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="ユーザーIDが見つかりません"
+        )
+    
+    current_user = get_user_by_id(db, current_user_id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ユーザーが見つかりません"
+        )
+    
+    # 投稿を取得
+    post = db.query(models.BoardPost).filter(models.BoardPost.id == post_id).first()
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="投稿が見つかりません"
+        )
+    
+    # ユーザーの固定匿名名を取得または生成
+    anonymous_name = get_or_create_anonymous_name(current_user, db)
+    
+    # 返信を作成
+    new_reply = models.BoardReply(
+        post_id=post_id,
+        content=reply_data.content,
+        author_id=current_user.id,
+        author_name=anonymous_name
+    )
+    
+    db.add(new_reply)
+    
+    # 投稿の返信数を更新
+    post.reply_count += 1
+    
+    db.commit()
+    db.refresh(new_reply)
+    
+    return schemas.BoardReplyResponse(
+        id=new_reply.id,
+        post_id=new_reply.post_id,
+        content=new_reply.content,
+        author_name=new_reply.author_name,
+        author_year=current_user.year,
+        author_department=current_user.department,
+        like_count=new_reply.like_count,
+        is_liked=False,
+        created_at=new_reply.created_at.isoformat()
+    )
+
+@router.post("/replies/{reply_id}/like")
+def toggle_reply_like(
+    reply_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """返信のいいねを切り替え"""
+    
+    # 現在のユーザーを取得
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="ユーザーIDが見つかりません"
+        )
+    
+    current_user = get_user_by_id(db, current_user_id)
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="ユーザーが見つかりません"
+        )
+    
+    # 返信を取得
+    reply = db.query(models.BoardReply).filter(models.BoardReply.id == reply_id).first()
+    if not reply:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="返信が見つかりません"
+        )
+    
+    # 既存のいいねをチェック
+    existing_like = db.query(models.BoardReplyLike).filter(
+        and_(
+            models.BoardReplyLike.reply_id == reply_id,
+            models.BoardReplyLike.user_id == current_user.id
+        )
+    ).first()
+    
+    if existing_like:
+        # いいねを削除
+        db.delete(existing_like)
+        reply.like_count = max(0, reply.like_count - 1)
+        is_liked = False
+    else:
+        # いいねを追加
+        new_like = models.BoardReplyLike(
+            reply_id=reply_id,
+            user_id=current_user.id
+        )
+        db.add(new_like)
+        reply.like_count += 1
+        is_liked = True
+    
+    db.commit()
+    
+    return {
+        "message": "いいねを更新しました",
+        "is_liked": is_liked,
+        "like_count": reply.like_count
+    }
+

@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import models, schemas, database, utils, univ_domains
 import market_routes
+import board_routes
 import os
 
 app = FastAPI()
@@ -13,6 +14,38 @@ async def startup_event():
     try:
         models.Base.metadata.create_all(bind=database.engine)
         print("データベーステーブルが正常に作成されました")
+        
+        # デモユーザーを作成（開発モード用）
+        db = database.SessionLocal()
+        try:
+            import random
+            import string
+            demo_email = "demo@hokudai.ac.jp"
+            existing_user = database.get_user_by_email(db, demo_email)
+            if not existing_user:
+                # 匿名名を生成
+                anonymous_name = f"匿名ユーザー #{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
+                demo_user = models.User(
+                    email=demo_email,
+                    university="hokudai.ac.jp",
+                    anonymous_name=anonymous_name,
+                    is_verified=True
+                )
+                db.add(demo_user)
+                db.commit()
+                print(f"デモユーザーを作成しました: {demo_email} ({anonymous_name})")
+            else:
+                # 既存のデモユーザーに匿名名がない場合は追加
+                if not existing_user.anonymous_name:
+                    anonymous_name = f"匿名ユーザー #{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
+                    existing_user.anonymous_name = anonymous_name
+                    db.commit()
+                    print(f"デモユーザーに匿名名を追加しました: {demo_email} ({anonymous_name})")
+                else:
+                    print(f"デモユーザーは既に存在します: {demo_email} ({existing_user.anonymous_name})")
+        finally:
+            db.close()
+            
     except Exception as e:
         print(f"データベース接続エラー: {e}")
         # データベースが起動していない場合は待機
@@ -23,13 +56,9 @@ async def startup_event():
 # CORS設定（開発用：全許可）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", 
-        "http://127.0.0.1:3000",
-        "http://frontend:3000"  # Docker環境用
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_origins=["*"],  # 開発環境では全てのオリジンを許可
+    allow_credentials=False,  # allow_origins=["*"]の場合はFalseにする必要がある
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -40,6 +69,78 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# メールアドレスチェックAPI
+@app.get("/users/check-email")
+def check_email(email: str, db: Session = Depends(get_db)):
+    """メールアドレスで既存ユーザーをチェック"""
+    normalized_email = email.strip().lower()
+    existing_user = database.get_user_by_email(db, normalized_email)
+    
+    if existing_user:
+        return {
+            "exists": True,
+            "user": {
+                "id": existing_user.id,
+                "email": existing_user.email,
+                "anonymous_name": existing_user.anonymous_name,
+                "university": existing_user.university,
+                "year": existing_user.year,
+                "department": existing_user.department
+            }
+        }
+    else:
+        return {"exists": False}
+
+# 簡易ユーザー登録API（認証なし）
+@app.post("/users/quick-register", response_model=schemas.UserRegisterResponse)
+def quick_register(user: schemas.UserQuickRegister, db: Session = Depends(get_db)):
+    """簡易ユーザー登録（ニックネーム・学年・学部・大学・メールアドレス）"""
+    
+    # ニックネームのバリデーション
+    nickname = user.nickname.strip()
+    if len(nickname) < 2:
+        raise HTTPException(status_code=400, detail="ニックネームは2文字以上で入力してください")
+    if len(nickname) > 20:
+        raise HTTPException(status_code=400, detail="ニックネームは20文字以内で入力してください")
+    
+    # メールアドレスの処理
+    email_to_save = None
+    if user.email:
+        email_to_save = user.email.strip().lower()
+        # メールアドレスの重複チェック
+        existing_user = database.get_user_by_email(db, email_to_save)
+        if existing_user:
+            raise HTTPException(status_code=400, detail="このメールアドレスは既に登録されています")
+    
+    # ニックネームの重複チェック（任意）
+    existing_user = db.query(models.User).filter(models.User.anonymous_name == nickname).first()
+    if existing_user:
+        # 重複している場合は番号を追加
+        import random
+        nickname = f"{nickname}{random.randint(1, 999)}"
+    
+    # 新規ユーザーを作成
+    new_user = models.User(
+        email=email_to_save,
+        university=user.university,
+        year=user.year,
+        department=user.department,
+        anonymous_name=nickname,  # ユーザーが入力したニックネームを使用
+        is_verified=True if email_to_save else False
+    )
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    return schemas.UserRegisterResponse(
+        user_id=new_user.id,
+        anonymous_name=new_user.anonymous_name,
+        university=new_user.university,
+        year=new_user.year,
+        department=new_user.department
+    )
 
 # 認証コード送信API
 @app.post("/auth/request")
@@ -109,3 +210,6 @@ def verify_auth(user: schemas.UserVerify, db: Session = Depends(get_db)):
 
 # 市場掲示板のルーターを追加
 app.include_router(market_routes.router)
+
+# 掲示板のルーターを追加
+app.include_router(board_routes.router)
