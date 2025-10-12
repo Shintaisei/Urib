@@ -14,8 +14,8 @@ def ensure_jst_aware(dt):
     if dt is None:
         return None
     if dt.tzinfo is None:
-        # naive datetime はJSTとして扱う
-        return dt.replace(tzinfo=models.JST)
+        # naive datetime はUTC起点とみなしJSTへ変換する
+        return dt.replace(tzinfo=models.timezone.utc).astimezone(models.JST)
     # tz-aware はJSTへ変換（UTCなどからのズレを解消）
     return dt.astimezone(models.JST)
 
