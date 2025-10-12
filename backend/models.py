@@ -30,8 +30,8 @@ class User(Base):
     anonymous_name = Column(String(100), unique=True)  # 固定の匿名表示名（ニックネーム）
     is_verified = Column(Boolean, default=False)  # 認証済みかどうか
     verification_code = Column(String(255))  # 認証コード
-    created_at = Column(DateTime, default=jst_now, index=True)  # 作成日時（日本時間）
-    updated_at = Column(DateTime, default=jst_now, onupdate=jst_now)  # 更新日時（日本時間）
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)  # 作成日時（日本時間）
+    updated_at = Column(DateTime(timezone=True), default=jst_now, onupdate=jst_now)  # 更新日時（日本時間）
     
     # リレーション
     market_items = relationship("MarketItem", back_populates="author")
@@ -64,8 +64,8 @@ class MarketItem(Base):
     is_deleted = Column(Boolean, default=False)  # 論理削除フラグ
     view_count = Column(Integer, default=0)  # 閲覧数
     like_count = Column(Integer, default=0)  # いいね数
-    created_at = Column(DateTime, default=jst_now, index=True)
-    updated_at = Column(DateTime, default=jst_now, onupdate=jst_now)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+    updated_at = Column(DateTime(timezone=True), default=jst_now, onupdate=jst_now)
     
     # リレーション
     author = relationship("User", back_populates="market_items")
@@ -82,7 +82,7 @@ class MarketItemLike(Base):
     id = Column(Integer, primary_key=True, index=True)
     item_id = Column(Integer, ForeignKey("market_items.id"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    created_at = Column(DateTime, default=jst_now)
+    created_at = Column(DateTime(timezone=True), default=jst_now)
     
     # リレーション
     item = relationship("MarketItem", back_populates="likes")
@@ -107,8 +107,8 @@ class BoardPost(Base):
     like_count = Column(Integer, default=0, index=True)  # いいね数
     reply_count = Column(Integer, default=0)  # 返信数
     is_deleted = Column(Boolean, default=False, index=True)  # 論理削除フラグ
-    created_at = Column(DateTime, default=jst_now, index=True)
-    updated_at = Column(DateTime, default=jst_now, onupdate=jst_now)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+    updated_at = Column(DateTime(timezone=True), default=jst_now, onupdate=jst_now)
     
     # リレーション
     author = relationship("User", backref="board_posts")
@@ -128,7 +128,7 @@ class BoardPostLike(Base):
     id = Column(Integer, primary_key=True, index=True)
     post_id = Column(Integer, ForeignKey("board_posts.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime, default=jst_now, index=True)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
     
     # リレーション
     post = relationship("BoardPost", back_populates="likes")
@@ -149,7 +149,7 @@ class BoardReply(Base):
     author_name = Column(String(100), nullable=False)  # 匿名表示名
     like_count = Column(Integer, default=0)  # いいね数
     is_deleted = Column(Boolean, default=False)  # 論理削除フラグ
-    created_at = Column(DateTime, default=jst_now, index=True)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
     
     # リレーション
     post = relationship("BoardPost", back_populates="replies")
@@ -169,7 +169,7 @@ class BoardReplyLike(Base):
     id = Column(Integer, primary_key=True, index=True)
     reply_id = Column(Integer, ForeignKey("board_replies.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    created_at = Column(DateTime, default=jst_now, index=True)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
     
     # リレーション
     reply = relationship("BoardReply", back_populates="likes")
