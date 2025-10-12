@@ -53,14 +53,31 @@ async def startup_event():
         time.sleep(5)
         models.Base.metadata.create_all(bind=database.engine)
 
-# CORS設定（開発用：全許可）
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # 開発環境では全てのオリジンを許可
-    allow_credentials=False,  # allow_origins=["*"]の場合はFalseにする必要がある
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS設定（環境変数で制御）
+ENV = os.getenv("ENV", "development")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",")
+
+if ENV == "production":
+    # 本番環境：環境変数で指定されたオリジンのみ許可
+    origins = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+    print(f"✅ 本番環境モード - 許可されたオリジン: {origins}")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    # 開発環境：全てのオリジンを許可
+    print("✅ 開発環境モード - 全てのオリジンを許可")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # DBセッションを取得する依存関数
 def get_db():
