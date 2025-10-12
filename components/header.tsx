@@ -16,6 +16,13 @@ import { useRouter } from "next/navigation"
 export function Header() {
   const router = useRouter()
 
+  const handleLogout = () => {
+    // localStorageをクリア
+    localStorage.clear()
+    // ログイン画面にリダイレクト
+    router.push("/")
+  }
+
   return (
     <header className="border-b border-border bg-card">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between max-w-6xl">
@@ -51,7 +58,7 @@ export function Header() {
                 プロフィール設定
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={() => router.push("/")}>
+              <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 ログアウト
               </DropdownMenuItem>
