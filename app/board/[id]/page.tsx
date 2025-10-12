@@ -13,22 +13,37 @@ interface BoardPageProps {
   }>
 }
 
-// Mock data for different boards
+// 掲示板情報（北大特化）
 const boardInfo = {
   "1": {
-    title: "東京大学 工学部 掲示板",
-    description: "工学部の学生向けの情報交換",
-    memberCount: 1247,
+    title: "全体掲示板",
+    description: "北大生みんなで使える総合掲示板",
+    memberCount: 0,
   },
   "2": {
-    title: "東京大学 文学部 掲示板",
-    description: "文学部の学生向けの情報交換",
-    memberCount: 892,
+    title: "授業・履修",
+    description: "授業の情報、履修相談、試験対策など",
+    memberCount: 0,
   },
   "3": {
-    title: "東京大学 情報理工学系研究科",
-    description: "大学院生向けの研究・学習情報",
-    memberCount: 456,
+    title: "サークル・部活",
+    description: "サークル情報、メンバー募集、イベント告知",
+    memberCount: 0,
+  },
+  "4": {
+    title: "バイト・就活",
+    description: "バイト募集、就活情報、インターン相談",
+    memberCount: 0,
+  },
+  "5": {
+    title: "雑談・交流",
+    description: "気軽におしゃべり、友達作り、暇つぶし",
+    memberCount: 0,
+  },
+  "6": {
+    title: "恋愛・相談",
+    description: "恋愛相談、悩み相談、人生相談",
+    memberCount: 0,
   },
 }
 
