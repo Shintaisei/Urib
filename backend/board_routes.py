@@ -9,6 +9,15 @@ import string
 
 router = APIRouter(prefix="/board", tags=["board"])
 
+def ensure_jst_aware(dt):
+    """datetime オブジェクトが JST aware であることを保証"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        # naive datetime を JST として扱う
+        return dt.replace(tzinfo=models.JST)
+    return dt
+
 # 掲示板統計情報を取得
 @router.get("/stats")
 def get_board_stats(db: Session = Depends(database.get_db)):
@@ -125,7 +134,7 @@ def get_feed_posts(
             "author_department": post.author.department if post.author else None,
             "like_count": post.like_count,
             "reply_count": post.reply_count,
-            "created_at": post.created_at.isoformat(),
+            "created_at": ensure_jst_aware(post.created_at).isoformat(),
             "is_liked": is_liked
         })
     
@@ -186,7 +195,7 @@ def search_posts_and_replies(
             "author_department": author.department if author else None,
             "like_count": post.like_count,
             "reply_count": post.reply_count,
-            "created_at": post.created_at,
+            "created_at": post.created_at,  # ソート用にdatetimeオブジェクトを保持
             "matched_in_post": query.lower() in post.content.lower(),
             "matched_in_hashtags": post.hashtags and query.lower() in post.hashtags.lower(),
             "matched_replies": [
@@ -194,7 +203,7 @@ def search_posts_and_replies(
                     "id": reply.id,
                     "content": reply.content,
                     "author_name": reply.author_name,
-                    "created_at": reply.created_at
+                    "created_at": ensure_jst_aware(reply.created_at).isoformat()
                 }
                 for reply in post_matching_replies
             ]
@@ -202,6 +211,10 @@ def search_posts_and_replies(
     
     # 作成日時の降順でソート
     results.sort(key=lambda x: x["created_at"], reverse=True)
+    
+    # ソート後、created_atをISO形式の文字列に変換
+    for result in results:
+        result["created_at"] = ensure_jst_aware(result["created_at"]).isoformat()
     
     return {
         "query": query,
@@ -300,7 +313,7 @@ def get_board_posts(
             author_department=post.author.department if post.author else None,
             like_count=post.like_count,
             reply_count=post.reply_count,
-            created_at=post.created_at.isoformat(),
+            created_at=ensure_jst_aware(post.created_at).isoformat(),
             is_liked=is_liked
         ))
     
@@ -355,7 +368,7 @@ def create_board_post(
         author_department=current_user.department,
         like_count=new_post.like_count,
         reply_count=new_post.reply_count,
-        created_at=new_post.created_at.isoformat(),
+        created_at=ensure_jst_aware(new_post.created_at).isoformat(),
         is_liked=False
     )
 
@@ -459,7 +472,7 @@ def get_post_replies(
             author_department=reply.author.department if reply.author else None,
             like_count=reply.like_count,
             is_liked=is_liked,
-            created_at=reply.created_at.isoformat()
+            created_at=ensure_jst_aware(reply.created_at).isoformat()
         ))
     
     return result
@@ -524,7 +537,7 @@ def create_reply(
         author_department=current_user.department,
         like_count=new_reply.like_count,
         is_liked=False,
-        created_at=new_reply.created_at.isoformat()
+        created_at=ensure_jst_aware(new_reply.created_at).isoformat()
     )
 
 @router.post("/replies/{reply_id}/like")
