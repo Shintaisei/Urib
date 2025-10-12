@@ -49,6 +49,81 @@ def get_board_stats(db: Session = Depends(database.get_db)):
     
     return {"stats": stats}
 
+# 全文検索API
+@router.get("/search")
+def search_posts_and_replies(
+    query: str = Query(..., min_length=1, description="検索キーワード"),
+    db: Session = Depends(database.get_db)
+):
+    """投稿とコメントを全文検索"""
+    if not query or len(query.strip()) == 0:
+        return {"results": []}
+    
+    search_term = f"%{query.strip()}%"
+    
+    # 投稿を検索
+    matching_posts = db.query(models.BoardPost).filter(
+        models.BoardPost.content.like(search_term)
+    ).order_by(desc(models.BoardPost.created_at)).all()
+    
+    # コメントを検索
+    matching_replies = db.query(models.BoardReply).filter(
+        models.BoardReply.content.like(search_term)
+    ).order_by(desc(models.BoardReply.created_at)).all()
+    
+    # コメントが見つかった場合、その投稿も含める
+    post_ids_from_replies = set([reply.post_id for reply in matching_replies])
+    posts_from_replies = db.query(models.BoardPost).filter(
+        models.BoardPost.id.in_(post_ids_from_replies)
+    ).all() if post_ids_from_replies else []
+    
+    # 重複を除いて投稿をマージ
+    all_post_ids = set([post.id for post in matching_posts])
+    for post in posts_from_replies:
+        if post.id not in all_post_ids:
+            matching_posts.append(post)
+            all_post_ids.add(post.id)
+    
+    # 結果を整形
+    results = []
+    for post in matching_posts:
+        # この投稿に関連する検索マッチしたコメントを取得
+        post_matching_replies = [r for r in matching_replies if r.post_id == post.id]
+        
+        # 投稿者情報を取得
+        author = get_user_by_id(db, post.author_id)
+        
+        results.append({
+            "post_id": post.id,
+            "board_id": post.board_id,
+            "content": post.content,
+            "author_name": post.author_name,
+            "author_year": author.year if author else None,
+            "author_department": author.department if author else None,
+            "like_count": post.like_count,
+            "reply_count": post.reply_count,
+            "created_at": post.created_at,
+            "matched_in_post": query.lower() in post.content.lower(),
+            "matched_replies": [
+                {
+                    "id": reply.id,
+                    "content": reply.content,
+                    "author_name": reply.author_name,
+                    "created_at": reply.created_at
+                }
+                for reply in post_matching_replies
+            ]
+        })
+    
+    # 作成日時の降順でソート
+    results.sort(key=lambda x: x["created_at"], reverse=True)
+    
+    return {
+        "query": query,
+        "total_results": len(results),
+        "results": results
+    }
+
 def get_current_user_id(request: Request):
     """現在のユーザーのIDを取得"""
     # X-User-Id ヘッダーから取得

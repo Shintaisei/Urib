@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { SearchDialog } from "@/components/search-dialog"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -28,6 +29,8 @@ export function Header() {
         </div>
 
         <nav className="flex items-center space-x-4">
+          <SearchDialog />
+          
           <Link href="/dm">
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
               <MessageCircle className="w-4 h-4 mr-2" />
