@@ -6,8 +6,8 @@ from datetime import datetime, timezone, timedelta
 JST = timezone(timedelta(hours=9))
 
 def jst_now():
-    """日本時間で現在時刻を返す"""
-    return datetime.now(JST)
+    """日本時間で現在時刻を返す（UTC時刻をJSTに変換）"""
+    return datetime.now(timezone.utc).astimezone(JST)
 
 # SQLAlchemyのベースクラス（全ORMモデルの親）
 Base = declarative_base()
