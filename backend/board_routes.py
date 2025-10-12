@@ -73,6 +73,64 @@ def get_board_stats(db: Session = Depends(database.get_db)):
     
     return {"stats": stats}
 
+# 全体の人気投稿・最新投稿を取得
+@router.get("/posts/feed")
+def get_feed_posts(
+    feed_type: str = Query("latest", description="latest, popular, trending"),
+    limit: int = Query(10, description="取得件数"),
+    request: Request = None,
+    db: Session = Depends(database.get_db)
+):
+    """全掲示板から人気投稿・最新投稿を取得"""
+    
+    # 現在のユーザーを取得
+    current_user_id = get_current_user_id(request) if request else None
+    current_user = get_user_by_id(db, current_user_id) if current_user_id else None
+    
+    # フィードタイプに応じてクエリを変更
+    query = db.query(models.BoardPost)
+    
+    if feed_type == "popular":
+        # いいね数が多い順
+        query = query.order_by(desc(models.BoardPost.like_count), desc(models.BoardPost.created_at))
+    elif feed_type == "trending":
+        # コメント数が多い順
+        query = query.order_by(desc(models.BoardPost.reply_count), desc(models.BoardPost.created_at))
+    else:
+        # 最新順（デフォルト）
+        query = query.order_by(desc(models.BoardPost.created_at))
+    
+    posts = query.limit(limit).all()
+    
+    # レスポンス形式に変換
+    result = []
+    for post in posts:
+        # いいねしているかチェック
+        is_liked = False
+        if current_user:
+            is_liked = db.query(models.BoardPostLike).filter(
+                and_(
+                    models.BoardPostLike.post_id == post.id,
+                    models.BoardPostLike.user_id == current_user.id
+                )
+            ).first() is not None
+        
+        result.append({
+            "id": post.id,
+            "board_id": post.board_id,
+            "content": post.content,
+            "hashtags": post.hashtags,
+            "author_name": post.author_name,
+            "author_year": post.author.year if post.author else None,
+            "author_department": post.author.department if post.author else None,
+            "like_count": post.like_count,
+            "reply_count": post.reply_count,
+            "created_at": post.created_at.isoformat(),
+            "is_liked": is_liked
+        })
+    
+    return {"posts": result}
+
 # 全文検索API
 @router.get("/search")
 def search_posts_and_replies(
