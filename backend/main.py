@@ -55,11 +55,17 @@ async def startup_event():
 
 # CORS設定（環境変数で制御）
 ENV = os.getenv("ENV", "development")
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",")
+ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
 
 if ENV == "production":
     # 本番環境：環境変数で指定されたオリジンのみ許可
-    origins = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
+    if ALLOWED_ORIGINS_ENV:
+        origins = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
+    else:
+        # フォールバック：環境変数が未設定の場合
+        origins = ["https://urib.vercel.app"]
+        print("⚠️  ALLOWED_ORIGINS環境変数が未設定です。デフォルト値を使用します。")
+    
     print(f"✅ 本番環境モード - 許可されたオリジン: {origins}")
     app.add_middleware(
         CORSMiddleware,
