@@ -39,12 +39,36 @@ def get_board_stats(db: Session = Depends(database.get_db)):
         
         last_activity = latest_post.created_at if latest_post else None
         
+        # 人気のハッシュタグを取得（この掲示板の最新3件の投稿から）
+        recent_posts_with_tags = db.query(models.BoardPost.hashtags).filter(
+            and_(
+                models.BoardPost.board_id == str(board_id),
+                models.BoardPost.hashtags.isnot(None),
+                models.BoardPost.hashtags != ""
+            )
+        ).order_by(desc(models.BoardPost.created_at)).limit(5).all()
+        
+        # ハッシュタグを抽出
+        all_tags = []
+        for (tags,) in recent_posts_with_tags:
+            if tags:
+                all_tags.extend([tag.strip() for tag in tags.split() if tag.strip()])
+        
+        # 重複を削除して最大3つまで
+        unique_tags = []
+        for tag in all_tags:
+            if tag not in unique_tags:
+                unique_tags.append(tag)
+            if len(unique_tags) >= 3:
+                break
+        
         stats.append({
             "board_id": board_id,
             "post_count": post_count,
             "reply_count": int(total_replies),
             "like_count": int(total_likes),
-            "last_activity": last_activity
+            "last_activity": last_activity,
+            "popular_hashtags": unique_tags
         })
     
     return {"stats": stats}
@@ -61,9 +85,10 @@ def search_posts_and_replies(
     
     search_term = f"%{query.strip()}%"
     
-    # 投稿を検索
+    # 投稿を検索（本文とハッシュタグの両方を検索）
     matching_posts = db.query(models.BoardPost).filter(
-        models.BoardPost.content.like(search_term)
+        (models.BoardPost.content.like(search_term)) | 
+        (models.BoardPost.hashtags.like(search_term))
     ).order_by(desc(models.BoardPost.created_at)).all()
     
     # コメントを検索
@@ -97,6 +122,7 @@ def search_posts_and_replies(
             "post_id": post.id,
             "board_id": post.board_id,
             "content": post.content,
+            "hashtags": post.hashtags,
             "author_name": post.author_name,
             "author_year": author.year if author else None,
             "author_department": author.department if author else None,
@@ -104,6 +130,7 @@ def search_posts_and_replies(
             "reply_count": post.reply_count,
             "created_at": post.created_at,
             "matched_in_post": query.lower() in post.content.lower(),
+            "matched_in_hashtags": post.hashtags and query.lower() in post.hashtags.lower(),
             "matched_replies": [
                 {
                     "id": reply.id,

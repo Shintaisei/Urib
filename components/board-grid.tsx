@@ -20,6 +20,7 @@ interface BoardData {
   replyCount: number
   likeCount: number
   lastActivity: string
+  popularHashtags?: string[]
 }
 
 type CategoryColorMap = {
@@ -127,7 +128,8 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
               recentPosts: stat.post_count,
               replyCount: stat.reply_count,
               likeCount: stat.like_count,
-              lastActivity: stat.last_activity ? getTimeDiff(stat.last_activity) : "-"
+              lastActivity: stat.last_activity ? getTimeDiff(stat.last_activity) : "-",
+              popularHashtags: stat.popular_hashtags || []
             }
           }
           return board
@@ -196,6 +198,21 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
                   {board.lastActivity}
                 </div>
               </div>
+              
+              {board.popularHashtags && board.popularHashtags.length > 0 && (
+                <div className="pt-2 border-t border-border">
+                  <div className="flex flex-wrap gap-1">
+                    {board.popularHashtags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <Link href={`/board/${board.id}`}>

@@ -22,6 +22,7 @@ interface SearchResult {
   post_id: number
   board_id: string
   content: string
+  hashtags?: string
   author_name: string
   author_year?: string
   author_department?: string
@@ -29,6 +30,7 @@ interface SearchResult {
   reply_count: number
   created_at: string
   matched_in_post: boolean
+  matched_in_hashtags?: boolean
   matched_replies: Array<{
     id: number
     content: string
@@ -192,6 +194,22 @@ export function SearchDialog() {
                   <p className="text-sm text-foreground whitespace-pre-wrap">
                     {highlightText(result.content, searchQuery)}
                   </p>
+                  
+                  {result.hashtags && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {result.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary"
+                        >
+                          #{highlightText(tag, searchQuery)}
+                        </span>
+                      ))}
+                      {result.matched_in_hashtags && (
+                        <Badge variant="secondary" className="text-xs">ハッシュタグ一致</Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {result.matched_replies.length > 0 && (
