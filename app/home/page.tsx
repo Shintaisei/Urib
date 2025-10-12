@@ -20,17 +20,6 @@ export default function HomePage() {
         {/* タブナビゲーション */}
         <div className="mt-8 flex gap-2 border-b border-border">
           <button
-            onClick={() => setActiveTab('boards')}
-            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'boards'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4 inline mr-2" />
-            掲示板一覧
-          </button>
-          <button
             onClick={() => setActiveTab('feed')}
             className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'feed'
@@ -40,6 +29,17 @@ export default function HomePage() {
           >
             <TrendingUp className="w-4 h-4 inline mr-2" />
             話題の投稿
+          </button>
+          <button
+            onClick={() => setActiveTab('boards')}
+            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'boards'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LayoutGrid className="w-4 h-4 inline mr-2" />
+            掲示板一覧
           </button>
         </div>
 
