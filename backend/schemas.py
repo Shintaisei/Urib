@@ -78,11 +78,13 @@ class MarketStats(BaseModel):
 class BoardPostCreate(BaseModel):
     board_id: str
     content: str
+    hashtags: Optional[str] = None  # ハッシュタグ（カンマ区切り）
 
 class BoardPostResponse(BaseModel):
     id: int
     board_id: str
     content: str
+    hashtags: Optional[str] = None  # ハッシュタグ（カンマ区切り）
     author_name: str
     author_year: Optional[str] = None  # 学年
     author_department: Optional[str] = None  # 学部

@@ -13,6 +13,7 @@ interface Post {
   id: number
   board_id: string
   content: string
+  hashtags?: string
   author_name: string
   author_year?: string
   author_department?: string
@@ -347,7 +348,22 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               </DropdownMenu>
             </div>
 
-            <p className="text-foreground mb-4 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{post.content}</p>
+            
+            {post.hashtags && (
+              <div className="flex flex-wrap gap-2 mt-3 mb-4">
+                {post.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {!post.hashtags && <div className="mb-4"></div>}
 
             <div className="flex items-center space-x-4">
               <Button 

@@ -209,6 +209,7 @@ def get_board_posts(
             id=post.id,
             board_id=post.board_id,
             content=post.content,
+            hashtags=post.hashtags,
             author_name=post.author_name,
             author_year=post.author.year if post.author else None,
             author_department=post.author.department if post.author else None,
@@ -250,6 +251,7 @@ def create_board_post(
     new_post = models.BoardPost(
         board_id=post_data.board_id,
         content=post_data.content,
+        hashtags=post_data.hashtags,
         author_id=current_user.id,
         author_name=anonymous_name
     )
@@ -262,6 +264,7 @@ def create_board_post(
         id=new_post.id,
         board_id=new_post.board_id,
         content=new_post.content,
+        hashtags=new_post.hashtags,
         author_name=new_post.author_name,
         author_year=current_user.year,
         author_department=current_user.department,

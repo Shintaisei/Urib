@@ -94,6 +94,7 @@ class BoardPost(Base):
     id = Column(Integer, primary_key=True, index=True)
     board_id = Column(String(50), nullable=False, index=True)  # 掲示板ID
     content = Column(Text, nullable=False)  # 投稿内容
+    hashtags = Column(String(500), nullable=True)  # ハッシュタグ（カンマ区切り）
     author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     author_name = Column(String(100), nullable=False)  # 匿名表示名
     like_count = Column(Integer, default=0, index=True)  # いいね数

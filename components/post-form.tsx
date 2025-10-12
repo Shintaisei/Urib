@@ -6,7 +6,8 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Send, Loader2, Hash } from "lucide-react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -17,6 +18,7 @@ interface PostFormProps {
 
 export function PostForm({ boardId, onPostCreated }: PostFormProps) {
   const [content, setContent] = useState("")
+  const [hashtags, setHashtags] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
 
@@ -44,6 +46,7 @@ export function PostForm({ boardId, onPostCreated }: PostFormProps) {
         body: JSON.stringify({
           board_id: boardId,
           content: content.trim(),
+          hashtags: hashtags.trim() || null,
         }),
       })
 
@@ -54,6 +57,7 @@ export function PostForm({ boardId, onPostCreated }: PostFormProps) {
 
       // 成功したらフォームをクリア
       setContent("")
+      setHashtags("")
       
       // 親コンポーネントに通知
       if (onPostCreated) {
@@ -80,6 +84,24 @@ export function PostForm({ boardId, onPostCreated }: PostFormProps) {
             className="min-h-[120px] resize-none"
             maxLength={500}
           />
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground flex items-center gap-1">
+              <Hash className="w-3 h-3" />
+              ハッシュタグ（任意・スペース区切りで複数OK）
+            </label>
+            <Input
+              type="text"
+              placeholder="例: 試験 レポート 期末テスト"
+              value={hashtags}
+              onChange={(e) => setHashtags(e.target.value)}
+              maxLength={100}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              ハッシュタグをつけると検索されやすくなります
+            </p>
+          </div>
 
           {error && (
             <div className="text-sm text-red-500">
