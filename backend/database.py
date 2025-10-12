@@ -39,7 +39,7 @@ def save_verification_code(db: Session, email: str, code: str):
     
     if user:
         user.verification_code = code
-        user.updated_at = datetime.utcnow()
+        user.updated_at = models.jst_now()
         # 大学情報が未設定の場合は設定
         if not user.university and domain:
             user.university = domain
@@ -59,7 +59,7 @@ def get_verification_code(db: Session, email: str) -> str:
     user = get_user_by_email(db, email)
     if user and user.verification_code:
         # 5分以内のコードのみ有効
-        if user.updated_at and datetime.utcnow() - user.updated_at < timedelta(minutes=5):
+        if user.updated_at and models.jst_now() - user.updated_at < timedelta(minutes=5):
             return user.verification_code
     return None
 
@@ -69,5 +69,5 @@ def mark_user_as_verified(db: Session, email: str):
     if user:
         user.is_verified = True
         user.verification_code = None
-        user.updated_at = datetime.utcnow()
+        user.updated_at = models.jst_now()
         db.commit()

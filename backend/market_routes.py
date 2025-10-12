@@ -296,7 +296,7 @@ def update_market_item(
     if item_data.is_available is not None:
         item.is_available = item_data.is_available
     
-    item.updated_at = datetime.utcnow()
+    item.updated_at = models.jst_now()
     db.commit()
     db.refresh(item)
     
