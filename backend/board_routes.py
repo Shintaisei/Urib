@@ -14,9 +14,10 @@ def ensure_jst_aware(dt):
     if dt is None:
         return None
     if dt.tzinfo is None:
-        # naive datetime を JST として扱う
+        # naive datetime はJSTとして扱う
         return dt.replace(tzinfo=models.JST)
-    return dt
+    # tz-aware はJSTへ変換（UTCなどからのズレを解消）
+    return dt.astimezone(models.JST)
 
 # 掲示板統計情報を取得
 @router.get("/stats")
@@ -46,7 +47,8 @@ def get_board_stats(db: Session = Depends(database.get_db)):
             models.BoardPost.board_id == str(board_id)
         ).order_by(desc(models.BoardPost.created_at)).first()
         
-        last_activity = latest_post.created_at if latest_post else None
+        # 最終活動時刻をJSTのISO文字列に統一
+        last_activity = ensure_jst_aware(latest_post.created_at).isoformat() if latest_post else None
         
         # 人気のハッシュタグを取得（この掲示板の最新3件の投稿から）
         recent_posts_with_tags = db.query(models.BoardPost.hashtags).filter(
