@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, and_
+from sqlalchemy import desc, and_, func
 from typing import List
 from datetime import datetime
 import models, schemas, database
@@ -8,6 +8,46 @@ import random
 import string
 
 router = APIRouter(prefix="/board", tags=["board"])
+
+# 掲示板統計情報を取得
+@router.get("/stats")
+def get_board_stats(db: Session = Depends(database.get_db)):
+    """各掲示板の統計情報（投稿数、コメント数、最終投稿時刻）を取得"""
+    board_ids = [1, 2, 3, 4, 5, 6]
+    stats = []
+    
+    for board_id in board_ids:
+        # 投稿数を取得
+        post_count = db.query(models.BoardPost).filter(
+            models.BoardPost.board_id == str(board_id)
+        ).count()
+        
+        # コメント数を取得（各投稿のreply_countの合計）
+        total_replies = db.query(func.sum(models.BoardPost.reply_count)).filter(
+            models.BoardPost.board_id == str(board_id)
+        ).scalar() or 0
+        
+        # いいね数を取得
+        total_likes = db.query(func.sum(models.BoardPost.like_count)).filter(
+            models.BoardPost.board_id == str(board_id)
+        ).scalar() or 0
+        
+        # 最終投稿時刻を取得
+        latest_post = db.query(models.BoardPost).filter(
+            models.BoardPost.board_id == str(board_id)
+        ).order_by(desc(models.BoardPost.created_at)).first()
+        
+        last_activity = latest_post.created_at if latest_post else None
+        
+        stats.append({
+            "board_id": board_id,
+            "post_count": post_count,
+            "reply_count": int(total_replies),
+            "like_count": int(total_likes),
+            "last_activity": last_activity
+        })
+    
+    return {"stats": stats}
 
 def get_current_user_id(request: Request):
     """現在のユーザーのIDを取得"""
