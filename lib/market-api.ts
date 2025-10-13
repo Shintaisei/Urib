@@ -201,9 +201,9 @@ export interface MarketItemComment {
 }
 
 export const getItemComments = async (itemId: string): Promise<MarketItemComment[]> => {
+  // GETはカスタムヘッダーを付けずにCORSプリフライトを回避
   const response = await fetch(`${API_BASE_URL}/market/items/${itemId}/comments`, {
-    method: 'GET',
-    headers: getHeaders(),
+    method: 'GET'
   })
   if (!response.ok) throw new Error('コメント取得に失敗しました')
   return response.json()
