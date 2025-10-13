@@ -220,3 +220,26 @@ export const createItemComment = async (itemId: string, content: string): Promis
 
 export const MarketCommentsApi = { getItemComments, createItemComment }
 
+// 管理者API
+export const adminCancelItem = async (itemId: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/market/admin/items/${itemId}/cancel`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(data.detail || '出品の取り消しに失敗しました')
+  }
+}
+
+export const adminDeleteItem = async (itemId: string): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/market/admin/items/${itemId}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(data.detail || '出品の削除に失敗しました')
+  }
+}
+

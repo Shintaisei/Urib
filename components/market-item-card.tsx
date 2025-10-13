@@ -15,7 +15,8 @@ import {
   MoreHorizontal
 } from "lucide-react"
 import { MarketItem } from "@/types"
-import { MarketApi, MarketCommentsApi, type MarketItemComment } from "@/lib/market-api"
+import { MarketApi, MarketCommentsApi, type MarketItemComment, adminCancelItem, adminDeleteItem } from "@/lib/market-api"
+import { isAdminEmail } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
 
 interface MarketItemCardProps {
@@ -28,6 +29,8 @@ export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
   const [comments, setComments] = useState<MarketItemComment[]>([])
   const [commentInput, setCommentInput] = useState("")
   const [posting, setPosting] = useState(false)
+  const userEmail = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+  const isAdmin = isAdminEmail(userEmail)
 
   // 価格の表示フォーマット
   const formatPrice = (price?: number) => {
@@ -244,6 +247,17 @@ export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
               <MessageCircle className="w-4 h-4 mr-1" />
               チャット
             </Button>
+            {isAdmin && (
+              <>
+                <Button size="sm" variant="outline" onClick={async () => {
+                  try { await adminCancelItem(item.id); alert('取り消しました') } catch (e:any) { alert(e.message || '取り消し失敗') }
+                }}>取消</Button>
+                <Button size="sm" variant="destructive" onClick={async () => {
+                  if (!confirm('この出品を削除しますか？')) return;
+                  try { await adminDeleteItem(item.id); alert('削除しました') } catch (e:any) { alert(e.message || '削除失敗') }
+                }}>削除</Button>
+              </>
+            )}
           </div>
 
           {/* 取引可能状態 */}
