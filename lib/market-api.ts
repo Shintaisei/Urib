@@ -201,16 +201,17 @@ export interface MarketItemComment {
 }
 
 export const getItemComments = async (itemId: string): Promise<MarketItemComment[]> => {
-  // GETはカスタムヘッダーを付けずにCORSプリフライトを回避
-  const response = await fetch(`${API_BASE_URL}/market/items/${itemId}/comments`, {
-    method: 'GET'
+  // Next.js API Route経由でCORS回避
+  const response = await fetch(`/api/market/comments/${itemId}`, {
+    method: 'GET',
+    cache: 'no-store'
   })
   if (!response.ok) throw new Error('コメント取得に失敗しました')
   return response.json()
 }
 
 export const createItemComment = async (itemId: string, content: string): Promise<MarketItemComment> => {
-  const response = await fetch(`${API_BASE_URL}/market/items/${itemId}/comments`, {
+  const response = await fetch(`/api/market/comments/${itemId}`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ content })
