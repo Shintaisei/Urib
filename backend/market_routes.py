@@ -25,6 +25,21 @@ def get_current_user_email(request: Request):
         except Exception:
             pass  # トークン検証失敗時はフォールバック
     
+    # X-User-Id から取得（存在すれば優先）
+    user_id = request.headers.get("X-User-Id")
+    if user_id:
+        try:
+            uid = int(user_id)
+            db = database.SessionLocal()
+            try:
+                user = db.query(models.User).filter(models.User.id == uid).first()
+                if user and user.email:
+                    return user.email
+            finally:
+                db.close()
+        except Exception:
+            pass
+
     # 開発用フォールバック: X-Dev-Email ヘッダー
     dev_email = request.headers.get("X-Dev-Email")
     if dev_email:

@@ -22,6 +22,10 @@ const getHeaders = () => {
   if (devEmail) {
     headers['X-Dev-Email'] = `dev:${devEmail}`;
   }
+  const userId = localStorage.getItem('user_id');
+  if (userId) {
+    headers['X-User-Id'] = userId;
+  }
 
   return headers;
 };
