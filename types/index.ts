@@ -94,7 +94,7 @@ export interface MarketItemCreate {
   type: MarketItemType
   price?: number
   condition: 'new' | 'like_new' | 'good' | 'fair' | 'poor'
-  category: string
+  category?: string
   images: string[]
   contact_method: 'dm' | 'email' | 'phone'
 }

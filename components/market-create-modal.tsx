@@ -50,7 +50,7 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
       "image/webp",
       "image/gif",
     ]
-    const maxSizeBytes = 5 * 1024 * 1024 // 5MB/枚
+    const maxSizeBytes = 1.5 * 1024 * 1024 // 1.5MB/枚（DataURL長対策）
     const limit = Math.min(3 - formData.images.length, files.length)
     const errors: string[] = []
     for (let i = 0; i < limit; i++) {
@@ -68,12 +68,7 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
         errors.push(`${f.name}: 画像ではありません`)
         continue
       }
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(f)
-      })
+      const dataUrl = await compressToDataUrl(f)
       picked.push(dataUrl)
     }
     if (picked.length > 0) {
@@ -82,6 +77,26 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
     if (errors.length > 0) {
       alert(`一部の画像を追加できませんでした:\n- ${errors.join('\n- ')}`)
     }
+  }
+
+  // 画像をリサイズ＆圧縮してDataURLに変換（最大1200px, JPEG/品質0.8）
+  const compressToDataUrl = async (file: File): Promise<string> => {
+    const imageBitmap = await createImageBitmap(file)
+    const maxDim = 1200
+    let { width, height } = imageBitmap
+    if (width > maxDim || height > maxDim) {
+      const ratio = Math.min(maxDim / width, maxDim / height)
+      width = Math.round(width * ratio)
+      height = Math.round(height * ratio)
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(imageBitmap, 0, 0, width, height)
+    const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+    const quality = mime === 'image/png' ? undefined : 0.8
+    return canvas.toDataURL(mime, quality)
   }
 
   const removeImage = (idx: number) => {
