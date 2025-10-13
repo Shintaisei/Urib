@@ -64,3 +64,37 @@ export interface ProfileSettings {
 
 export type AuthState = "idle" | "loading" | "authenticated" | "unauthenticated"
 export type BoardCategory = "faculty" | "department" | "club"
+
+// Market types (for market pages/components)
+export type MarketItemType = 'buy' | 'sell' | 'free'
+
+export interface MarketItem {
+  id: string
+  title: string
+  description: string
+  type: MarketItemType
+  price?: number
+  condition: 'new' | 'like_new' | 'good' | 'fair' | 'poor'
+  category: string
+  images: string[]
+  author_name: string
+  university: string
+  contact_method: 'dm' | 'email' | 'phone'
+  is_available: boolean
+  created_at: string
+  updated_at: string
+  view_count: number
+  like_count: number
+  is_liked: boolean
+}
+
+export interface MarketItemCreate {
+  title: string
+  description: string
+  type: MarketItemType
+  price?: number
+  condition: 'new' | 'like_new' | 'good' | 'fair' | 'poor'
+  category: string
+  images: string[]
+  contact_method: 'dm' | 'email' | 'phone'
+}

@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { BoardGrid } from "@/components/board-grid"
 import { UniversityInfo } from "@/components/university-info"
 import { PostFeed } from "@/components/post-feed"
+import { MarketWidget } from "@/components/market-widget"
 import { TrendingUp, LayoutGrid } from "lucide-react"
 
 export default function HomePage() {
@@ -46,15 +47,25 @@ export default function HomePage() {
         {/* タブコンテンツ */}
         <div className="mt-6">
           {activeTab === 'feed' && (
-            <div>
-              <PostFeed />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <PostFeed />
+              </div>
+              <div className="lg:col-span-1">
+                <MarketWidget />
+              </div>
             </div>
           )}
 
           {activeTab === 'boards' && (
-            <div>
-              <h2 className="text-2xl font-bold text-foreground mb-6">掲示板カテゴリー</h2>
-              <BoardGrid />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <h2 className="text-2xl font-bold text-foreground mb-6">掲示板カテゴリー</h2>
+                <BoardGrid />
+              </div>
+              <div className="lg:col-span-1">
+                <MarketWidget />
+              </div>
             </div>
           )}
         </div>
