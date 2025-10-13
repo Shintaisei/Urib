@@ -251,7 +251,7 @@ def create_market_item(
         if ext in allowed_ext:
             validated.append(url)
     images = validated[:3]
-    images_json = json.dumps(images) if images else None
+    images_json = json.dumps(images) if images else json.dumps([])
     
     # 新しい商品を作成
     new_item = models.MarketItem(

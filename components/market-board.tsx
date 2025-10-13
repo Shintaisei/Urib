@@ -209,8 +209,12 @@ export function MarketBoard() {
         images: newItem.images,
         contact_method: newItem.contact_method
       })
-      
-      setItems(prevItems => [createdItem, ...prevItems])
+      // 画像がレスポンスに含まれない場合はフロント側の選択画像をフォールバック
+      const itemToAdd = {
+        ...createdItem,
+        images: (createdItem.images && createdItem.images.length > 0) ? createdItem.images : (newItem.images || [])
+      }
+      setItems(prevItems => [itemToAdd, ...prevItems])
       setShowCreateModal(false)
     } catch (error) {
       console.error('商品作成エラー:', error)
