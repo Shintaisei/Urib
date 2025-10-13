@@ -7,7 +7,7 @@ import models, database
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
-ADMIN_EMAIL_PATTERN = re.compile(r"^master([1-9]|[1-2][0-9]|30)@ac\.jp$", re.IGNORECASE)
+ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@ac\.jp$", re.IGNORECASE)
 
 def is_admin_email(email: Optional[str]) -> bool:
     if not email:
