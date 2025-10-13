@@ -55,9 +55,6 @@ export function ProfileSettings() {
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
             <div>
               <p className="font-medium text-foreground">{university || '大学未設定'}</p>
-              {isAdmin && (
-                <p className="text-xs text-primary mb-1">管理者アカウント</p>
-              )}
               {isAdmin && email && (
                 <p className="text-sm text-muted-foreground">{email}</p>
               )}
