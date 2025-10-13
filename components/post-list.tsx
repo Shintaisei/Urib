@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Heart, MessageCircle, Share, MoreHorizontal, Send, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { isAdminEmail } from "@/lib/utils"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -65,6 +66,8 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   const [replyContent, setReplyContent] = useState<{ [key: number]: string }>({})
   const [submittingReply, setSubmittingReply] = useState<number | null>(null)
   const [loadingReplies, setLoadingReplies] = useState<number | null>(null)
+  const userEmail = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+  const isAdmin = isAdminEmail(userEmail)
 
   const fetchPosts = async () => {
     try {
@@ -177,6 +180,46 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       console.error('返信投稿エラー:', err)
     } finally {
       setSubmittingReply(null)
+    }
+  }
+
+  const handleDeletePost = async (postId: number) => {
+    if (!isAdmin) return
+    if (!confirm('この投稿を削除しますか？')) return
+    try {
+      const userId = localStorage.getItem('user_id')
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const response = await fetch(`${API_BASE_URL}/board/admin/posts/${postId}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Id': userId }
+      })
+      if (!response.ok) throw new Error('投稿の削除に失敗しました')
+      setPosts(prev => prev.filter(p => p.id !== postId))
+    } catch (err) {
+      console.error(err)
+      alert('削除に失敗しました')
+    }
+  }
+
+  const handleDeleteReply = async (replyId: number, postId: number) => {
+    if (!isAdmin) return
+    if (!confirm('この返信を削除しますか？')) return
+    try {
+      const userId = localStorage.getItem('user_id')
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const response = await fetch(`${API_BASE_URL}/board/admin/replies/${replyId}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Id': userId }
+      })
+      if (!response.ok) throw new Error('返信の削除に失敗しました')
+      setReplies(prev => ({
+        ...prev,
+        [postId]: (prev[postId] || []).filter(r => r.id !== replyId)
+      }))
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, reply_count: Math.max(0, p.reply_count - 1) } : p))
+    } catch (err) {
+      console.error(err)
+      alert('削除に失敗しました')
     }
   }
 
@@ -343,6 +386,11 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem>報告する</DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeletePost(post.id)}>
+                      投稿を削除（管理者）
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem>非表示にする</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -421,6 +469,16 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                               <p className="text-xs text-muted-foreground">{getTimeDiff(reply.created_at)}</p>
                             </div>
                           </div>
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-destructive"
+                              onClick={() => handleDeleteReply(reply.id, post.id)}
+                            >
+                              削除（管理者）
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
