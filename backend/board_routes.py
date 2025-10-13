@@ -6,6 +6,7 @@ from datetime import datetime
 import models, schemas, database
 import random
 import string
+import re
 
 router = APIRouter(prefix="/board", tags=["board"])
 
@@ -272,6 +273,29 @@ def get_or_create_anonymous_name(user, db: Session):
         db.commit()
         db.refresh(user)
     return user.anonymous_name
+
+# -----------------------------
+# 管理者判定と保護ユーティリティ
+# -----------------------------
+ADMIN_EMAIL_PATTERN = re.compile(r"^master([1-9]|[1-2][0-9]|30)@ac\.jp$", re.IGNORECASE)
+
+def is_admin_user(user) -> bool:
+    """メールが master1..master30@ac.jp のユーザーを管理者として扱う"""
+    if not user or not getattr(user, "email", None):
+        return False
+    return ADMIN_EMAIL_PATTERN.match(user.email or "") is not None
+
+def require_admin(request: Request, db: Session) -> models.User:
+    """管理者のみ許可。非管理者は403を返す。"""
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    user = get_user_by_id(db, current_user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+    if not is_admin_user(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが実行できます")
+    return user
 
 @router.get("/posts/{board_id}", response_model=List[schemas.BoardPostResponse])
 def get_board_posts(
@@ -604,3 +628,43 @@ def toggle_reply_like(
         "like_count": reply.like_count
     }
 
+@router.delete("/admin/posts/{post_id}")
+def admin_delete_post(
+    post_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """管理者専用: 投稿を物理削除"""
+    # 認可
+    require_admin(request, db)
+
+    post = db.query(models.BoardPost).filter(models.BoardPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="投稿が見つかりません")
+
+    db.delete(post)
+    db.commit()
+    return {"message": "投稿を削除しました", "post_id": post_id}
+
+@router.delete("/admin/replies/{reply_id}")
+def admin_delete_reply(
+    reply_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """管理者専用: 返信を物理削除（親投稿の返信数も調整）"""
+    # 認可
+    require_admin(request, db)
+
+    reply = db.query(models.BoardReply).filter(models.BoardReply.id == reply_id).first()
+    if not reply:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="返信が見つかりません")
+
+    # 親投稿の返信数を調整
+    parent_post = db.query(models.BoardPost).filter(models.BoardPost.id == reply.post_id).first()
+    if parent_post and parent_post.reply_count and parent_post.reply_count > 0:
+        parent_post.reply_count -= 1
+
+    db.delete(reply)
+    db.commit()
+    return {"message": "返信を削除しました", "reply_id": reply_id}
