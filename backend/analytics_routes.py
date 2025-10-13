@@ -144,19 +144,22 @@ async def analytics_summary(request: Request, days: int = 7, db: Session = Depen
             or_(models.User.email == None, not_(models.User.email.like('master%@ac.jp')))
         ).group_by(models.User.id, models.User.anonymous_name).order_by(func.count(models.BoardPost.id).desc()).limit(10).all()
 
-        # イベント集計（管理者以外）
-        events_count = db.query(models.AnalyticsEvent).filter(
-            models.AnalyticsEvent.created_at >= since,
-            or_(models.AnalyticsEvent.email == None, not_(models.AnalyticsEvent.email.like('master%@ac.jp')))
-        ).count()
+        # イベント集計（管理者以外）: モデルが未ロードな環境でも500にしない
+        events_count = 0
+        top_events = []
+        if hasattr(models, 'AnalyticsEvent'):
+            events_count = db.query(models.AnalyticsEvent).filter(
+                models.AnalyticsEvent.created_at >= since,
+                or_(models.AnalyticsEvent.email == None, not_(models.AnalyticsEvent.email.like('master%@ac.jp')))
+            ).count()
 
-        top_events = db.query(
-            models.AnalyticsEvent.event_name,
-            func.count(models.AnalyticsEvent.id)
-        ).filter(
-            models.AnalyticsEvent.created_at >= since,
-            or_(models.AnalyticsEvent.email == None, not_(models.AnalyticsEvent.email.like('master%@ac.jp')))
-        ).group_by(models.AnalyticsEvent.event_name).order_by(func.count(models.AnalyticsEvent.id).desc()).limit(10).all()
+            top_events = db.query(
+                models.AnalyticsEvent.event_name,
+                func.count(models.AnalyticsEvent.id)
+            ).filter(
+                models.AnalyticsEvent.created_at >= since,
+                or_(models.AnalyticsEvent.email == None, not_(models.AnalyticsEvent.email.like('master%@ac.jp')))
+            ).group_by(models.AnalyticsEvent.event_name).order_by(func.count(models.AnalyticsEvent.id).desc()).limit(10).all()
 
         # 時間帯分布（0-23h）: 方言差を吸収
         # エンジンから確実に方言名を取得
