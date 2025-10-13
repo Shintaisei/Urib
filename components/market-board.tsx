@@ -400,6 +400,9 @@ export function MarketBoard() {
                     key={item.id}
                     item={item}
                     onLike={handleLike}
+                    onDeleted={(itemId) => {
+                      setItems(prev => prev.filter(i => i.id !== itemId))
+                    }}
                   />
                 ))}
               </div>

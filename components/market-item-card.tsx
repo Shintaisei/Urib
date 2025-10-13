@@ -15,16 +15,17 @@ import {
   MoreHorizontal
 } from "lucide-react"
 import { MarketItem } from "@/types"
-import { MarketApi, MarketCommentsApi, type MarketItemComment, deleteItemComment } from "@/lib/market-api"
+import { MarketApi, MarketCommentsApi, type MarketItemComment, deleteItemComment, adminDeleteItem } from "@/lib/market-api"
 import { isAdminEmail } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
 
 interface MarketItemCardProps {
   item: MarketItem
   onLike: (itemId: string) => void
+  onDeleted?: (itemId: string) => void
 }
 
-export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
+export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps) {
   const [isLiking, setIsLiking] = useState(false)
   const [comments, setComments] = useState<MarketItemComment[]>([])
   const [commentInput, setCommentInput] = useState("")
@@ -205,6 +206,26 @@ export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
               <span>{getConditionText(item.condition)}</span>
             </div>
           </div>
+
+          {/* 管理者: 出品削除ボタン */}
+          {isAdmin && (
+            <div className="flex justify-end mb-2">
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-7 px-2 text-xs"
+                onClick={async () => {
+                  if (!confirm('この出品を削除しますか？')) return
+                  try {
+                    await adminDeleteItem(item.id)
+                    if (onDeleted) onDeleted(item.id)
+                  } catch (e: any) {
+                    alert(e.message || '削除に失敗しました')
+                  }
+                }}
+              >削除（管理者）</Button>
+            </div>
+          )}
 
           {/* 説明 */}
           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
