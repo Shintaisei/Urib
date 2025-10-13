@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 import models, schemas, database, utils, univ_domains
 import market_routes
 import board_routes
+import analytics_routes
 import os
 
 app = FastAPI()
@@ -236,3 +237,6 @@ app.include_router(market_routes.router)
 
 # 掲示板のルーターを追加
 app.include_router(board_routes.router)
+
+# アナリティクスのルーターを追加
+app.include_router(analytics_routes.router)

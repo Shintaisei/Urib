@@ -174,3 +174,19 @@ class BoardReplyLike(Base):
     # リレーション
     reply = relationship("BoardReply", back_populates="likes")
     user = relationship("User", backref="board_reply_likes")
+
+# シンプルなページビューの記録テーブル（アナリティクス用）
+class PageView(Base):
+    __tablename__ = "page_views"
+    __table_args__ = (
+        Index('idx_page_views_created', 'created_at'),
+        Index('idx_page_views_path', 'path'),
+        Index('idx_page_views_email', 'email'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    email = Column(String(255), nullable=True, index=True)
+    path = Column(String(512), nullable=False)
+    user_agent = Column(String(512), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)

@@ -12,9 +12,29 @@ import {
 import { SearchDialog } from "@/components/search-dialog"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export function Header() {
   const router = useRouter()
+
+  useEffect(() => {
+    const already = sessionStorage.getItem('pv_tracked')
+    if (already) return
+    const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+    const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+    fetch(`${API_BASE_URL}/analytics/track`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(userId ? { 'X-User-Id': userId } : {}),
+        ...(email ? { 'X-Dev-Email': email } : {}),
+      },
+      body: JSON.stringify({ path: typeof window !== 'undefined' ? window.location.pathname : '/' })
+    }).catch(() => {})
+    sessionStorage.setItem('pv_tracked', '1')
+  }, [])
 
   const handleLogout = () => {
     // localStorageをクリア
@@ -56,6 +76,9 @@ export function Header() {
               <DropdownMenuItem onClick={() => router.push("/profile")}>
                 <User className="w-4 h-4 mr-2" />
                 プロフィール設定
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/analytics")}>
+                アナリティクス
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
