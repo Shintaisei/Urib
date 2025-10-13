@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, asc, func
 from typing import List, Optional
@@ -272,8 +272,11 @@ def create_market_item(
     )
 
 @router.get("/items/{item_id}/comments", response_model=List[schemas.MarketItemCommentResponse])
-def get_item_comments(item_id: int, db: Session = Depends(database.get_db)):
+def get_item_comments(item_id: int, response: Response, db: Session = Depends(database.get_db)):
     comments = db.query(models.MarketItemComment).filter(models.MarketItemComment.item_id == item_id).order_by(models.MarketItemComment.created_at).all()
+    # 明示的にCORSヘッダーを付与（GETは認証不要のため*で許可）
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Vary"] = "Origin"
     return [
         schemas.MarketItemCommentResponse(
             id=c.id,
@@ -285,7 +288,7 @@ def get_item_comments(item_id: int, db: Session = Depends(database.get_db)):
     ]
 
 @router.post("/items/{item_id}/comments", response_model=schemas.MarketItemCommentResponse)
-def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, request: Request, db: Session = Depends(database.get_db)):
+def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, request: Request, response: Response, db: Session = Depends(database.get_db)):
     current_user_email = get_current_user_email(request)
     current_user = get_user_by_email(db, current_user_email)
     if not current_user:
@@ -303,6 +306,9 @@ def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, req
     db.add(comment)
     db.commit()
     db.refresh(comment)
+    # 明示的にCORSヘッダーを付与（POSTも許可、プリフライトはOPTIONSで対応）
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Vary"] = "Origin"
     return schemas.MarketItemCommentResponse(
         id=comment.id,
         item_id=comment.item_id,
@@ -310,6 +316,15 @@ def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, req
         author_name=comment.author_name,
         created_at=comment.created_at.isoformat()
     )
+
+# コメントエンドポイントのプリフライト対応
+@router.options("/items/{item_id}/comments")
+def options_item_comments(item_id: int, response: Response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Vary"] = "Origin"
+    return {}
 
 @router.put("/items/{item_id}", response_model=schemas.MarketItemResponse)
 def update_market_item(
