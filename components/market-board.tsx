@@ -151,8 +151,7 @@ export function MarketBoard() {
     if (searchQuery) {
       filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchQuery.toLowerCase())
+        item.description.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
 
@@ -162,9 +161,7 @@ export function MarketBoard() {
     }
 
     // その他のフィルター
-    if (filter.category) {
-      filtered = filtered.filter(item => item.category === filter.category)
-    }
+    // カテゴリは廃止
     if (filter.minPrice !== undefined) {
       filtered = filtered.filter(item => (item.price || 0) >= filter.minPrice!)
     }

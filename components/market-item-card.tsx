@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,8 +15,8 @@ import {
   MoreHorizontal
 } from "lucide-react"
 import { MarketItem } from "@/types"
-import { DMApi } from "@/lib/dm-api"
-import { MarketApi } from "@/lib/market-api"
+import { MarketApi, MarketCommentsApi, type MarketItemComment } from "@/lib/market-api"
+import { Textarea } from "@/components/ui/textarea"
 
 interface MarketItemCardProps {
   item: MarketItem
@@ -25,7 +25,9 @@ interface MarketItemCardProps {
 
 export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
   const [isLiking, setIsLiking] = useState(false)
-  const [isSendingDM, setIsSendingDM] = useState(false)
+  const [comments, setComments] = useState<MarketItemComment[]>([])
+  const [commentInput, setCommentInput] = useState("")
+  const [posting, setPosting] = useState(false)
 
   // 価格の表示フォーマット
   const formatPrice = (price?: number) => {
@@ -96,24 +98,34 @@ export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
     }
   }
 
-  // DM送信機能
-  const handleSendDM = async () => {
-    if (isSendingDM) return
-    setIsSendingDM(true)
+  // コメント取得/投稿
+  const fetchComments = async () => {
     try {
-      // モックデータとして適当なメールアドレスを使用
-      await DMApi.createConversation({ partner_email: "test@example.ac.jp" })
-      const shouldNavigate = window.confirm(
-        `DM会話を作成しました！\n\nDMページに移動してメッセージを送信しますか？`
-      )
-      if (shouldNavigate) {
-        window.location.href = '/dm'
-      }
-    } catch (error) {
-      console.error('DM送信エラー:', error)
-      alert('DMの送信に失敗しました。')
+      const list = await MarketCommentsApi.getItemComments(item.id)
+      setComments(list)
+    } catch (e) {
+      console.error('コメント取得エラー:', e)
+    }
+  }
+
+  useEffect(() => {
+    fetchComments()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handlePostComment = async () => {
+    const content = commentInput.trim()
+    if (!content || posting) return
+    setPosting(true)
+    try {
+      const created = await MarketCommentsApi.createItemComment(item.id, content)
+      setComments(prev => [...prev, created])
+      setCommentInput("")
+    } catch (e) {
+      console.error('コメント投稿エラー:', e)
+      alert('コメントの投稿に失敗しました')
     } finally {
-      setIsSendingDM(false)
+      setPosting(false)
     }
   }
 
@@ -226,34 +238,50 @@ export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
             </div>
           </div>
 
-          {/* アクションボタン */}
+          {/* アクションボタン（チャットを開く） */}
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              className="flex-1"
-              onClick={handleSendDM}
-              disabled={isSendingDM}
-            >
+            <Button size="sm" className="flex-1">
               <MessageCircle className="w-4 h-4 mr-1" />
-              {isSendingDM ? '送信中...' : '連絡する'}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="px-2"
-            >
-              <MoreHorizontal className="w-4 h-4" />
+              チャット
             </Button>
           </div>
 
           {/* 取引可能状態 */}
           {!item.is_available && (
             <div className="mt-2">
-              <Badge variant="destructive" className="text-xs">
-                取引済み
-              </Badge>
+              <Badge variant="destructive" className="text-xs">取引済み</Badge>
             </div>
           )}
+
+          {/* コメント（チャット） */}
+          <div className="mt-4 space-y-3">
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {comments.length === 0 ? (
+                <p className="text-xs text-muted-foreground">まだコメントはありません</p>
+              ) : (
+                comments.map((c) => (
+                  <div key={c.id} className="bg-muted/30 rounded p-2">
+                    <div className="text-xs text-muted-foreground mb-1">{c.author_name} ・ {new Date(c.created_at).toLocaleString('ja-JP')}</div>
+                    <div className="text-sm text-foreground whitespace-pre-wrap">{c.content}</div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="space-y-2">
+              <Textarea
+                placeholder="コメントを入力..."
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                className="min-h-[72px]"
+                maxLength={300}
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={handlePostComment} disabled={!commentInput.trim() || posting}>
+                  {posting ? '送信中...' : '送信'}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

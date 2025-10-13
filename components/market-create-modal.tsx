@@ -14,11 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { X, Upload, DollarSign, Gift, ShoppingCart } from "lucide-react"
-import { MarketItemType, MarketItemCreateRequest } from "@/types"
+import { MarketItemType, MarketItemCreate } from "@/types"
 
 interface MarketCreateModalProps {
   onClose: () => void
-  onSubmit: (item: MarketItemCreateRequest) => void
+  onSubmit: (item: MarketItemCreate) => void
 }
 
 export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps) {
@@ -28,8 +28,6 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
     type: "sell" as MarketItemType,
     price: "",
     condition: "good" as "new" | "like_new" | "good" | "fair" | "poor",
-    category: "",
-    contactMethod: "dm" as "dm" | "email" | "phone",
     images: [] as string[]
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -40,6 +38,30 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
       ...prev,
       [field]: value
     }))
+  }
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files) return
+    const picked: string[] = []
+    const limit = Math.min(3 - formData.images.length, files.length)
+    for (let i = 0; i < limit; i++) {
+      const f = files[i]
+      if (!f.type.startsWith('image/')) continue
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(f)
+      })
+      picked.push(dataUrl)
+    }
+    if (picked.length > 0) {
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...picked].slice(0, 3) }))
+    }
+  }
+
+  const removeImage = (idx: number) => {
+    setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))
   }
 
   // フォームの送信
@@ -56,10 +78,6 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
       alert("商品説明を入力してください")
       return
     }
-    if (!formData.category) {
-      alert("カテゴリを選択してください")
-      return
-    }
     if (formData.type !== "free" && !formData.price) {
       alert("価格を入力してください")
       return
@@ -68,20 +86,14 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
     setIsSubmitting(true)
     try {
       // モックデータとして現在のユーザー情報を使用
-      const newItem = {
+      const newItem: MarketItemCreate = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         type: formData.type,
         price: formData.type === "free" ? 0 : Number(formData.price),
         condition: formData.condition,
-        category: formData.category,
         images: formData.images,
-        author_id: "current_user",
-        author_email: "current@example.ac.jp",
-        author_name: "あなた",
-        university: "北海道大学",
-        contact_method: formData.contactMethod,
-        is_available: true
+        contact_method: 'dm'
       }
 
       onSubmit(newItem)
@@ -92,17 +104,6 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
       setIsSubmitting(false)
     }
   }
-
-  // カテゴリオプション
-  const categories = [
-    "教科書",
-    "電子機器",
-    "家具",
-    "衣類",
-    "スポーツ用品",
-    "楽器",
-    "その他"
-  ]
 
   // 商品状態オプション
   const conditions = [
@@ -214,27 +215,6 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
               </div>
             )}
 
-            {/* カテゴリ */}
-            <div className="space-y-2">
-              <Label htmlFor="category">カテゴリ *</Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) => updateFormData("category", value)}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="カテゴリを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* 商品状態 */}
             <div className="space-y-2">
               <Label htmlFor="condition">商品状態</Label>
@@ -255,32 +235,23 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
               </Select>
             </div>
 
-            {/* 連絡方法 */}
-            <div className="space-y-2">
-              <Label htmlFor="contactMethod">連絡方法</Label>
-              <Select
-                value={formData.contactMethod}
-                onValueChange={(value) => updateFormData("contactMethod", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dm">DM（推奨）</SelectItem>
-                  <SelectItem value="email">メール</SelectItem>
-                  <SelectItem value="phone">電話</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 画像アップロード（将来の実装用） */}
+            {/* 画像アップロード（最大3枚） */}
             <div className="space-y-2">
               <Label>商品画像</Label>
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  画像アップロード機能は準備中です
-                </p>
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center space-y-3">
+                <div className="text-xs text-muted-foreground">最大3枚までアップロードできます</div>
+                <Input type="file" accept="image/*" multiple onChange={(e) => handleFiles(e.target.files)} />
+                {formData.images.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {formData.images.map((src, idx) => (
+                      <div key={idx} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`img-${idx}`} className="w-full h-20 object-cover rounded" />
+                        <Button type="button" size="sm" variant="outline" className="absolute top-1 right-1 h-6 px-2 text-xs" onClick={() => removeImage(idx)}>削除</Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -80,26 +80,7 @@ export function MarketFilterPanel({ filter, onFilterChange, onClose }: MarketFil
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* カテゴリフィルター */}
-        <div className="space-y-2">
-          <Label htmlFor="category">カテゴリ</Label>
-          <Select
-            value={localFilter.category || ""}
-            onValueChange={(value) => updateFilter("category", value || undefined)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="カテゴリを選択" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">すべて</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* カテゴリフィルターは書籍前提のため削除 */}
 
         {/* 価格範囲フィルター */}
         <div className="space-y-2">
@@ -193,17 +174,12 @@ export function MarketFilterPanel({ filter, onFilterChange, onClose }: MarketFil
         </div>
 
         {/* 現在のフィルター表示 */}
-        {(localFilter.category || localFilter.minPrice !== undefined || localFilter.maxPrice !== undefined || localFilter.condition || localFilter.university) && (
+        {(localFilter.minPrice !== undefined || localFilter.maxPrice !== undefined || localFilter.condition || localFilter.university) && (
           <div className="pt-4 border-t">
             <Label className="text-xs text-muted-foreground mb-2 block">
               現在のフィルター
             </Label>
             <div className="space-y-1">
-              {localFilter.category && (
-                <div className="text-xs text-muted-foreground">
-                  カテゴリ: {localFilter.category}
-                </div>
-              )}
               {(localFilter.minPrice !== undefined || localFilter.maxPrice !== undefined) && (
                 <div className="text-xs text-muted-foreground">
                   価格: {localFilter.minPrice || 0}円 ～ {localFilter.maxPrice || "∞"}円
