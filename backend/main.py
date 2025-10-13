@@ -57,6 +57,7 @@ async def startup_event():
 # CORS設定（環境変数で制御）
 ENV = os.getenv("ENV", "development")
 ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
+ALLOWED_ORIGIN_REGEX_ENV = os.getenv("ALLOWED_ORIGIN_REGEX", "")
 
 if ENV == "production":
     # 本番環境：環境変数で指定されたオリジンのみ許可
@@ -68,9 +69,12 @@ if ENV == "production":
         print("⚠️  ALLOWED_ORIGINS環境変数が未設定です。デフォルト値を使用します。")
     
     print(f"✅ 本番環境モード - 許可されたオリジン: {origins}")
+    # vercelプレビューも許可するための正規表現（必要に応じて環境変数で上書き可能）
+    origin_regex = ALLOWED_ORIGIN_REGEX_ENV or r"https://.*\\.vercel\\.app"
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
+        allow_origin_regex=origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
