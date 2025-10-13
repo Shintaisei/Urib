@@ -15,7 +15,8 @@ import {
   MoreHorizontal
 } from "lucide-react"
 import { MarketItem } from "@/types"
-import { MarketApi, MarketCommentsApi, type MarketItemComment } from "@/lib/market-api"
+import { MarketApi, MarketCommentsApi, type MarketItemComment, deleteItemComment } from "@/lib/market-api"
+import { isAdminEmail } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
 
 interface MarketItemCardProps {
@@ -29,6 +30,10 @@ export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
   const [commentInput, setCommentInput] = useState("")
   const [posting, setPosting] = useState(false)
   // 管理者ボタンは非表示にする（依頼により）
+  const userEmail = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+  const userIdStr = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+  const myUserId = userIdStr ? parseInt(userIdStr, 10) : undefined
+  const isAdmin = isAdminEmail(userEmail || '')
 
   // 価格の表示フォーマット
   const formatPrice = (price?: number) => {
@@ -256,7 +261,23 @@ export function MarketItemCard({ item, onLike }: MarketItemCardProps) {
               ) : (
                 comments.map((c) => (
                   <div key={c.id} className="bg-muted/30 rounded p-2">
-                    <div className="text-xs text-muted-foreground mb-1">{c.author_name} ・ {new Date(c.created_at).toLocaleString('ja-JP')}</div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-muted-foreground">{c.author_name} ・ {new Date(c.created_at).toLocaleString('ja-JP')}</div>
+                      {(isAdmin || (myUserId && c.author_id === myUserId)) && (
+                        <button
+                          className="text-xs text-destructive hover:underline"
+                          onClick={async () => {
+                            if (!confirm('このコメントを削除しますか？')) return
+                            try {
+                              await deleteItemComment(item.id, c.id)
+                              setComments(prev => prev.filter(x => x.id !== c.id))
+                            } catch (e:any) {
+                              alert(e.message || '削除に失敗しました')
+                            }
+                          }}
+                        >削除</button>
+                      )}
+                    </div>
                     <div className="text-sm text-foreground whitespace-pre-wrap">{c.content}</div>
                   </div>
                 ))

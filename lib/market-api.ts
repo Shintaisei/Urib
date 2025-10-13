@@ -195,6 +195,7 @@ export const MarketApi = {
 export interface MarketItemComment {
   id: number
   item_id: number
+  author_id?: number
   content: string
   author_name: string
   created_at: string
@@ -224,6 +225,18 @@ export const createItemComment = async (itemId: string, content: string): Promis
 }
 
 export const MarketCommentsApi = { getItemComments, createItemComment }
+
+export const deleteItemComment = async (itemId: string, commentId: number): Promise<void> => {
+  const params = new URLSearchParams({ comment_id: String(commentId) })
+  const response = await fetch(`/api/market/comments/${itemId}?${params.toString()}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(data.detail || 'コメント削除に失敗しました')
+  }
+}
 
 // 管理者API
 export const adminCancelItem = async (itemId: string): Promise<void> => {

@@ -81,6 +81,7 @@ class MarketItemCommentCreate(BaseModel):
 class MarketItemCommentResponse(BaseModel):
     id: int
     item_id: int
+    author_id: Optional[int] = None
     content: str
     author_name: str
     created_at: str

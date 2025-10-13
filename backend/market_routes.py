@@ -297,7 +297,12 @@ def create_market_item(
 
 @router.get("/items/{item_id}/comments", response_model=List[schemas.MarketItemCommentResponse])
 def get_item_comments(item_id: int, response: Response, db: Session = Depends(database.get_db)):
-    comments = db.query(models.MarketItemComment).filter(models.MarketItemComment.item_id == item_id).order_by(models.MarketItemComment.created_at).all()
+    # テーブル存在エラー等を考慮して一度例外時にテーブル作成を試行
+    try:
+        comments = db.query(models.MarketItemComment).filter(models.MarketItemComment.item_id == item_id).order_by(models.MarketItemComment.created_at).all()
+    except Exception:
+        models.Base.metadata.create_all(bind=database.engine)
+        comments = db.query(models.MarketItemComment).filter(models.MarketItemComment.item_id == item_id).order_by(models.MarketItemComment.created_at).all()
     # 明示的にCORSヘッダーを付与（GETは認証不要のため*で許可）
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Vary"] = "Origin"
@@ -305,6 +310,7 @@ def get_item_comments(item_id: int, response: Response, db: Session = Depends(da
         schemas.MarketItemCommentResponse(
             id=c.id,
             item_id=c.item_id,
+            author_id=c.user_id,
             content=c.content,
             author_name=c.author_name,
             created_at=c.created_at.isoformat()
@@ -336,10 +342,31 @@ def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, req
     return schemas.MarketItemCommentResponse(
         id=comment.id,
         item_id=comment.item_id,
+        author_id=comment.user_id,
         content=comment.content,
         author_name=comment.author_name,
         created_at=comment.created_at.isoformat()
     )
+
+# コメント削除（本人/管理者）
+@router.delete("/items/{item_id}/comments/{comment_id}")
+def delete_item_comment(item_id: int, comment_id: int, request: Request, db: Session = Depends(database.get_db)):
+    email = get_current_user_email(request)
+    user = get_user_by_email(db, email)
+    comment = db.query(models.MarketItemComment).filter(
+        and_(
+            models.MarketItemComment.id == comment_id,
+            models.MarketItemComment.item_id == item_id
+        )
+    ).first()
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="コメントが見つかりません")
+    is_admin = bool(email and ADMIN_EMAIL_PATTERN.match(email.strip().lower()))
+    if not (is_admin or (user and user.id == comment.user_id)):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="削除権限がありません")
+    db.delete(comment)
+    db.commit()
+    return {"message": "コメントを削除しました"}
 
 # コメントエンドポイントのプリフライト対応
 @router.options("/items/{item_id}/comments")
