@@ -200,8 +200,9 @@ def create_market_item(
     # ユーザーの固定匿名名を取得または生成
     anonymous_name = get_or_create_anonymous_name(current_user, db)
     
-    # 画像をJSON文字列に変換
-    images_json = json.dumps(item_data.images) if item_data.images else None
+    # 画像は最大3枚
+    images = item_data.images[:3] if item_data.images else []
+    images_json = json.dumps(images) if images else None
     
     # 新しい商品を作成
     new_item = models.MarketItem(
@@ -210,7 +211,7 @@ def create_market_item(
         type=item_data.type,
         price=item_data.price,
         condition=item_data.condition,
-        category=item_data.category,
+        category=item_data.category or "書籍",
         images=images_json,
         author_id=current_user.id,
         author_name=anonymous_name,
@@ -223,7 +224,7 @@ def create_market_item(
     db.refresh(new_item)
     
     # レスポンス形式に変換
-    images = item_data.images or []
+    images = images
     
     return schemas.MarketItemResponse(
         id=str(new_item.id),
@@ -243,6 +244,46 @@ def create_market_item(
         view_count=new_item.view_count,
         like_count=new_item.like_count,
         is_liked=False
+    )
+
+@router.get("/items/{item_id}/comments", response_model=List[schemas.MarketItemCommentResponse])
+def get_item_comments(item_id: int, db: Session = Depends(database.get_db)):
+    comments = db.query(models.MarketItemComment).filter(models.MarketItemComment.item_id == item_id).order_by(models.MarketItemComment.created_at).all()
+    return [
+        schemas.MarketItemCommentResponse(
+            id=c.id,
+            item_id=c.item_id,
+            content=c.content,
+            author_name=c.author_name,
+            created_at=c.created_at.isoformat()
+        ) for c in comments
+    ]
+
+@router.post("/items/{item_id}/comments", response_model=schemas.MarketItemCommentResponse)
+def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, request: Request, db: Session = Depends(database.get_db)):
+    current_user_email = get_current_user_email(request)
+    current_user = get_user_by_email(db, current_user_email)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+    item = db.query(models.MarketItem).filter(models.MarketItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
+    author_name = get_or_create_anonymous_name(current_user, db)
+    comment = models.MarketItemComment(
+        item_id=item_id,
+        user_id=current_user.id,
+        author_name=author_name,
+        content=data.content.strip()
+    )
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    return schemas.MarketItemCommentResponse(
+        id=comment.id,
+        item_id=comment.item_id,
+        content=comment.content,
+        author_name=comment.author_name,
+        created_at=comment.created_at.isoformat()
     )
 
 @router.put("/items/{item_id}", response_model=schemas.MarketItemResponse)

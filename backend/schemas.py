@@ -34,7 +34,7 @@ class MarketItemCreate(BaseModel):
     type: str  # buy, sell, free
     price: Optional[int] = None
     condition: str  # new, like_new, good, fair, poor
-    category: str
+    category: Optional[str] = None  # 書籍前提のため省略可（サーバ側で既定値）
     images: List[str] = []
     contact_method: str  # dm, email, phone
 
@@ -73,6 +73,17 @@ class MarketStats(BaseModel):
     sell_items: int
     free_items: int
     categories: dict
+
+# 市場コメント
+class MarketItemCommentCreate(BaseModel):
+    content: str
+
+class MarketItemCommentResponse(BaseModel):
+    id: int
+    item_id: int
+    content: str
+    author_name: str
+    created_at: str
 
 # 掲示板投稿関連のスキーマ
 class BoardPostCreate(BaseModel):

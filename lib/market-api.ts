@@ -27,7 +27,7 @@ const getHeaders = () => {
 };
 
 // 市場商品の型定義
-import type { MarketItem, MarketItemCreateRequest } from '../types';
+import type { MarketItem, MarketItemCreate } from '../types';
 export interface MarketItemUpdate {
   title?: string
   description?: string
@@ -105,7 +105,7 @@ export const createMarketItem = async (itemData: MarketItemCreate): Promise<Mark
   const response = await fetch(`${API_BASE_URL}/market/items`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify(itemData),
+    body: JSON.stringify({ ...itemData, category: itemData.category || undefined }),
   });
 
   if (!response.ok) {
@@ -186,4 +186,37 @@ export const MarketApi = {
   setDevUserEmail,
   clearDevUserEmail,
 };
+
+// コメントAPI
+export interface MarketItemComment {
+  id: number
+  item_id: number
+  content: string
+  author_name: string
+  created_at: string
+}
+
+export const getItemComments = async (itemId: string): Promise<MarketItemComment[]> => {
+  const response = await fetch(`${API_BASE_URL}/market/items/${itemId}/comments`, {
+    method: 'GET',
+    headers: getHeaders(),
+  })
+  if (!response.ok) throw new Error('コメント取得に失敗しました')
+  return response.json()
+}
+
+export const createItemComment = async (itemId: string, content: string): Promise<MarketItemComment> => {
+  const response = await fetch(`${API_BASE_URL}/market/items/${itemId}/comments`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ content })
+  })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(data.detail || 'コメント投稿に失敗しました')
+  }
+  return response.json()
+}
+
+export const MarketCommentsApi = { getItemComments, createItemComment }
 
