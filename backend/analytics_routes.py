@@ -140,7 +140,7 @@ async def analytics_summary(request: Request, days: int = 7, db: Session = Depen
     ).join(models.BoardPost, models.BoardPost.author_id == models.User.id).filter(
         models.BoardPost.created_at >= since,
         or_(models.User.email == None, not_(models.User.email.like('master%@ac.jp')))
-    ).group_by(models.User.id).order_by(func.count(models.BoardPost.id).desc()).limit(10).all()
+    ).group_by(models.User.id, models.User.anonymous_name).order_by(func.count(models.BoardPost.id).desc()).limit(10).all()
 
     # イベント集計（管理者以外）
     events_count = db.query(models.AnalyticsEvent).filter(
