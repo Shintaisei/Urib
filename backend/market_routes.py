@@ -226,7 +226,7 @@ def create_market_item(
     anonymous_name = get_or_create_anonymous_name(current_user, db)
     
     # 画像は最大3枚 + 簡易バリデーション（拡張子/MIME相当）
-    allowed_ext = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".heic", ".heif", ".bmp"}
+    allowed_ext = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
     images = item_data.images[:3] if item_data.images else []
     # DataURLが来る想定のため、拡張子チェックは限定的（先頭のMIMEを推定）
     validated: list[str] = []

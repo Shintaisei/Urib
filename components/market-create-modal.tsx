@@ -43,16 +43,12 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
   const handleFiles = async (files: FileList | null) => {
     if (!files) return
     const picked: string[] = []
-    const allowedExt = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".heic", ".heif", ".bmp"]
+    const allowedExt = [".jpg", ".jpeg", ".png", ".webp", ".gif"]
     const allowedMime = [
       "image/jpeg",
       "image/png",
       "image/webp",
       "image/gif",
-      "image/avif",
-      "image/heic",
-      "image/heif",
-      "image/bmp",
     ]
     const maxSizeBytes = 5 * 1024 * 1024 // 5MB/枚
     const limit = Math.min(3 - formData.images.length, files.length)
@@ -269,9 +265,9 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center space-y-3">
                 <div className="text-xs text-muted-foreground space-y-1">
                   <div>最大3枚までアップロードできます（各5MBまで）</div>
-                  <div>対応形式: JPG/JPEG, PNG, WEBP, GIF, AVIF, HEIC/HEIF, BMP</div>
+                  <div>対応形式: JPG/JPEG, PNG, WEBP, GIF</div>
                 </div>
-                <Input type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.heic,.heif,.bmp" multiple onChange={(e) => handleFiles(e.target.files)} />
+                <Input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" multiple onChange={(e) => handleFiles(e.target.files)} />
                 {formData.images.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
                     {formData.images.map((src, idx) => (
