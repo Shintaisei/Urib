@@ -157,8 +157,11 @@ async def analytics_summary(request: Request, days: int = 7, db: Session = Depen
     ).group_by(models.AnalyticsEvent.event_name).order_by(func.count(models.AnalyticsEvent.id).desc()).limit(10).all()
 
     # 時間帯分布（0-23h）: 方言差を吸収
-    dialect = getattr(getattr(db, 'bind', None), 'dialect', None)
-    dialect_name = getattr(dialect, 'name', 'sqlite')
+    # エンジンから確実に方言名を取得（セッション.bindがNoneの場合があるため）
+    try:
+        dialect_name = getattr(getattr(database.engine, 'dialect', None), 'name', 'sqlite')
+    except Exception:
+        dialect_name = 'sqlite'
     hour_expr = func.strftime('%H', models.PageView.created_at) if dialect_name == 'sqlite' else extract('hour', models.PageView.created_at)
     h_col = hour_expr.label('h')
     hourly = db.query(
