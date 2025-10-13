@@ -225,8 +225,32 @@ def create_market_item(
     # ユーザーの固定匿名名を取得または生成
     anonymous_name = get_or_create_anonymous_name(current_user, db)
     
-    # 画像は最大3枚
+    # 画像は最大3枚 + 簡易バリデーション（拡張子/MIME相当）
+    allowed_ext = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".heic", ".heif", ".bmp"}
     images = item_data.images[:3] if item_data.images else []
+    # DataURLが来る想定のため、拡張子チェックは限定的（先頭のMIMEを推定）
+    validated: list[str] = []
+    for url in images:
+        if url.startswith("data:image/"):
+            # data:image/png;base64,... から拡張子相当を抽出
+            try:
+                mime = url.split(";")[0].split(":",1)[1]  # image/png
+                ext = "." + mime.split("/")[1]
+            except Exception:
+                ext = ""
+        else:
+            # URL/ファイル名から拡張子を抽出
+            lower = url.lower()
+            ext = None
+            for e in allowed_ext:
+                if lower.endswith(e):
+                    ext = e
+                    break
+            if ext is None:
+                ext = ""
+        if ext in allowed_ext:
+            validated.append(url)
+    images = validated[:3]
     images_json = json.dumps(images) if images else None
     
     # 新しい商品を作成

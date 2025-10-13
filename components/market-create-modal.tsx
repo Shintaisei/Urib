@@ -43,10 +43,35 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
   const handleFiles = async (files: FileList | null) => {
     if (!files) return
     const picked: string[] = []
+    const allowedExt = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif", ".heic", ".heif", ".bmp"]
+    const allowedMime = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/avif",
+      "image/heic",
+      "image/heif",
+      "image/bmp",
+    ]
+    const maxSizeBytes = 5 * 1024 * 1024 // 5MB/枚
     const limit = Math.min(3 - formData.images.length, files.length)
+    const errors: string[] = []
     for (let i = 0; i < limit; i++) {
       const f = files[i]
-      if (!f.type.startsWith('image/')) continue
+      const ext = `.${f.name.split('.').pop()?.toLowerCase() || ''}`
+      if (!allowedMime.includes(f.type) && !allowedExt.includes(ext)) {
+        errors.push(`${f.name}: 未対応の形式です`)
+        continue
+      }
+      if (f.size > maxSizeBytes) {
+        errors.push(`${f.name}: 5MBを超えています`)
+        continue
+      }
+      if (!f.type.startsWith('image/')) {
+        errors.push(`${f.name}: 画像ではありません`)
+        continue
+      }
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => resolve(reader.result as string)
@@ -57,6 +82,9 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
     }
     if (picked.length > 0) {
       setFormData(prev => ({ ...prev, images: [...prev.images, ...picked].slice(0, 3) }))
+    }
+    if (errors.length > 0) {
+      alert(`一部の画像を追加できませんでした:\n- ${errors.join('\n- ')}`)
     }
   }
 
@@ -239,8 +267,11 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
             <div className="space-y-2">
               <Label>商品画像</Label>
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center space-y-3">
-                <div className="text-xs text-muted-foreground">最大3枚までアップロードできます</div>
-                <Input type="file" accept="image/*" multiple onChange={(e) => handleFiles(e.target.files)} />
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>最大3枚までアップロードできます（各5MBまで）</div>
+                  <div>対応形式: JPG/JPEG, PNG, WEBP, GIF, AVIF, HEIC/HEIF, BMP</div>
+                </div>
+                <Input type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.heic,.heif,.bmp" multiple onChange={(e) => handleFiles(e.target.files)} />
                 {formData.images.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
                     {formData.images.map((src, idx) => (
