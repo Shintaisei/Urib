@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, not_, or_, extract
 from typing import Optional
@@ -95,89 +96,95 @@ async def track_event(request: Request, db: Session = Depends(database.get_db)):
 @router.get("/summary")
 async def analytics_summary(request: Request, days: int = 7, db: Session = Depends(database.get_db)):
     """管理者専用: 直近days日分のPVと投稿動向（管理者以外）を返す。"""
-    # 管理者チェック（X-User-Id または X-Dev-Email）
-    user_id = request.headers.get("X-User-Id")
-    dev_email = request.headers.get("X-Dev-Email")
-
-    email = None
-    if dev_email:
-        email = dev_email.strip().lower()
-    elif user_id:
-        try:
-            uid = int(user_id)
-        except:
-            uid = None
-        if uid:
-            user = db.query(models.User).filter(models.User.id == uid).first()
-            email = (user.email or "").strip().lower() if user else None
-
-    if not is_admin_email(email):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが閲覧できます")
-
-    # 期間フィルタ
-    from datetime import timedelta
-    since = models.jst_now() - timedelta(days=days)
-
-    # PV合計（管理者以外: master%@ac.jp を除外）
-    pv_count = db.query(models.PageView).filter(
-        models.PageView.created_at >= since,
-        or_(models.PageView.email == None, not_(models.PageView.email.like('master%@ac.jp')))
-    ).count()
-
-    # パス別PVトップ
-    top_paths = db.query(
-        models.PageView.path,
-        func.count(models.PageView.id)
-    ).filter(
-        models.PageView.created_at >= since,
-        or_(models.PageView.email == None, not_(models.PageView.email.like('master%@ac.jp')))
-    ).group_by(models.PageView.path).order_by(func.count(models.PageView.id).desc()).limit(10).all()
-
-    # 投稿多いユーザー（管理者以外）
-    top_posters = db.query(
-        models.User.anonymous_name,
-        func.count(models.BoardPost.id)
-    ).join(models.BoardPost, models.BoardPost.author_id == models.User.id).filter(
-        models.BoardPost.created_at >= since,
-        or_(models.User.email == None, not_(models.User.email.like('master%@ac.jp')))
-    ).group_by(models.User.id, models.User.anonymous_name).order_by(func.count(models.BoardPost.id).desc()).limit(10).all()
-
-    # イベント集計（管理者以外）
-    events_count = db.query(models.AnalyticsEvent).filter(
-        models.AnalyticsEvent.created_at >= since,
-        or_(models.AnalyticsEvent.email == None, not_(models.AnalyticsEvent.email.like('master%@ac.jp')))
-    ).count()
-
-    top_events = db.query(
-        models.AnalyticsEvent.event_name,
-        func.count(models.AnalyticsEvent.id)
-    ).filter(
-        models.AnalyticsEvent.created_at >= since,
-        or_(models.AnalyticsEvent.email == None, not_(models.AnalyticsEvent.email.like('master%@ac.jp')))
-    ).group_by(models.AnalyticsEvent.event_name).order_by(func.count(models.AnalyticsEvent.id).desc()).limit(10).all()
-
-    # 時間帯分布（0-23h）: 方言差を吸収
-    # エンジンから確実に方言名を取得（セッション.bindがNoneの場合があるため）
     try:
-        dialect_name = getattr(getattr(database.engine, 'dialect', None), 'name', 'sqlite')
-    except Exception:
-        dialect_name = 'sqlite'
-    hour_expr = func.strftime('%H', models.PageView.created_at) if dialect_name == 'sqlite' else extract('hour', models.PageView.created_at)
-    h_col = hour_expr.label('h')
-    hourly = db.query(
-        h_col,
-        func.count(models.PageView.id)
-    ).filter(
-        models.PageView.created_at >= since,
-        or_(models.PageView.email == None, not_(models.PageView.email.like('master%@ac.jp')))
-    ).group_by(hour_expr).order_by(hour_expr).all()
+        # 管理者チェック（X-User-Id または X-Dev-Email）
+        user_id = request.headers.get("X-User-Id")
+        dev_email = request.headers.get("X-Dev-Email")
 
-    return {
-        "pv_count": pv_count,
-        "top_paths": [{"path": p, "count": c} for p, c in top_paths],
-        "top_posters": [{"anonymous_name": n, "count": c} for n, c in top_posters],
-        "events_count": events_count,
-        "top_events": [{"event_name": n, "count": c} for n, c in top_events],
-        "hourly": [{"hour": int((h or '0')), "count": c} for h, c in hourly],
-        "since": since.isoformat()
-    }
+        email = None
+        if dev_email:
+            email = dev_email.strip().lower()
+        elif user_id:
+            try:
+                uid = int(user_id)
+            except:
+                uid = None
+            if uid:
+                user = db.query(models.User).filter(models.User.id == uid).first()
+                email = (user.email or "").strip().lower() if user else None
+
+        if not is_admin_email(email):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが閲覧できます")
+
+        # 期間フィルタ
+        from datetime import timedelta
+        since = models.jst_now() - timedelta(days=days)
+
+        # PV合計（管理者以外: master%@ac.jp を除外）
+        pv_count = db.query(models.PageView).filter(
+            models.PageView.created_at >= since,
+            or_(models.PageView.email == None, not_(models.PageView.email.like('master%@ac.jp')))
+        ).count()
+
+        # パス別PVトップ
+        top_paths = db.query(
+            models.PageView.path,
+            func.count(models.PageView.id)
+        ).filter(
+            models.PageView.created_at >= since,
+            or_(models.PageView.email == None, not_(models.PageView.email.like('master%@ac.jp')))
+        ).group_by(models.PageView.path).order_by(func.count(models.PageView.id).desc()).limit(10).all()
+
+        # 投稿多いユーザー（管理者以外）
+        top_posters = db.query(
+            models.User.anonymous_name,
+            func.count(models.BoardPost.id)
+        ).join(models.BoardPost, models.BoardPost.author_id == models.User.id).filter(
+            models.BoardPost.created_at >= since,
+            or_(models.User.email == None, not_(models.User.email.like('master%@ac.jp')))
+        ).group_by(models.User.id, models.User.anonymous_name).order_by(func.count(models.BoardPost.id).desc()).limit(10).all()
+
+        # イベント集計（管理者以外）
+        events_count = db.query(models.AnalyticsEvent).filter(
+            models.AnalyticsEvent.created_at >= since,
+            or_(models.AnalyticsEvent.email == None, not_(models.AnalyticsEvent.email.like('master%@ac.jp')))
+        ).count()
+
+        top_events = db.query(
+            models.AnalyticsEvent.event_name,
+            func.count(models.AnalyticsEvent.id)
+        ).filter(
+            models.AnalyticsEvent.created_at >= since,
+            or_(models.AnalyticsEvent.email == None, not_(models.AnalyticsEvent.email.like('master%@ac.jp')))
+        ).group_by(models.AnalyticsEvent.event_name).order_by(func.count(models.AnalyticsEvent.id).desc()).limit(10).all()
+
+        # 時間帯分布（0-23h）: 方言差を吸収
+        # エンジンから確実に方言名を取得
+        try:
+            dialect_name = getattr(getattr(database.engine, 'dialect', None), 'name', 'sqlite')
+        except Exception:
+            dialect_name = 'sqlite'
+        hour_expr = func.strftime('%H', models.PageView.created_at) if dialect_name == 'sqlite' else extract('hour', models.PageView.created_at)
+        h_col = hour_expr.label('h')
+        hourly = db.query(
+            h_col,
+            func.count(models.PageView.id)
+        ).filter(
+            models.PageView.created_at >= since,
+            or_(models.PageView.email == None, not_(models.PageView.email.like('master%@ac.jp')))
+        ).group_by(hour_expr).order_by(hour_expr).all()
+
+        return {
+            "pv_count": pv_count,
+            "top_paths": [{"path": p, "count": c} for p, c in top_paths],
+            "top_posters": [{"anonymous_name": n, "count": c} for n, c in top_posters],
+            "events_count": events_count,
+            "top_events": [{"event_name": n, "count": c} for n, c in top_events],
+            "hourly": [{"hour": int((h or '0')), "count": c} for h, c in hourly],
+            "since": since.isoformat()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        # 一時的にエラーの内容を返す（本番障害調査用）
+        return JSONResponse(status_code=500, content={"detail": "internal_error", "error": str(e)})
