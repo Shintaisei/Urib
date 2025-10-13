@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { School, Shield, Bell, Eye, Save, Check } from "lucide-react"
+import { isAdminEmail } from "@/lib/utils"
 
 export function ProfileSettings() {
   const [nickname, setNickname] = useState("匿名ユーザー #A1B2")
@@ -16,6 +17,17 @@ export function ProfileSettings() {
   const [showOnlineStatus, setShowOnlineStatus] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
+  const [email, setEmail] = useState("")
+  const [university, setUniversity] = useState("")
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const storedEmail = typeof window !== 'undefined' ? (localStorage.getItem('user_email') || '') : ''
+    const storedUniversity = typeof window !== 'undefined' ? (localStorage.getItem('university') || '') : ''
+    setEmail(storedEmail)
+    setUniversity(storedUniversity)
+    setIsAdmin(isAdminEmail(storedEmail))
+  }, [])
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -42,8 +54,13 @@ export function ProfileSettings() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
             <div>
-              <p className="font-medium text-foreground">東京大学</p>
-              <p className="text-sm text-muted-foreground">user@s.u-tokyo.ac.jp</p>
+              <p className="font-medium text-foreground">{university || '大学未設定'}</p>
+              {isAdmin && (
+                <p className="text-xs text-primary mb-1">管理者アカウント</p>
+              )}
+              {isAdmin && email && (
+                <p className="text-sm text-muted-foreground">{email}</p>
+              )}
             </div>
             <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
               <Shield className="w-3 h-3 mr-1" />
