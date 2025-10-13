@@ -310,7 +310,7 @@ def get_item_comments(item_id: int, response: Response, db: Session = Depends(da
         schemas.MarketItemCommentResponse(
             id=c.id,
             item_id=c.item_id,
-            author_id=c.user_id,
+            author_id=c.author_id,
             content=c.content,
             author_name=c.author_name,
             created_at=c.created_at.isoformat()
@@ -329,7 +329,7 @@ def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, req
     author_name = get_or_create_anonymous_name(current_user, db)
     comment = models.MarketItemComment(
         item_id=item_id,
-        user_id=current_user.id,
+        author_id=current_user.id,
         author_name=author_name,
         content=data.content.strip()
     )
@@ -342,7 +342,7 @@ def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, req
     return schemas.MarketItemCommentResponse(
         id=comment.id,
         item_id=comment.item_id,
-        author_id=comment.user_id,
+        author_id=comment.author_id,
         content=comment.content,
         author_name=comment.author_name,
         created_at=comment.created_at.isoformat()
@@ -362,7 +362,7 @@ def delete_item_comment(item_id: int, comment_id: int, request: Request, db: Ses
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="コメントが見つかりません")
     is_admin = bool(email and ADMIN_EMAIL_PATTERN.match(email.strip().lower()))
-    if not (is_admin or (user and user.id == comment.user_id)):
+    if not (is_admin or (user and user.id == comment.author_id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="削除権限がありません")
     db.delete(comment)
     db.commit()

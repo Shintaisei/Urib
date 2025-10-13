@@ -88,6 +88,23 @@ class MarketItemLike(Base):
     item = relationship("MarketItem", back_populates="likes")
     user = relationship("User", back_populates="market_likes")
 
+# 書籍売買: コメント
+class MarketItemComment(Base):
+    __tablename__ = "market_item_comments"
+    __table_args__ = (
+        Index('idx_market_item_comments_item_created', 'item_id', 'created_at'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("market_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_name = Column(String(100), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
+    item = relationship("MarketItem", backref="comments")
+    user = relationship("User")
+
 # 掲示板投稿テーブル
 class BoardPost(Base):
     __tablename__ = "board_posts"
