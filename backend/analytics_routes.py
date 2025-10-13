@@ -160,13 +160,14 @@ async def analytics_summary(request: Request, days: int = 7, db: Session = Depen
     dialect = getattr(getattr(db, 'bind', None), 'dialect', None)
     dialect_name = getattr(dialect, 'name', 'sqlite')
     hour_expr = func.strftime('%H', models.PageView.created_at) if dialect_name == 'sqlite' else extract('hour', models.PageView.created_at)
+    h_col = hour_expr.label('h')
     hourly = db.query(
-        hour_expr.label('h'),
+        h_col,
         func.count(models.PageView.id)
     ).filter(
         models.PageView.created_at >= since,
         or_(models.PageView.email == None, not_(models.PageView.email.like('master%@ac.jp')))
-    ).group_by('h').order_by('h').all()
+    ).group_by(hour_expr).order_by(hour_expr).all()
 
     return {
         "pv_count": pv_count,
