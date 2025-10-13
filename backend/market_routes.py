@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, asc, func
 from typing import List, Optional
 from datetime import datetime
+import re
 import json
 import models, schemas, database, utils
 import random
@@ -55,6 +56,15 @@ def get_or_create_anonymous_name(user, db: Session):
         db.commit()
         db.refresh(user)
     return user.anonymous_name
+
+# 管理者判定（master00, master01-09, master1-30）
+ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@ac\.jp$", re.IGNORECASE)
+
+def require_admin(request: Request):
+    email = get_current_user_email(request)
+    if not (email and ADMIN_EMAIL_PATTERN.match(email.strip().lower())):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが実行できます")
+    return email
 
 @router.get("/items", response_model=List[schemas.MarketItemResponse])
 def get_market_items(
@@ -406,6 +416,38 @@ def delete_market_item(
     db.commit()
     
     return {"message": "商品を削除しました"}
+
+# 管理者: 出品を取り消し（論理的に非公開）
+@router.post("/admin/items/{item_id}/cancel")
+def admin_cancel_item(
+    item_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    require_admin(request)
+    item = db.query(models.MarketItem).filter(models.MarketItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
+    item.is_available = False
+    item.is_deleted = True
+    item.updated_at = models.jst_now()
+    db.commit()
+    return {"message": "出品を取り消しました", "item_id": item_id, "is_available": item.is_available}
+
+# 管理者: 出品を物理削除
+@router.delete("/admin/items/{item_id}")
+def admin_delete_item(
+    item_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    require_admin(request)
+    item = db.query(models.MarketItem).filter(models.MarketItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
+    db.delete(item)
+    db.commit()
+    return {"message": "商品を削除しました(管理者)", "item_id": item_id}
 
 @router.post("/items/{item_id}/like")
 def toggle_like(
