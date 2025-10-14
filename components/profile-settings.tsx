@@ -152,7 +152,7 @@ export function ProfileSettings() {
                 try {
                   const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
                   const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
-                  const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000') + '/users/me', {
+                  const res = await fetch('/api/profile/delete', {
                     method: 'DELETE',
                     headers: {
                       ...(userId ? { 'X-User-Id': userId } : {}),
