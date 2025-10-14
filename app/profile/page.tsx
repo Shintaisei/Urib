@@ -1,7 +1,29 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { ProfileSettings } from "@/components/profile-settings"
+import { isAdminEmail } from "@/lib/utils"
 
 export default function ProfilePage() {
+  const router = useRouter()
+  const [ready, setReady] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+    const ok = isAdminEmail(email || '')
+    setIsAdmin(ok)
+    if (!ok) {
+      router.replace('/')
+    }
+    setReady(true)
+  }, [router])
+
+  if (!ready) return null
+  if (!isAdmin) return null
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
