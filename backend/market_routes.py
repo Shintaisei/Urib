@@ -388,15 +388,15 @@ def toggle_comment_like(item_id: int, comment_id: int, request: Request, db: Ses
     else:
         db.add(models.MarketItemCommentLike(comment_id=comment_id, user_id=current_user.id))
         is_liked = True
-        # 通知: コメント作者にいいね通知
+        # 通知: コメント作者にいいね通知（遷移先の都合で item に紐づけ）
         try:
             if comment.author_id and comment.author_id != current_user.id:
                 notif = models.Notification(
                     user_id=comment.author_id,
                     actor_id=current_user.id,
                     type="market_comment_liked",
-                    entity_type="market_item_comment",
-                    entity_id=comment.id,
+                    entity_type="market_item",
+                    entity_id=comment.item_id,
                     title="あなたのコメントがいいねされました",
                     message=comment.content[:120]
                 )

@@ -64,11 +64,13 @@ export function NotificationsList({ inline = false }: { inline?: boolean }) {
   }
 
   const navigate = (n: NotificationItem) => {
-    // board_post => /board/{post_id}, market_item => /market（将来詳細へ）
     if (n.entity_type === 'board_post') {
       router.push(`/board/${n.entity_id}`)
+    } else if (n.entity_type === 'market_item') {
+      // マーケット詳細未実装のため、ホームのマーケットタブへスクロール用ハッシュで遷移
+      router.push(`/home#market-${n.entity_id}`)
     } else {
-      router.push(`/home`) // ひとまずホーム or マーケット一覧へ
+      router.push(`/home`)
     }
   }
 
