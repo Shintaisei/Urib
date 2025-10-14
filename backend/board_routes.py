@@ -555,6 +555,23 @@ def create_reply(
     db.commit()
     db.refresh(new_reply)
     
+    # 通知: 投稿者に「返信がつきました」
+    try:
+        if post.author_id and post.author_id != current_user.id:
+            notif = models.Notification(
+                user_id=post.author_id,
+                actor_id=current_user.id,
+                type="post_replied",
+                entity_type="board_post",
+                entity_id=post.id,
+                title="あなたの投稿に返信がありました",
+                message=new_reply.content[:120]
+            )
+            db.add(notif)
+            db.commit()
+    except Exception:
+        pass
+
     return schemas.BoardReplyResponse(
         id=new_reply.id,
         post_id=new_reply.post_id,
@@ -623,6 +640,23 @@ def toggle_reply_like(
     
     db.commit()
     
+    # 通知: 返信の作者に「いいねされました」
+    try:
+        if reply.author_id and reply.author_id != current_user.id:
+            notif = models.Notification(
+                user_id=reply.author_id,
+                actor_id=current_user.id,
+                type="reply_liked",
+                entity_type="board_reply",
+                entity_id=reply.id,
+                title="あなたの返信がいいねされました",
+                message=reply.content[:120]
+            )
+            db.add(notif)
+            db.commit()
+    except Exception:
+        pass
+
     return {
         "message": "いいねを更新しました",
         "is_liked": is_liked,

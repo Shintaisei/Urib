@@ -86,6 +86,16 @@ class MarketItemCommentResponse(BaseModel):
     author_name: str
     created_at: str
 
+class NotificationResponse(BaseModel):
+    id: int
+    type: str
+    title: Optional[str] = None
+    message: Optional[str] = None
+    entity_type: str
+    entity_id: int
+    is_read: bool
+    created_at: str
+
 # 掲示板投稿関連のスキーマ
 class BoardPostCreate(BaseModel):
     board_id: str

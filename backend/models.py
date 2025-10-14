@@ -105,6 +105,19 @@ class MarketItemComment(Base):
     item = relationship("MarketItem", backref="comments")
     user = relationship("User")
 
+# 書籍売買: コメントいいね
+class MarketItemCommentLike(Base):
+    __tablename__ = "market_item_comment_likes"
+    __table_args__ = (
+        UniqueConstraint('comment_id', 'user_id', name='uq_market_item_comment_user'),
+        Index('idx_market_item_comment_likes_composite', 'comment_id', 'user_id'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    comment_id = Column(Integer, ForeignKey("market_item_comments.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
 # 掲示板投稿テーブル
 class BoardPost(Base):
     __tablename__ = "board_posts"
@@ -191,6 +204,28 @@ class BoardReplyLike(Base):
     # リレーション
     reply = relationship("BoardReply", back_populates="likes")
     user = relationship("User", backref="board_reply_likes")
+
+# 通知
+class Notification(Base):
+    __tablename__ = "notifications"
+    __table_args__ = (
+        Index('idx_notifications_user_created', 'user_id', 'created_at'),
+        Index('idx_notifications_read', 'user_id', 'is_read'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)  # 受信者
+    actor_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)  # 行為者
+    type = Column(String(50), nullable=False)  # 'post_replied' | 'reply_liked' | 'market_comment_added' | 'market_comment_liked'
+    entity_type = Column(String(50), nullable=False)  # 'board_post' | 'board_reply' | 'market_item_comment' | 'market_item'
+    entity_id = Column(Integer, nullable=False)
+    title = Column(String(200), nullable=True)
+    message = Column(Text, nullable=True)
+    is_read = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
+    user = relationship("User", foreign_keys=[user_id])
+    actor = relationship("User", foreign_keys=[actor_id])
 
 # シンプルなページビューの記録テーブル（アナリティクス用）
 class PageView(Base):

@@ -339,6 +339,22 @@ def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, req
     db.add(comment)
     db.commit()
     db.refresh(comment)
+    # 通知: 出品者にコメント通知
+    try:
+        if item.author_id and item.author_id != current_user.id:
+            notif = models.Notification(
+                user_id=item.author_id,
+                actor_id=current_user.id,
+                type="market_comment_added",
+                entity_type="market_item",
+                entity_id=item.id,
+                title="あなたの出品にコメントがありました",
+                message=comment.content[:120]
+            )
+            db.add(notif)
+            db.commit()
+    except Exception:
+        pass
     # 明示的にCORSヘッダーを付与（POSTも許可、プリフライトはOPTIONSで対応）
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Vary"] = "Origin"
@@ -350,6 +366,78 @@ def create_item_comment(item_id: int, data: schemas.MarketItemCommentCreate, req
         author_name=comment.author_name,
         created_at=comment.created_at.isoformat()
     )
+
+@router.post("/items/{item_id}/comments/{comment_id}/like")
+def toggle_comment_like(item_id: int, comment_id: int, request: Request, db: Session = Depends(database.get_db)):
+    current_user_email = get_current_user_email(request)
+    current_user = get_user_by_email(db, current_user_email)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+    comment = db.query(models.MarketItemComment).filter(models.MarketItemComment.id == comment_id, models.MarketItemComment.item_id == item_id).first()
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="コメントが見つかりません")
+    existing = db.query(models.MarketItemCommentLike).filter(
+        and_(
+            models.MarketItemCommentLike.comment_id == comment_id,
+            models.MarketItemCommentLike.user_id == current_user.id
+        )
+    ).first()
+    if existing:
+        db.delete(existing)
+        is_liked = False
+    else:
+        db.add(models.MarketItemCommentLike(comment_id=comment_id, user_id=current_user.id))
+        is_liked = True
+        # 通知: コメント作者にいいね通知
+        try:
+            if comment.author_id and comment.author_id != current_user.id:
+                notif = models.Notification(
+                    user_id=comment.author_id,
+                    actor_id=current_user.id,
+                    type="market_comment_liked",
+                    entity_type="market_item_comment",
+                    entity_id=comment.id,
+                    title="あなたのコメントがいいねされました",
+                    message=comment.content[:120]
+                )
+                db.add(notif)
+        except Exception:
+            pass
+    db.commit()
+    return {"message": "ok", "is_liked": is_liked}
+
+@router.get("/notifications", response_model=List[schemas.NotificationResponse])
+def get_notifications(request: Request, db: Session = Depends(database.get_db)):
+    current_user_email = get_current_user_email(request)
+    current_user = get_user_by_email(db, current_user_email)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+    notifs = db.query(models.Notification).filter(models.Notification.user_id == current_user.id).order_by(desc(models.Notification.created_at)).limit(50).all()
+    return [
+        schemas.NotificationResponse(
+            id=n.id,
+            type=n.type,
+            title=n.title,
+            message=n.message,
+            entity_type=n.entity_type,
+            entity_id=n.entity_id,
+            is_read=n.is_read,
+            created_at=n.created_at.isoformat()
+        ) for n in notifs
+    ]
+
+@router.post("/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: int, request: Request, db: Session = Depends(database.get_db)):
+    current_user_email = get_current_user_email(request)
+    current_user = get_user_by_email(db, current_user_email)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+    notif = db.query(models.Notification).filter(models.Notification.id == notification_id, models.Notification.user_id == current_user.id).first()
+    if not notif:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="通知が見つかりません")
+    notif.is_read = True
+    db.commit()
+    return {"message": "read"}
 
 # コメント削除（本人/管理者）
 @router.delete("/items/{item_id}/comments/{comment_id}")

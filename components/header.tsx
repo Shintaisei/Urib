@@ -1,6 +1,6 @@
 "use client"
 
-import { GraduationCap, MessageCircle, User, LogOut } from "lucide-react"
+import { GraduationCap, MessageCircle, User, LogOut, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -12,12 +12,13 @@ import {
 import { SearchDialog } from "@/components/search-dialog"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export function Header() {
   const router = useRouter()
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     const already = sessionStorage.getItem('pv_tracked')
@@ -34,6 +35,29 @@ export function Header() {
       body: JSON.stringify({ path: typeof window !== 'undefined' ? window.location.pathname : '/' })
     }).catch(() => {})
     sessionStorage.setItem('pv_tracked', '1')
+  }, [])
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+        const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+        const res = await fetch(`${API_BASE_URL}/market/notifications`, {
+          headers: {
+            ...(userId ? { 'X-User-Id': userId } : {}),
+            ...(email ? { 'X-Dev-Email': email } : {}),
+          },
+          cache: 'no-store'
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        const unread = Array.isArray(data) ? data.filter((n:any) => !n.is_read).length : 0
+        setUnreadCount(unread)
+      } catch {}
+    }
+    fetchNotifications()
+    const id = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(id)
   }, [])
 
   const handleLogout = () => {
@@ -57,6 +81,12 @@ export function Header() {
 
         <nav className="flex items-center space-x-4">
           <SearchDialog />
+          <Button variant="ghost" size="sm" className="relative text-muted-foreground hover:text-foreground" onClick={() => router.push('/notifications')}>
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+            )}
+          </Button>
           
           <Link href="/dm">
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
