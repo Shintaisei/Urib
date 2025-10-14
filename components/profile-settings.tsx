@@ -73,21 +73,21 @@ export function ProfileSettings() {
       {/* Anonymous Settings */}
       <Card>
         <CardHeader>
-          <CardTitle>匿名設定</CardTitle>
-          <CardDescription>匿名での表示に関する設定</CardDescription>
+          <CardTitle>プロフィール設定</CardTitle>
+          <CardDescription>表示名に関する設定</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nickname">匿名ニックネーム</Label>
+            <Label htmlFor="nickname">表示名</Label>
             <Input
               id="nickname"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="匿名ユーザー #A1B2"
+              placeholder="表示名を入力"
               maxLength={20}
             />
             <p className="text-xs text-muted-foreground">
-              他のユーザーに表示される匿名の名前です。いつでも変更できます。
+              他のユーザーに表示される名前です。いつでも変更できます。
             </p>
           </div>
 
@@ -143,6 +143,35 @@ export function ProfileSettings() {
             <Button
               variant="outline"
               className="w-full justify-start text-destructive hover:text-destructive bg-transparent"
+              onClick={async () => {
+                if (!isAdmin) {
+                  alert('この操作は管理者のみが実行できます')
+                  return
+                }
+                if (!confirm('アカウントを削除します。よろしいですか？\nこの操作は取り消せません。')) return
+                try {
+                  const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+                  const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+                  const res = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000') + '/users/me', {
+                    method: 'DELETE',
+                    headers: {
+                      ...(userId ? { 'X-User-Id': userId } : {}),
+                      ...(email ? { 'X-Dev-Email': email } : {}),
+                    },
+                  })
+                  if (!res.ok) {
+                    const j = await res.json().catch(() => ({}))
+                    throw new Error(j.detail || '削除に失敗しました')
+                  }
+                  alert('アカウントを削除しました。トップへ戻ります。')
+                  if (typeof window !== 'undefined') {
+                    localStorage.clear()
+                    window.location.href = '/'
+                  }
+                } catch (e: any) {
+                  alert(e.message || '削除に失敗しました')
+                }
+              }}
             >
               アカウントを削除
             </Button>

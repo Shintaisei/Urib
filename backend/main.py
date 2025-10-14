@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import models, schemas, database, utils, univ_domains
@@ -6,6 +6,8 @@ import market_routes
 import board_routes
 import analytics_routes
 import os
+import re
+from typing import Optional
 
 app = FastAPI()
 
@@ -244,3 +246,76 @@ app.include_router(board_routes.router)
 
 # アナリティクスのルーターを追加
 app.include_router(analytics_routes.router)
+
+# =========================
+# 管理者専用: アカウント削除
+# =========================
+
+ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@ac\.jp$", re.IGNORECASE)
+
+def is_admin_email(email: Optional[str]) -> bool:
+    if not email:
+        return False
+    return ADMIN_EMAIL_PATTERN.match(email or "") is not None
+
+def resolve_email_from_headers(request: Request, db: Session) -> Optional[str]:
+    dev_email = request.headers.get("X-Dev-Email")
+    if dev_email:
+        return (dev_email or "").strip().lower()
+    user_id = request.headers.get("X-User-Id")
+    if user_id:
+        try:
+            uid = int(user_id)
+        except Exception:
+            uid = None
+        if uid:
+            user = db.query(models.User).filter(models.User.id == uid).first()
+            if user and user.email:
+                return (user.email or "").strip().lower()
+    return None
+
+def resolve_user_from_headers(request: Request, db: Session) -> Optional[models.User]:
+    user_id = request.headers.get("X-User-Id")
+    if user_id:
+        try:
+            uid = int(user_id)
+        except Exception:
+            uid = None
+        if uid:
+            user = db.query(models.User).filter(models.User.id == uid).first()
+            if user:
+                return user
+    # Fallback: email
+    email = resolve_email_from_headers(request, db)
+    if email:
+        return database.get_user_by_email(db, email)
+    return None
+
+@app.delete("/users/me")
+def delete_my_account(request: Request, db: Session = Depends(get_db)):
+    """管理者専用: 自分のアカウントを削除"""
+    email = resolve_email_from_headers(request, db)
+    if not is_admin_email(email):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが実行できます")
+
+    current = resolve_user_from_headers(request, db)
+    if not current:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+
+    db.delete(current)
+    db.commit()
+    return {"message": "アカウントを削除しました", "user_id": current.id}
+
+@app.delete("/admin/users/{user_id}")
+def admin_delete_user(user_id: int, request: Request, db: Session = Depends(get_db)):
+    """管理者専用: 任意のユーザーを削除"""
+    email = resolve_email_from_headers(request, db)
+    if not is_admin_email(email):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが実行できます")
+
+    target = db.query(models.User).filter(models.User.id == user_id).first()
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+    db.delete(target)
+    db.commit()
+    return {"message": "ユーザーを削除しました", "user_id": user_id}
