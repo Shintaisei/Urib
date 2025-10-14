@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Header } from "@/components/header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { isAdminEmail } from "@/lib/utils"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -14,6 +15,38 @@ export default function AnalyticsPage() {
   const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
   const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
   const isAdmin = isAdminEmail(email || '')
+
+  const handleClear = async () => {
+    if (!confirm('アナリティクスデータを全削除します。よろしいですか？')) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/analytics/clear`, {
+        method: 'POST',
+        headers: {
+          ...(userId ? { 'X-User-Id': userId } : {}),
+          ...(email ? { 'X-Dev-Email': email } : {}),
+        }
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.detail || '削除に失敗しました')
+      }
+      // 再取得
+      setLoading(true)
+      setError("")
+      const r = await fetch(`${API_BASE_URL}/analytics/summary?days=7`, {
+        headers: {
+          ...(userId ? { 'X-User-Id': userId } : {}),
+          ...(email ? { 'X-Dev-Email': email } : {}),
+        }
+      })
+      const j = await r.json()
+      setData(j)
+    } catch (e: any) {
+      setError(e.message || '削除に失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     const run = async () => {
@@ -48,7 +81,14 @@ export default function AnalyticsPage() {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-6 max-w-3xl">
-        <h1 className="text-2xl font-bold text-foreground mb-4">アナリティクス</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-foreground">アナリティクス</h1>
+          {isAdmin && (
+            <Button size="sm" variant="destructive" onClick={handleClear}>
+              全削除
+            </Button>
+          )}
+        </div>
         {loading && <div className="text-muted-foreground">読み込み中...</div>}
         {error && <div className="text-red-500">{error}</div>}
         {!loading && !error && data && (

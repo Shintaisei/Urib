@@ -184,3 +184,32 @@ async def analytics_summary(request: Request, days: int = 7, db: Session = Depen
         "hourly": [{"hour": int((h or '0')), "count": c} for h, c in hourly],
         "since": since.isoformat()
     }
+
+@router.post("/clear")
+async def clear_analytics(request: Request, db: Session = Depends(database.get_db)):
+    """管理者専用: アナリティクス関連テーブル(PageView, AnalyticsEvent)を全削除"""
+    # 管理者チェック
+    user_id = request.headers.get("X-User-Id")
+    dev_email = request.headers.get("X-Dev-Email")
+
+    email = None
+    if dev_email:
+        email = dev_email.strip().lower()
+    elif user_id:
+        try:
+            uid = int(user_id)
+        except:
+            uid = None
+        if uid:
+            user = db.query(models.User).filter(models.User.id == uid).first()
+            email = (user.email or "").strip().lower() if user else None
+
+    if not is_admin_email(email):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが実行できます")
+
+    # 削除処理（存在チェックしつつ）
+    db.query(models.PageView).delete()
+    if hasattr(models, 'AnalyticsEvent'):
+        db.query(models.AnalyticsEvent).delete()
+    db.commit()
+    return {"message": "analytics_cleared"}
