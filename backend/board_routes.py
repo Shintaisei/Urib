@@ -563,7 +563,7 @@ def create_reply(
                 actor_id=current_user.id,
                 type="post_replied",
                 entity_type="board_post",
-                entity_id=post.id,
+                entity_id=int(post.board_id),
                 title="あなたの投稿に返信がありました",
                 message=new_reply.content[:120]
             )
@@ -643,12 +643,13 @@ def toggle_reply_like(
     # 通知: 返信の作者に「いいねされました」
     try:
         if reply.author_id and reply.author_id != current_user.id:
+            parent_post = db.query(models.BoardPost).filter(models.BoardPost.id == reply.post_id).first()
             notif = models.Notification(
                 user_id=reply.author_id,
                 actor_id=current_user.id,
                 type="reply_liked",
                 entity_type="board_post",
-                entity_id=reply.post_id,
+                entity_id=int(parent_post.board_id) if parent_post else 1,
                 title="あなたの返信がいいねされました",
                 message=reply.content[:120]
             )

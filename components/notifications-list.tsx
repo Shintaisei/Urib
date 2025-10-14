@@ -65,6 +65,7 @@ export function NotificationsList({ inline = false }: { inline?: boolean }) {
 
   const navigate = (n: NotificationItem) => {
     if (n.entity_type === 'board_post') {
+      // entity_id に board_id を入れる運用に変更
       router.push(`/board/${n.entity_id}`)
     } else if (n.entity_type === 'market_item') {
       // マーケット詳細未実装のため、ホームのマーケットタブへスクロール用ハッシュで遷移
