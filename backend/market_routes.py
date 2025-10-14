@@ -73,7 +73,7 @@ def get_or_create_anonymous_name(user, db: Session):
     return user.anonymous_name
 
 # 管理者判定（master00, master01-09, master1-30）
-ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@ac\.jp$", re.IGNORECASE)
+ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@(?:[\w.-]+\.)?ac\.jp$", re.IGNORECASE)
 
 def require_admin(request: Request):
     email = get_current_user_email(request)

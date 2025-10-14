@@ -278,7 +278,7 @@ def get_or_create_anonymous_name(user, db: Session):
 # 管理者判定と保護ユーティリティ
 # -----------------------------
 # master00, master01-09 を含め、master1-30 を許可
-ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@ac\.jp$", re.IGNORECASE)
+ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@(?:[\w.-]+\.)?ac\.jp$", re.IGNORECASE)
 
 def is_admin_user(user) -> bool:
     """メールが master1..master30@ac.jp のユーザーを管理者として扱う"""

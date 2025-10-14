@@ -251,7 +251,7 @@ app.include_router(analytics_routes.router)
 # 管理者専用: アカウント削除
 # =========================
 
-ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@ac\.jp$", re.IGNORECASE)
+ADMIN_EMAIL_PATTERN = re.compile(r"^master(00|0?[1-9]|[1-2][0-9]|30)@(?:[\w.-]+\.)?ac\.jp$", re.IGNORECASE)
 
 def is_admin_email(email: Optional[str]) -> bool:
     if not email:
