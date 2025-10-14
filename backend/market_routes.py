@@ -617,6 +617,24 @@ def admin_delete_item(
     item = db.query(models.MarketItem).filter(models.MarketItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
+    # 参照レコードを先に削除（外部キー制約回避）
+    # コメントID一覧
+    comment_ids_subq = db.query(models.MarketItemComment.id).filter(models.MarketItemComment.item_id == item_id)
+    # コメントいいね
+    if hasattr(models, 'MarketItemCommentLike'):
+        db.query(models.MarketItemCommentLike).filter(models.MarketItemCommentLike.comment_id.in_(comment_ids_subq)).delete(synchronize_session=False)
+    # コメント
+    if hasattr(models, 'MarketItemComment'):
+        db.query(models.MarketItemComment).filter(models.MarketItemComment.item_id == item_id).delete(synchronize_session=False)
+    # いいね
+    db.query(models.MarketItemLike).filter(models.MarketItemLike.item_id == item_id).delete(synchronize_session=False)
+    # 通知（itemに紐づくもの）
+    if hasattr(models, 'Notification'):
+        db.query(models.Notification).filter(
+            models.Notification.entity_type.in_(["market_item", "market_item_comment"]),
+            models.Notification.entity_id == item_id
+        ).delete(synchronize_session=False)
+    # 本体を削除
     db.delete(item)
     db.commit()
     return {"message": "商品を削除しました(管理者)", "item_id": item_id}
