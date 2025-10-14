@@ -152,13 +152,16 @@ export function ProfileSettings() {
                 try {
                   const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
                   const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
-                  const res = await fetch('/api/profile/delete', {
-                    method: 'DELETE',
-                    headers: {
-                      ...(userId ? { 'X-User-Id': userId } : {}),
-                      ...(email ? { 'X-Dev-Email': email } : {}),
-                    },
-                  })
+                  let res: Response
+                  if (userId) {
+                    // 管理者として対象ユーザーIDを直接削除
+                    res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+                      method: 'DELETE',
+                    })
+                  } else {
+                    // フォールバック（通常は到達しない）
+                    res = await fetch('/api/profile/delete', { method: 'DELETE' })
+                  }
                   if (!res.ok) {
                     const j = await res.json().catch(() => ({}))
                     throw new Error(j.detail || '削除に失敗しました')
