@@ -291,6 +291,32 @@ def resolve_user_from_headers(request: Request, db: Session) -> Optional[models.
         return database.get_user_by_email(db, email)
     return None
 
+def delete_user_deep(db: Session, target: models.User):
+    """参照整合性エラーを避けるため、ユーザー関連データを順に削除"""
+    uid = target.id
+    # いいね類
+    db.query(models.BoardReplyLike).filter(models.BoardReplyLike.user_id == uid).delete(synchronize_session=False)
+    db.query(models.BoardPostLike).filter(models.BoardPostLike.user_id == uid).delete(synchronize_session=False)
+    db.query(models.MarketItemLike).filter(models.MarketItemLike.user_id == uid).delete(synchronize_session=False)
+    if hasattr(models, 'MarketItemCommentLike'):
+        db.query(models.MarketItemCommentLike).filter(models.MarketItemCommentLike.user_id == uid).delete(synchronize_session=False)
+    # 通知（受信者/行為者）
+    db.query(models.Notification).filter(models.Notification.user_id == uid).delete(synchronize_session=False)
+    db.query(models.Notification).filter(models.Notification.actor_id == uid).delete(synchronize_session=False)
+    # コメント/返信
+    if hasattr(models, 'MarketItemComment'):
+        db.query(models.MarketItemComment).filter(models.MarketItemComment.author_id == uid).delete(synchronize_session=False)
+    db.query(models.BoardReply).filter(models.BoardReply.author_id == uid).delete(synchronize_session=False)
+    # 投稿/出品
+    db.query(models.BoardPost).filter(models.BoardPost.author_id == uid).delete(synchronize_session=False)
+    db.query(models.MarketItem).filter(models.MarketItem.author_id == uid).delete(synchronize_session=False)
+    # アナリティクス
+    db.query(models.PageView).filter(models.PageView.user_id == uid).delete(synchronize_session=False)
+    if hasattr(models, 'AnalyticsEvent'):
+        db.query(models.AnalyticsEvent).filter(models.AnalyticsEvent.user_id == uid).delete(synchronize_session=False)
+    # 最後にユーザー
+    db.delete(target)
+
 @app.delete("/users/me")
 def delete_my_account(request: Request, db: Session = Depends(get_db)):
     """管理者専用: 自分のアカウントを削除"""
@@ -302,7 +328,7 @@ def delete_my_account(request: Request, db: Session = Depends(get_db)):
     if not current:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
 
-    db.delete(current)
+    delete_user_deep(db, current)
     db.commit()
     return {"message": "アカウントを削除しました", "user_id": current.id}
 
@@ -316,6 +342,6 @@ def admin_delete_user(user_id: int, request: Request, db: Session = Depends(get_
     target = db.query(models.User).filter(models.User.id == user_id).first()
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
-    db.delete(target)
+    delete_user_deep(db, target)
     db.commit()
     return {"message": "ユーザーを削除しました", "user_id": user_id}
