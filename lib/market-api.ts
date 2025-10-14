@@ -240,7 +240,7 @@ export const deleteItemComment = async (itemId: string, commentId: number): Prom
 
 // 管理者API
 export const adminCancelItem = async (itemId: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/market/admin/items/${itemId}/cancel`, {
+  const response = await fetch(`/api/market/admin/items/${itemId}/cancel`, {
     method: 'POST',
     headers: getHeaders(),
   })
@@ -251,7 +251,7 @@ export const adminCancelItem = async (itemId: string): Promise<void> => {
 }
 
 export const adminDeleteItem = async (itemId: string): Promise<void> => {
-  const response = await fetch(`${API_BASE_URL}/market/admin/items/${itemId}`, {
+  const response = await fetch(`/api/market/admin/items/${itemId}`, {
     method: 'DELETE',
     headers: getHeaders(),
   })
