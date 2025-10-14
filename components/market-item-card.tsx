@@ -19,6 +19,30 @@ import { MarketApi, MarketCommentsApi, type MarketItemComment, deleteItemComment
 import { isAdminEmail } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
 
+function ExpandableText({ text, maxChars = 120 }: { text: string; maxChars?: number }) {
+  const [expanded, setExpanded] = useState(false)
+  const safeText = text || ""
+  const isLong = safeText.length > maxChars
+  const shown = expanded ? safeText : safeText.slice(0, maxChars)
+  return (
+    <div className="mb-3">
+      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+        {shown}
+        {!expanded && isLong ? '…' : ''}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          className="text-xs text-primary hover:underline"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? '閉じる' : 'もっと見る'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 interface MarketItemCardProps {
   item: MarketItem
   onLike: (itemId: string) => void
@@ -228,9 +252,7 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
           )}
 
           {/* 説明 */}
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-            {item.description}
-          </p>
+          <ExpandableText text={item.description} maxChars={140} />
 
           {/* 投稿者情報 */}
           <div className="flex items-center gap-2 mb-2.5">
