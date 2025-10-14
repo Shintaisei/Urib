@@ -1,13 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Header } from "@/components/header"
 import { ProfileSettings } from "@/components/profile-settings"
 import { isAdminEmail } from "@/lib/utils"
 
 export default function ProfilePage() {
-  const router = useRouter()
   const [ready, setReady] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -15,26 +14,32 @@ export default function ProfilePage() {
     const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
     const ok = isAdminEmail(email || '')
     setIsAdmin(ok)
-    if (!ok) {
-      router.replace('/')
-    }
     setReady(true)
-  }, [router])
+  }, [])
 
   if (!ready) return null
-  if (!isAdmin) return null
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
       <main className="container mx-auto px-4 py-6 max-w-2xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">プロフィール設定</h1>
-          <p className="text-muted-foreground mt-2">匿名性を保ちながら、アプリの使用体験をカスタマイズできます</p>
-        </div>
+        {!isAdmin ? (
+          <div className="text-center py-16">
+            <h1 className="text-2xl font-bold text-foreground mb-2">管理者限定ページ</h1>
+            <p className="text-muted-foreground mb-6">このページは管理者のみが閲覧できます。</p>
+            <Link href="/" className="text-primary underline">ホームへ戻る</Link>
+          </div>
+        ) : (
+          <>
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-foreground">プロフィール設定</h1>
+              <p className="text-muted-foreground mt-2">匿名性を保ちながら、アプリの使用体験をカスタマイズできます</p>
+            </div>
 
-        <ProfileSettings />
+            <ProfileSettings />
+          </>
+        )}
       </main>
     </div>
   )
