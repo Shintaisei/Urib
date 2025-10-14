@@ -237,7 +237,7 @@ export function MarketBoard() {
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">市場掲示板</h1>
+              <h1 className="text-3xl font-bold text-foreground mb-2">マーケット掲示板</h1>
               <p className="text-muted-foreground">
                 大学内で商品の売買や無料譲渡を行える掲示板です
               </p>
@@ -253,26 +253,46 @@ export function MarketBoard() {
 
           {/* 統計情報 */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-muted/30">
-              <CardContent className="p-4 text-center">
+            <Card 
+              role="button" 
+              tabIndex={0}
+              onClick={() => setSelectedType("all")}
+              className={`bg-muted/30 cursor-pointer hover:ring-2 hover:ring-primary ${selectedType === "all" ? "ring-2 ring-primary" : ""}`}
+            >
+              <CardContent className="p-4 text-center select-none">
                 <div className="text-2xl font-bold text-foreground">{stats.totalItems}</div>
                 <div className="text-sm text-muted-foreground">総出品数</div>
               </CardContent>
             </Card>
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-4 text-center">
+            <Card 
+              role="button" 
+              tabIndex={0}
+              onClick={() => setSelectedType("buy")}
+              className={`bg-blue-50 border-blue-200 cursor-pointer hover:ring-2 hover:ring-blue-300 ${selectedType === "buy" ? "ring-2 ring-blue-400" : ""}`}
+            >
+              <CardContent className="p-4 text-center select-none">
                 <div className="text-2xl font-bold text-blue-600">{stats.buyItems}</div>
                 <div className="text-sm text-blue-600">買いたい</div>
               </CardContent>
             </Card>
-            <Card className="bg-green-50 border-green-200">
-              <CardContent className="p-4 text-center">
+            <Card 
+              role="button" 
+              tabIndex={0}
+              onClick={() => setSelectedType("sell")}
+              className={`bg-green-50 border-green-200 cursor-pointer hover:ring-2 hover:ring-green-300 ${selectedType === "sell" ? "ring-2 ring-green-400" : ""}`}
+            >
+              <CardContent className="p-4 text-center select-none">
                 <div className="text-2xl font-bold text-green-600">{stats.sellItems}</div>
                 <div className="text-sm text-green-600">売りたい</div>
               </CardContent>
             </Card>
-            <Card className="bg-purple-50 border-purple-200">
-              <CardContent className="p-4 text-center">
+            <Card 
+              role="button" 
+              tabIndex={0}
+              onClick={() => setSelectedType("free")}
+              className={`bg-purple-50 border-purple-200 cursor-pointer hover:ring-2 hover:ring-purple-300 ${selectedType === "free" ? "ring-2 ring-purple-400" : ""}`}
+            >
+              <CardContent className="p-4 text-center select-none">
                 <div className="text-2xl font-bold text-purple-600">{stats.freeItems}</div>
                 <div className="text-sm text-purple-600">ただであげる</div>
               </CardContent>
