@@ -65,8 +65,12 @@ export function NotificationsList({ inline = false }: { inline?: boolean }) {
 
   const navigate = (n: NotificationItem) => {
     if (n.entity_type === 'board_post') {
-      // entity_id に board_id を入れる運用に変更
-      router.push(`/board/${n.entity_id}`)
+      // message 末尾に post_id を埋め込んでいる場合: "...||post_id=123"
+      const m = n.message || ''
+      const match = m.match(/\|\|post_id=(\d+)/)
+      const postId = match ? match[1] : undefined
+      const url = postId ? `/board/${n.entity_id}?post_id=${postId}` : `/board/${n.entity_id}`
+      router.push(url)
     } else if (n.entity_type === 'market_item') {
       // マーケット詳細未実装のため、ホームのマーケットタブへスクロール用ハッシュで遷移
       router.push(`/home#market-${n.entity_id}`)

@@ -565,7 +565,7 @@ def create_reply(
                 entity_type="board_post",
                 entity_id=int(post.board_id),
                 title="あなたの投稿に返信がありました",
-                message=new_reply.content[:120]
+                message=(new_reply.content[:120] + f"||post_id={post.id}")
             )
             db.add(notif)
             db.commit()
@@ -651,7 +651,7 @@ def toggle_reply_like(
                 entity_type="board_post",
                 entity_id=int(parent_post.board_id) if parent_post else 1,
                 title="あなたの返信がいいねされました",
-                message=reply.content[:120]
+                message=(reply.content[:120] + (f"||post_id={reply.post_id}" if parent_post else ""))
             )
             db.add(notif)
             db.commit()
