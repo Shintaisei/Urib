@@ -17,7 +17,8 @@ import {
   MessageCircle,
   MapPin
 } from "lucide-react"
-import { MarketItem, MarketItemType, MarketFilter } from "@/types"
+import { MarketItem, MarketItemType, type MarketItemCreate } from "@/types"
+import type { MarketFilter } from "@/lib/market-api"
 import { MarketItemCard } from "./market-item-card"
 import { MarketFilterPanel } from "./market-filter-panel"
 import { MarketCreateModal } from "./market-create-modal"
@@ -162,11 +163,11 @@ export function MarketBoard() {
 
     // その他のフィルター
     // カテゴリは廃止
-    if (filter.minPrice !== undefined) {
-      filtered = filtered.filter(item => (item.price || 0) >= filter.minPrice!)
+    if (filter.min_price !== undefined) {
+      filtered = filtered.filter(item => (item.price || 0) >= filter.min_price!)
     }
-    if (filter.maxPrice !== undefined) {
-      filtered = filtered.filter(item => (item.price || 0) <= filter.maxPrice!)
+    if (filter.max_price !== undefined) {
+      filtered = filtered.filter(item => (item.price || 0) <= filter.max_price!)
     }
     if (filter.condition) {
       filtered = filtered.filter(item => item.condition === filter.condition)
@@ -197,7 +198,7 @@ export function MarketBoard() {
   }
 
   // 新しいアイテムの作成
-  const handleCreateItem = async (newItem: Omit<MarketItem, "id" | "created_at" | "updated_at" | "view_count" | "like_count" | "is_liked">) => {
+  const handleCreateItem = async (newItem: MarketItemCreate) => {
     try {
       const createdItem = await MarketApi.createItem({
         title: newItem.title,
