@@ -504,6 +504,14 @@ def get_post_replies(
     
     return result
 
+# 投稿IDからboard_idを解決
+@router.get("/posts/{post_id}/board")
+def resolve_board_id(post_id: int, db: Session = Depends(database.get_db)):
+    post = db.query(models.BoardPost).filter(models.BoardPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="投稿が見つかりません")
+    return {"board_id": post.board_id}
+
 @router.post("/posts/{post_id}/replies", response_model=schemas.BoardReplyResponse)
 def create_reply(
     post_id: int,

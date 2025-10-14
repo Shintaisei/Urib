@@ -63,14 +63,24 @@ export function NotificationsList({ inline = false }: { inline?: boolean }) {
     } catch {}
   }
 
-  const navigate = (n: NotificationItem) => {
+  const navigate = async (n: NotificationItem) => {
     if (n.entity_type === 'board_post') {
-      // message 末尾に post_id を埋め込んでいる場合: "...||post_id=123"
+      // message末尾からpost_idを抽出し、board_idはサーバで再解決して正確に遷移
       const m = n.message || ''
       const match = m.match(/\|\|post_id=(\d+)/)
       const postId = match ? match[1] : undefined
-      const url = postId ? `/board/${n.entity_id}?post_id=${postId}` : `/board/${n.entity_id}`
-      router.push(url)
+      if (postId) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/board`, { cache: 'no-store' })
+          if (res.ok) {
+            const data = await res.json()
+            router.push(`/board/${data.board_id}?post_id=${postId}`)
+            return
+          }
+        } catch {}
+      }
+      // フォールバック
+      router.push(`/board/${n.entity_id}`)
     } else if (n.entity_type === 'market_item') {
       // マーケット詳細未実装のため、ホームのマーケットタブへスクロール用ハッシュで遷移
       router.push(`/home#market-${n.entity_id}`)
