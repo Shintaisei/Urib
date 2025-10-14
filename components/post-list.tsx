@@ -421,7 +421,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               </DropdownMenu>
             </div>
 
-            <ExpandableText text={post.content} maxChars={140} />
+            <ExpandableText text={post.content} maxChars={50} />
             
             {post.hashtags && (
               <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
