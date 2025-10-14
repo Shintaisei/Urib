@@ -10,6 +10,30 @@ import { isAdminEmail } from "@/lib/utils"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+function ExpandableText({ text, maxChars = 140 }: { text: string; maxChars?: number }) {
+  const [expanded, setExpanded] = useState(false)
+  const safeText = text || ""
+  const isLong = safeText.length > maxChars
+  const shown = expanded ? safeText : safeText.slice(0, maxChars)
+  return (
+    <div className="mb-2">
+      <p className="text-[14px] text-foreground leading-relaxed whitespace-pre-wrap">
+        {shown}
+        {!expanded && isLong ? '…' : ''}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          className="text-xs text-primary hover:underline"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? '閉じる' : 'もっと見る'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 interface Post {
   id: number
   board_id: string
@@ -397,7 +421,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               </DropdownMenu>
             </div>
 
-            <p className="text-[14px] text-foreground leading-relaxed whitespace-pre-wrap">{post.content}</p>
+            <ExpandableText text={post.content} maxChars={140} />
             
             {post.hashtags && (
               <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
