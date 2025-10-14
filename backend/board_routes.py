@@ -647,8 +647,8 @@ def toggle_reply_like(
                 user_id=reply.author_id,
                 actor_id=current_user.id,
                 type="reply_liked",
-                entity_type="board_reply",
-                entity_id=reply.id,
+                entity_type="board_post",
+                entity_id=reply.post_id,
                 title="あなたの返信がいいねされました",
                 message=reply.content[:120]
             )

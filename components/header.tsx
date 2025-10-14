@@ -9,6 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { NotificationsList } from "@/components/notifications-list"
 import { SearchDialog } from "@/components/search-dialog"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -81,12 +82,19 @@ export function Header() {
 
         <nav className="flex items-center space-x-4">
           <SearchDialog />
-          <Button variant="ghost" size="sm" className="relative text-muted-foreground hover:text-foreground" onClick={() => router.push('/notifications')}>
-            <Bell className="w-4 h-4" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none px-1.5 py-0.5 rounded-full">{unreadCount}</span>
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="relative text-muted-foreground hover:text-foreground">
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-auto">
+              <NotificationsList inline />
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <Link href="/dm">
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
