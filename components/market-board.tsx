@@ -253,7 +253,7 @@ export function MarketBoard() {
           </div>
 
           {/* 統計情報 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <Card 
               role="button" 
               tabIndex={0}
@@ -301,7 +301,7 @@ export function MarketBoard() {
           </div>
 
           {/* 検索とフィルター */}
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -322,7 +322,7 @@ export function MarketBoard() {
           </div>
 
           {/* タイプフィルター */}
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-3">
             <Button
               variant={selectedType === "all" ? "default" : "outline"}
               size="sm"
@@ -419,7 +419,7 @@ export function MarketBoard() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredItems.map((item) => (
                   <div key={item.id} id={`market-${item.id}`}>
                     <MarketItemCard

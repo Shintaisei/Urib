@@ -143,7 +143,7 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
     <Card className="bg-card border-border hover:shadow-md transition-shadow duration-200">
       <CardContent className="p-0">
         {/* 商品画像 */}
-        <div className="relative h-48 bg-muted/30 rounded-t-lg overflow-hidden">
+        <div className="relative h-40 bg-muted/30 rounded-t-lg overflow-hidden">
           {item.images.length > 0 ? (
             <img
               src={item.images[0]}
@@ -160,44 +160,44 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
           )}
           
           {/* 商品タイプバッジ */}
-          <div className="absolute top-2 left-2">
+          <div className="absolute top-1.5 left-1.5">
             <Badge 
-              className={`${typeInfo.bgColor} ${typeInfo.borderColor} ${typeInfo.color} border`}
+              className={`${typeInfo.bgColor} ${typeInfo.borderColor} ${typeInfo.color} border text-[11px] h-6`}
             >
-              <TypeIcon className="w-3 h-3 mr-1" />
+              <TypeIcon className="w-2.5 h-2.5 mr-1" />
               {typeInfo.text}
             </Badge>
           </div>
 
           {/* 価格表示 */}
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-1.5 right-1.5">
             <Badge 
               variant="secondary" 
-              className="bg-background/90 text-foreground font-semibold"
+              className="bg-background/90 text-foreground font-semibold text-[11px] h-6"
             >
               {formatPrice(item.price)}
             </Badge>
           </div>
 
           {/* いいねボタン */}
-          <div className="absolute bottom-2 right-2">
+          <div className="absolute bottom-1.5 right-1.5">
             <Button
               size="sm"
               variant="ghost"
-              className={`h-8 w-8 p-0 ${item.is_liked ? 'text-red-500' : 'text-muted-foreground'}`}
+              className={`h-7 w-7 p-0 ${item.is_liked ? 'text-red-500' : 'text-muted-foreground'}`}
               onClick={handleLike}
               disabled={isLiking}
             >
-              <Heart className={`w-4 h-4 ${item.is_liked ? 'fill-current' : ''}`} />
+              <Heart className={`w-3.5 h-3.5 ${item.is_liked ? 'fill-current' : ''}`} />
             </Button>
           </div>
         </div>
 
         {/* 商品情報 */}
-        <div className="p-4">
+        <div className="p-3">
           {/* タイトルとカテゴリ */}
-          <div className="mb-2">
-            <h3 className="font-semibold text-foreground line-clamp-2 mb-1">
+          <div className="mb-1.5">
+            <h3 className="font-semibold text-foreground line-clamp-2 mb-1 text-[15px]">
               {item.title}
             </h3>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -233,7 +233,7 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
           </p>
 
           {/* 投稿者情報 */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2.5">
             <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
               <span className="text-xs font-medium text-primary">
                 {item.author_name.charAt(0) || "?"}
@@ -243,7 +243,7 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
               <p className="text-xs font-medium text-foreground truncate">
                 {item.author_name}
               </p>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <MapPin className="w-3 h-3" />
                 <span className="truncate">{item.university}</span>
               </div>
@@ -251,7 +251,7 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
           </div>
 
           {/* 統計情報 */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+          <div className="flex items-center gap-3 text-[12px] text-muted-foreground mb-2.5">
             <div className="flex items-center gap-1">
               <Eye className="w-3 h-3" />
               <span>{item.view_count}</span>
@@ -275,18 +275,18 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
           )}
 
           {/* コメント（チャット） */}
-          <div className="mt-4 space-y-3">
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+          <div className="mt-3 space-y-2.5">
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
               {comments.length === 0 ? (
-                <p className="text-xs text-muted-foreground">まだコメントはありません</p>
+                <p className="text-[12px] text-muted-foreground">まだコメントはありません</p>
               ) : (
                 comments.map((c) => (
-                  <div key={c.id} className="bg-muted/30 rounded p-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="text-xs text-muted-foreground">{c.author_name} ・ {new Date(c.created_at).toLocaleString('ja-JP')}</div>
+                  <div key={c.id} className="bg-muted/30 rounded p-1.5">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <div className="text-[11px] text-muted-foreground">{c.author_name} ・ {new Date(c.created_at).toLocaleString('ja-JP')}</div>
                       {(isAdmin || (myUserId && c.author_id === myUserId)) && (
                         <button
-                          className="text-xs text-destructive hover:underline"
+                          className="text-[11px] text-destructive hover:underline"
                           onClick={async () => {
                             if (!confirm('このコメントを削除しますか？')) return
                             try {
@@ -299,7 +299,7 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
                         >削除</button>
                       )}
                     </div>
-                    <div className="text-sm text-foreground whitespace-pre-wrap">{c.content}</div>
+                    <div className="text-[13px] text-foreground whitespace-pre-wrap">{c.content}</div>
                   </div>
                 ))
               )}
@@ -309,7 +309,7 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
                 placeholder="コメントを入力..."
                 value={commentInput}
                 onChange={(e) => setCommentInput(e.target.value)}
-                className="min-h-[72px]"
+                className="min-h-[56px] text-[14px]"
                 maxLength={300}
               />
               <div className="flex justify-end">
