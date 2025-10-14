@@ -346,9 +346,10 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-foreground">最新の投稿</h2>
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold text-foreground">最新の投稿</h2>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {posts.map((post) => {
         const isHighlighted = highlightPostId && parseInt(highlightPostId) === post.id
         return (
@@ -359,7 +360,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
             isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
           }`}
         >
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
@@ -367,14 +368,14 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">{post.author_name}</p>
+                    <p className="text-[13px] font-medium text-foreground">{post.author_name}</p>
                     {post.author_department && post.author_year && (
                       <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                         {post.author_department} {post.author_year}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">{getTimeDiff(post.created_at)}</p>
+                  <p className="text-[11px] text-muted-foreground">{getTimeDiff(post.created_at)}</p>
                 </div>
               </div>
 
@@ -396,14 +397,14 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               </DropdownMenu>
             </div>
 
-            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{post.content}</p>
+            <p className="text-[14px] text-foreground leading-relaxed whitespace-pre-wrap">{post.content}</p>
             
             {post.hashtags && (
-              <div className="flex flex-wrap gap-2 mt-3 mb-4">
+              <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
                 {post.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).map((tag, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors"
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors"
                   >
                     #{tag}
                   </span>
@@ -442,7 +443,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
 
             {/* 返信セクション */}
             {expandedPostId === post.id && (
-              <div className="mt-4 pt-4 border-t border-border space-y-4">
+              <div className="mt-3 pt-3 border-t border-border space-y-3">
                 {/* 返信一覧 */}
                 {loadingReplies === post.id ? (
                   <div className="text-center py-4 text-muted-foreground text-sm">
@@ -451,7 +452,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 ) : replies[post.id]?.length > 0 ? (
                   <div className="space-y-3">
                     {replies[post.id].map((reply) => (
-                      <div key={reply.id} className="bg-muted/30 rounded-lg p-3">
+                      <div key={reply.id} className="bg-muted/30 rounded-lg p-2.5">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
@@ -459,14 +460,14 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <p className="text-sm font-medium text-foreground">{reply.author_name}</p>
+                                <p className="text-[13px] font-medium text-foreground">{reply.author_name}</p>
                                 {reply.author_department && reply.author_year && (
                                   <span className="text-xs text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
                                     {reply.author_department} {reply.author_year}
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-muted-foreground">{getTimeDiff(reply.created_at)}</p>
+                              <p className="text-[11px] text-muted-foreground">{getTimeDiff(reply.created_at)}</p>
                             </div>
                           </div>
                           {isAdmin && (
@@ -489,7 +490,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                             <span className="text-xs">{reply.like_count}</span>
                           </Button>
                         </div>
-                        <p className="text-sm text-foreground whitespace-pre-wrap ml-8">{reply.content}</p>
+                        <p className="text-[13px] text-foreground whitespace-pre-wrap ml-8">{reply.content}</p>
                       </div>
                     ))}
                   </div>
@@ -505,7 +506,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                     placeholder="返信を入力..."
                     value={replyContent[post.id] || ''}
                     onChange={(e) => setReplyContent(prev => ({ ...prev, [post.id]: e.target.value }))}
-                    className="min-h-[80px] resize-none"
+                    className="min-h-[64px] resize-none"
                     maxLength={500}
                   />
                   <div className="flex items-center justify-between">
@@ -537,6 +538,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         </Card>
       )
       })}
+      </div>
     </div>
   )
 }
