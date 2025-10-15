@@ -41,14 +41,35 @@ interface FeedPost {
 }
 
 type FeedType = 'latest' | 'popular' | 'trending'
+type LatestTab = 'posts' | 'replies'
 
 export function PostFeed() {
   const [feedType, setFeedType] = useState<FeedType>('latest')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
+  const [latestTab, setLatestTab] = useState<LatestTab>('posts')
+  const [latestReplies, setLatestReplies] = useState<any[]>([])
 
   useEffect(() => {
     fetchFeed()
+  }, [feedType])
+
+  useEffect(() => {
+    if (feedType !== 'latest') return
+    const fetchReplies = async () => {
+      try {
+        const userId = localStorage.getItem('user_id')
+        const headers: any = {}
+        if (userId) headers['X-User-Id'] = userId
+        const res = await fetch(`${API_BASE_URL}/board/replies/feed?limit=10`, { headers })
+        if (!res.ok) throw new Error('failed')
+        const data = await res.json()
+        setLatestReplies(data.items || [])
+      } catch {
+        setLatestReplies([])
+      }
+    }
+    fetchReplies()
   }, [feedType])
 
   const fetchFeed = async () => {
@@ -137,7 +158,21 @@ export function PostFeed() {
         </button>
       </div>
 
-      {/* 投稿リスト */}
+      {/* 最新内タブ（最新投稿 / 最新返信） */}
+      {feedType === 'latest' && (
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={() => setLatestTab('posts')}
+            className={`px-3 py-1 text-xs rounded border ${latestTab === 'posts' ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border'}`}
+          >最新投稿</button>
+          <button
+            onClick={() => setLatestTab('replies')}
+            className={`px-3 py-1 text-xs rounded border ${latestTab === 'replies' ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border'}`}
+          >最新返信</button>
+        </div>
+      )}
+
+      {/* 投稿リスト / 最新返信リスト */}
       <div className="space-y-3">
         {loading && (
           <div className="text-center py-12">
@@ -146,72 +181,126 @@ export function PostFeed() {
           </div>
         )}
 
-        {!loading && posts.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-sm">まだ投稿がありません</p>
-          </div>
+        {!loading && latestTab === 'posts' && (
+          <>
+            {posts.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="text-sm">まだ投稿がありません</p>
+              </div>
+            )}
+            {posts.map((post) => (
+              <Link key={post.id} href={`/board/${post.board_id}?post_id=${post.id}`}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${BOARD_COLORS[post.board_id] || BOARD_COLORS["1"]}`}
+                          >
+                            {BOARD_NAMES[post.board_id] || `掲示板${post.board_id}`}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {getTimeDiff(post.created_at)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-medium text-foreground">{post.author_name}</span>
+                          {post.author_department && post.author_year && (
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                              {post.author_department} {post.author_year}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-sm text-foreground line-clamp-2 mb-2">
+                          {post.content}
+                        </p>
+
+                        {post.hashtags && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {post.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).slice(0, 3).map((tag, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Heart className={`w-3 h-3 ${post.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
+                            {post.like_count}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="w-3 h-3" />
+                            {post.reply_count}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </>
         )}
 
-        {!loading && posts.map((post) => (
-          <Link key={post.id} href={`/board/${post.board_id}?post_id=${post.id}`}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${BOARD_COLORS[post.board_id] || BOARD_COLORS["1"]}`}
-                      >
-                        {BOARD_NAMES[post.board_id] || `掲示板${post.board_id}`}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {getTimeDiff(post.created_at)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-medium text-foreground">{post.author_name}</span>
-                      {post.author_department && post.author_year && (
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                          {post.author_department} {post.author_year}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-sm text-foreground line-clamp-2 mb-2">
-                      {post.content}
-                    </p>
-
-                    {post.hashtags && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {post.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).slice(0, 3).map((tag, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary"
+        {!loading && feedType === 'latest' && latestTab === 'replies' && (
+          <>
+            {latestReplies.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <p className="text-sm">まだ返信がありません</p>
+              </div>
+            )}
+            {latestReplies.map((row: any, idx: number) => (
+              <Link key={idx} href={`/board/${row.post.board_id}?post_id=${row.post.id}`}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${BOARD_COLORS[row.post.board_id] || BOARD_COLORS["1"]}`}
                           >
-                            #{tag}
+                            {BOARD_NAMES[row.post.board_id] || `掲示板${row.post.board_id}`}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {getTimeDiff(row.reply.created_at)}
                           </span>
-                        ))}
-                      </div>
-                    )}
+                        </div>
 
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Heart className={`w-3 h-3 ${post.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
-                        {post.like_count}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="w-3 h-3" />
-                        {post.reply_count}
+                        <div className="mb-1">
+                          <span className="text-xs text-muted-foreground">返信</span>
+                          <div className="text-sm text-foreground line-clamp-2">{row.reply.content}</div>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground mb-2">元投稿: {row.post.content.slice(0, 80)}</div>
+
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Heart className={`w-3 h-3 ${row.reply.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
+                            {row.reply.like_count}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="w-3 h-3" />
+                            {row.post.reply_count}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </>
+        )}
       </div>
     </div>
   )

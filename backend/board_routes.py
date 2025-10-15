@@ -143,6 +143,60 @@ def get_feed_posts(
     
     return {"posts": result}
 
+@router.get("/replies/feed")
+def get_feed_replies(
+    limit: int = Query(10, description="取得件数"),
+    request: Request = None,
+    db: Session = Depends(database.get_db)
+):
+    """全掲示板から最新の返信を取得（返信内容＋親投稿の要約）"""
+    current_user_id = get_current_user_id(request) if request else None
+    current_user = get_user_by_id(db, current_user_id) if current_user_id else None
+
+    replies = db.query(models.BoardReply).order_by(desc(models.BoardReply.created_at)).limit(limit).all()
+    items = []
+    for reply in replies:
+        post = db.query(models.BoardPost).filter(models.BoardPost.id == reply.post_id).first()
+        if not post:
+            continue
+        # 返信のいいね済み判定
+        is_liked = False
+        if current_user:
+            is_liked = db.query(models.BoardReplyLike).filter(
+                and_(
+                    models.BoardReplyLike.reply_id == reply.id,
+                    models.BoardReplyLike.user_id == current_user.id
+                )
+            ).first() is not None
+
+        items.append({
+            "reply": {
+                "id": reply.id,
+                "post_id": reply.post_id,
+                "content": reply.content,
+                "author_name": reply.author_name,
+                "author_year": reply.author.year if reply.author else None,
+                "author_department": reply.author.department if reply.author else None,
+                "like_count": reply.like_count,
+                "is_liked": is_liked,
+                "created_at": ensure_jst_aware(reply.created_at).isoformat(),
+            },
+            "post": {
+                "id": post.id,
+                "board_id": post.board_id,
+                "content": post.content,
+                "hashtags": post.hashtags,
+                "author_name": post.author_name,
+                "author_year": post.author.year if post.author else None,
+                "author_department": post.author.department if post.author else None,
+                "like_count": post.like_count,
+                "reply_count": post.reply_count,
+                "created_at": ensure_jst_aware(post.created_at).isoformat(),
+            }
+        })
+
+    return {"items": items}
+
 # 全文検索API
 @router.get("/search")
 def search_posts_and_replies(
