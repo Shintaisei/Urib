@@ -371,6 +371,15 @@ def get_board_posts(
     current_user_id = get_current_user_id(request)
     current_user = get_user_by_id(db, current_user_id) if current_user_id else None
     
+    # 現在ユーザーの返信タイムスタンプをまとめて取得
+    user_reply_times = {}
+    if current_user:
+        rows = db.query(models.BoardReply.post_id, func.max(models.BoardReply.created_at)).filter(
+            models.BoardReply.author_id == current_user.id
+        ).group_by(models.BoardReply.post_id).all()
+        for post_id, last_reply_at in rows:
+            user_reply_times[post_id] = last_reply_at
+
     # レスポンス形式に変換
     result = []
     for post in posts:
@@ -383,7 +392,20 @@ def get_board_posts(
                     models.BoardPostLike.user_id == current_user.id
                 )
             ).first() is not None
-        
+        # 自分が返信したことがあるか
+        has_replied = post.id in user_reply_times
+        # 自分の最後の返信以降の新着返信数
+        new_replies_count = 0
+        if has_replied:
+            last_my = user_reply_times.get(post.id)
+            if last_my:
+                new_replies_count = db.query(func.count(models.BoardReply.id)).filter(
+                    and_(
+                        models.BoardReply.post_id == post.id,
+                        models.BoardReply.created_at > last_my
+                    )
+                ).scalar() or 0
+
         result.append(schemas.BoardPostResponse(
             id=post.id,
             board_id=post.board_id,
@@ -395,7 +417,9 @@ def get_board_posts(
             like_count=post.like_count,
             reply_count=post.reply_count,
             created_at=ensure_jst_aware(post.created_at).isoformat(),
-            is_liked=is_liked
+            is_liked=is_liked,
+            has_replied=has_replied,
+            new_replies_since_my_last_reply=int(new_replies_count)
         ))
     
     return result

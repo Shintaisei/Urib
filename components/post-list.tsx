@@ -46,6 +46,8 @@ interface Post {
   reply_count: number
   created_at: string
   is_liked: boolean
+  has_replied?: boolean
+  new_replies_since_my_last_reply?: number
 }
 
 interface Reply {
@@ -457,6 +459,11 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               >
                 <MessageCircle className="w-4 h-4 mr-1" />
                 {post.reply_count}
+                {post.has_replied && (post.new_replies_since_my_last_reply || 0) > 0 && (
+                  <span className="ml-1 inline-flex items-center text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-300 px-1 py-0.5 rounded">
+                    +{post.new_replies_since_my_last_reply}
+                  </span>
+                )}
               </Button>
 
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">

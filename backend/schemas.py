@@ -114,6 +114,8 @@ class BoardPostResponse(BaseModel):
     reply_count: int
     created_at: str
     is_liked: bool = False
+    has_replied: Optional[bool] = False
+    new_replies_since_my_last_reply: Optional[int] = 0
 
 class BoardReplyCreate(BaseModel):
     content: str
