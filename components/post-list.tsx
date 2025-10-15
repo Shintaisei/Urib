@@ -99,14 +99,19 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
     try {
       setLoading(true)
       const userId = localStorage.getItem('user_id')
+      const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
       
       const headers: any = {}
       if (userId) {
         headers['X-User-Id'] = userId
       }
+      if (email) {
+        headers['X-Dev-Email'] = email
+      }
       
       const response = await fetch(`${API_BASE_URL}/board/posts/${boardId}`, {
         headers,
+        cache: 'no-store'
       })
 
       if (!response.ok) {
@@ -195,7 +200,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       setPosts(prevPosts => 
         prevPosts.map(post => 
           post.id === postId 
-            ? { ...post, reply_count: post.reply_count + 1 }
+            ? { ...post, reply_count: post.reply_count + 1, has_replied: true, new_replies_since_my_last_reply: 0 }
             : post
         )
       )

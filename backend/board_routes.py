@@ -367,9 +367,15 @@ def get_board_posts(
         models.BoardPost.board_id == board_id
     ).order_by(desc(models.BoardPost.created_at)).offset(offset).limit(limit).all()
     
-    # 現在のユーザーを取得
+    # 現在のユーザーを取得（X-User-Id優先、なければX-Dev-Email）
     current_user_id = get_current_user_id(request)
     current_user = get_user_by_id(db, current_user_id) if current_user_id else None
+    if not current_user:
+        dev_email = request.headers.get("X-Dev-Email")
+        if dev_email:
+            if dev_email.startswith("dev:"):
+                dev_email = dev_email[4:]
+            current_user = get_user_by_email(db, dev_email)
     
     # 現在ユーザーの返信タイムスタンプをまとめて取得
     user_reply_times = {}
@@ -380,10 +386,8 @@ def get_board_posts(
         for post_id, last_reply_at in rows:
             user_reply_times[post_id] = last_reply_at
 
-    # レスポンス形式に変換
     result = []
     for post in posts:
-        # いいねしているかチェック
         is_liked = False
         if current_user:
             is_liked = db.query(models.BoardPostLike).filter(
@@ -392,9 +396,7 @@ def get_board_posts(
                     models.BoardPostLike.user_id == current_user.id
                 )
             ).first() is not None
-        # 自分が返信したことがあるか
         has_replied = post.id in user_reply_times
-        # 自分の最後の返信以降の新着返信数
         new_replies_count = 0
         if has_replied:
             last_my = user_reply_times.get(post.id)
