@@ -242,3 +242,16 @@ class PageView(Base):
     path = Column(String(512), nullable=False)
     user_agent = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
+# 掲示板の最終訪問記録（ユーザー×掲示板）
+class BoardVisit(Base):
+    __tablename__ = "board_visits"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'board_id', name='uq_board_visit_user_board'),
+        Index('idx_board_visits_user_board', 'user_id', 'board_id'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    board_id = Column(String(50), nullable=False, index=True)
+    last_seen = Column(DateTime(timezone=True), default=jst_now, index=True)

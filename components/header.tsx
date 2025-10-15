@@ -92,6 +92,30 @@ export function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-auto">
+              <div className="flex items-center justify-between px-2 py-1">
+                <span className="text-xs text-muted-foreground">通知</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs"
+                  onClick={async () => {
+                    try {
+                      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+                      const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+                      await fetch(`${API_BASE_URL}/market/notifications/mark-all-read`, {
+                        method: 'POST',
+                        headers: {
+                          ...(userId ? { 'X-User-Id': userId } : {}),
+                          ...(email ? { 'X-Dev-Email': email } : {}),
+                        }
+                      })
+                      setUnreadCount(0)
+                    } catch {}
+                  }}
+                >
+                  すべて既読
+                </Button>
+              </div>
               <NotificationsList inline />
             </DropdownMenuContent>
           </DropdownMenu>

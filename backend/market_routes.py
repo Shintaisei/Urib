@@ -439,6 +439,20 @@ def mark_notification_read(notification_id: int, request: Request, db: Session =
     db.commit()
     return {"message": "read"}
 
+@router.post("/notifications/mark-all-read")
+def mark_all_notifications_read(request: Request, db: Session = Depends(database.get_db)):
+    """ユーザーの未読通知を全て既読化する"""
+    current_user_email = get_current_user_email(request)
+    current_user = get_user_by_email(db, current_user_email)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+    db.query(models.Notification).filter(
+        models.Notification.user_id == current_user.id,
+        models.Notification.is_read == False
+    ).update({models.Notification.is_read: True}, synchronize_session=False)
+    db.commit()
+    return {"message": "all_read"}
+
 # コメント削除（本人/管理者）
 @router.delete("/items/{item_id}/comments/{comment_id}")
 def delete_item_comment(item_id: int, comment_id: int, request: Request, db: Session = Depends(database.get_db)):

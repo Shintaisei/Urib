@@ -712,3 +712,64 @@ def admin_delete_reply(
     db.delete(reply)
     db.commit()
     return {"message": "返信を削除しました", "reply_id": reply_id}
+
+# -----------------------------
+# 新着件数と訪問記録
+# -----------------------------
+
+@router.get("/new-counts")
+def get_new_counts(request: Request, db: Session = Depends(database.get_db)):
+    """ユーザーの最終訪問以降の新規投稿/コメント数を掲示板ごとに返す"""
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+
+    board_ids = [1, 2, 3, 4, 5, 6]
+    results = []
+    for board_id in board_ids:
+        visit = db.query(models.BoardVisit).filter(
+            and_(models.BoardVisit.user_id == current_user_id, models.BoardVisit.board_id == str(board_id))
+        ).first()
+        last_seen = visit.last_seen if visit else None
+
+        # 新規投稿数
+        post_query = db.query(func.count(models.BoardPost.id)).filter(models.BoardPost.board_id == str(board_id))
+        if last_seen:
+            post_query = post_query.filter(models.BoardPost.created_at > last_seen)
+        new_posts = post_query.scalar() or 0
+
+        # 新規コメント数（該当掲示板の投稿に紐づく返信）
+        reply_query = db.query(func.count(models.BoardReply.id)).join(
+            models.BoardPost, models.BoardReply.post_id == models.BoardPost.id
+        ).filter(models.BoardPost.board_id == str(board_id))
+        if last_seen:
+            reply_query = reply_query.filter(models.BoardReply.created_at > last_seen)
+        new_comments = reply_query.scalar() or 0
+
+        results.append({
+            "board_id": board_id,
+            "new_posts": int(new_posts),
+            "new_comments": int(new_comments),
+            "last_seen": ensure_jst_aware(last_seen).isoformat() if last_seen else None,
+        })
+
+    return {"counts": results}
+
+@router.post("/visit/{board_id}")
+def mark_board_visited(board_id: str, request: Request, db: Session = Depends(database.get_db)):
+    """掲示板入室時に最終訪問時刻を現在時刻に更新する"""
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+
+    visit = db.query(models.BoardVisit).filter(
+        and_(models.BoardVisit.user_id == current_user_id, models.BoardVisit.board_id == str(board_id))
+    ).first()
+    now = models.jst_now()
+    if visit:
+        visit.last_seen = now
+    else:
+        visit = models.BoardVisit(user_id=current_user_id, board_id=str(board_id), last_seen=now)
+        db.add(visit)
+    db.commit()
+    return {"message": "ok", "board_id": board_id, "last_seen": ensure_jst_aware(now).isoformat()}

@@ -112,6 +112,7 @@ interface BoardGridProps {
 export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
   const [boardsWithStats, setBoardsWithStats] = useState<BoardData[]>(initialBoardData)
   const [loading, setLoading] = useState(true)
+  const [newCounts, setNewCounts] = useState<Record<number, { new_posts: number; new_comments: number }>>({})
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -144,6 +145,30 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
     }
 
     fetchStats()
+  }, [])
+
+  useEffect(() => {
+    const fetchNewCounts = async (): Promise<void> => {
+      try {
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+        const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+        const res = await fetch(`${API_BASE_URL}/board/new-counts`, {
+          headers: {
+            ...(userId ? { 'X-User-Id': userId } : {}),
+            ...(email ? { 'X-Dev-Email': email } : {}),
+          },
+          cache: 'no-store'
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        const map: Record<number, { new_posts: number; new_comments: number }> = {}
+        for (const row of data.counts || []) {
+          map[row.board_id] = { new_posts: row.new_posts, new_comments: row.new_comments }
+        }
+        setNewCounts(map)
+      } catch {}
+    }
+    fetchNewCounts()
   }, [])
 
   const getTimeDiff = (createdAt: string): string => {
@@ -182,10 +207,20 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
                 <div className="flex items-center">
                   <MessageSquare className="w-4 h-4 mr-1" />
                   投稿 {board.recentPosts}件
+                  {newCounts[board.id]?.new_posts > 0 && (
+                    <span className="ml-2 inline-flex items-center text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                      +{newCounts[board.id].new_posts} new
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center">
                   <MessageSquare className="w-4 h-4 mr-1 text-blue-500" />
                   コメント {board.replyCount}件
+                  {newCounts[board.id]?.new_comments > 0 && (
+                    <span className="ml-2 inline-flex items-center text-[10px] bg-green-500/10 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
+                      +{newCounts[board.id].new_comments} new
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center justify-between">

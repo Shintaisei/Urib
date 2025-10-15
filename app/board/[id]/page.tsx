@@ -54,6 +54,24 @@ export default function BoardPage({ params }: BoardPageProps) {
   const highlightPostId = searchParams.get('post_id')
   const board = boardInfo[resolvedParams.id as keyof typeof boardInfo] || boardInfo["1"]
   const [refreshKey, setRefreshKey] = useState(0)
+  useEffect(() => {
+    const markVisited = async () => {
+      try {
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+        const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        await fetch(`${API_BASE_URL}/board/visit/${resolvedParams.id}`, {
+          method: 'POST',
+          headers: {
+            ...(userId ? { 'X-User-Id': userId } : {}),
+            ...(email ? { 'X-Dev-Email': email } : {}),
+          }
+        })
+      } catch {}
+    }
+    markVisited()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedParams.id])
 
   const handlePostCreated = () => {
     // 投稿が作成されたら、PostListを更新
