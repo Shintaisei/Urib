@@ -277,7 +277,14 @@ export function PostFeed() {
                         </div>
 
                         <div className="mb-1">
-                          <span className="text-xs text-muted-foreground">返信</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">返信</span>
+                            {row.reply.author_department && row.reply.author_year && (
+                              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                                {row.reply.author_department} {row.reply.author_year}
+                              </span>
+                            )}
+                          </div>
                           <div className="text-sm text-foreground line-clamp-2">{row.reply.content}</div>
                         </div>
 
