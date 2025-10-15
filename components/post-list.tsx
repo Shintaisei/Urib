@@ -166,6 +166,19 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       if (!replies[postId]) {
         await fetchReplies(postId)
       }
+      // 開いたタイミングで既読化: last_viewed_at を更新し、バッジを0に
+      try {
+        const userId = localStorage.getItem('user_id')
+        const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+        const headers: any = {}
+        if (userId) headers['X-User-Id'] = userId
+        if (email) headers['X-Dev-Email'] = email
+        await fetch(`${API_BASE_URL}/board/posts/${postId}/replies/view`, {
+          method: 'POST',
+          headers,
+        })
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, new_replies_since_my_last_reply: 0 } : p))
+      } catch {}
     }
   }
 

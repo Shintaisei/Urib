@@ -377,14 +377,14 @@ def get_board_posts(
                 dev_email = dev_email[4:]
             current_user = get_user_by_email(db, dev_email)
     
-    # 現在ユーザーの返信タイムスタンプをまとめて取得
-    user_reply_times = {}
+    # 現在ユーザーの最終閲覧時刻（返信一覧を開いた時）をまとめて取得
+    user_last_view = {}
     if current_user:
-        rows = db.query(models.BoardReply.post_id, func.max(models.BoardReply.created_at)).filter(
-            models.BoardReply.author_id == current_user.id
-        ).group_by(models.BoardReply.post_id).all()
-        for post_id, last_reply_at in rows:
-            user_reply_times[post_id] = last_reply_at
+        rows = db.query(models.BoardRepliesView.post_id, models.BoardRepliesView.last_viewed_at).filter(
+            models.BoardRepliesView.user_id == current_user.id
+        ).all()
+        for post_id, last_viewed_at in rows:
+            user_last_view[post_id] = last_viewed_at
 
     result = []
     for post in posts:
@@ -396,17 +396,18 @@ def get_board_posts(
                     models.BoardPostLike.user_id == current_user.id
                 )
             ).first() is not None
-        has_replied = post.id in user_reply_times
+        has_replied = db.query(models.BoardReply.id).filter(
+            and_(models.BoardReply.post_id == post.id, models.BoardReply.author_id == (current_user.id if current_user else -1))
+        ).first() is not None
         new_replies_count = 0
-        if has_replied:
-            last_my = user_reply_times.get(post.id)
-            if last_my:
-                new_replies_count = db.query(func.count(models.BoardReply.id)).filter(
-                    and_(
-                        models.BoardReply.post_id == post.id,
-                        models.BoardReply.created_at > last_my
-                    )
-                ).scalar() or 0
+        last_view = user_last_view.get(post.id)
+        if last_view:
+            new_replies_count = db.query(func.count(models.BoardReply.id)).filter(
+                and_(
+                    models.BoardReply.post_id == post.id,
+                    models.BoardReply.created_at > last_view
+                )
+            ).scalar() or 0
 
         result.append(schemas.BoardPostResponse(
             id=post.id,
@@ -425,6 +426,32 @@ def get_board_posts(
         ))
     
     return result
+
+@router.post("/posts/{post_id}/replies/view")
+def mark_replies_viewed(post_id: int, request: Request, db: Session = Depends(database.get_db)):
+    """返信一覧を開いたタイミングで最終閲覧時刻を記録（バッジの基準）"""
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        # 旧方式のフォールバック
+        dev_email = request.headers.get("X-Dev-Email")
+        if dev_email:
+            if dev_email.startswith("dev:"):
+                dev_email = dev_email[4:]
+            user = get_user_by_email(db, dev_email)
+            current_user_id = user.id if user else None
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+
+    view = db.query(models.BoardRepliesView).filter(
+        and_(models.BoardRepliesView.user_id == current_user_id, models.BoardRepliesView.post_id == post_id)
+    ).first()
+    now = models.jst_now()
+    if view:
+        view.last_viewed_at = now
+    else:
+        db.add(models.BoardRepliesView(user_id=current_user_id, post_id=post_id, last_viewed_at=now))
+    db.commit()
+    return {"message": "ok", "post_id": post_id}
 
 @router.post("/posts", response_model=schemas.BoardPostResponse)
 def create_board_post(
@@ -582,6 +609,29 @@ def get_post_replies(
             created_at=ensure_jst_aware(reply.created_at).isoformat()
         ))
     
+    # 閲覧記録を更新（バッジの基準）
+    try:
+        viewer_id = get_current_user_id(request)
+        if not viewer_id:
+            dev_email = request.headers.get("X-Dev-Email")
+            if dev_email:
+                if dev_email.startswith("dev:"):
+                    dev_email = dev_email[4:]
+                user = get_user_by_email(db, dev_email)
+                viewer_id = user.id if user else None
+        if viewer_id:
+            view = db.query(models.BoardRepliesView).filter(
+                and_(models.BoardRepliesView.user_id == viewer_id, models.BoardRepliesView.post_id == post_id)
+            ).first()
+            now = models.jst_now()
+            if view:
+                view.last_viewed_at = now
+            else:
+                db.add(models.BoardRepliesView(user_id=viewer_id, post_id=post_id, last_viewed_at=now))
+            db.commit()
+    except Exception:
+        pass
+
     return result
 
 # 投稿IDからboard_idを解決

@@ -243,6 +243,19 @@ class PageView(Base):
     user_agent = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
 
+# 投稿返信の閲覧記録（ユーザー×投稿の最終返信閲覧時刻）
+class BoardRepliesView(Base):
+    __tablename__ = "board_replies_view"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'post_id', name='uq_replies_view_user_post'),
+        Index('idx_replies_view_user_post', 'user_id', 'post_id'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    post_id = Column(Integer, ForeignKey("board_posts.id", ondelete="CASCADE"), nullable=False, index=True)
+    last_viewed_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
 # 掲示板の最終訪問記録（ユーザー×掲示板）
 class BoardVisit(Base):
     __tablename__ = "board_visits"
