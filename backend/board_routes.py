@@ -114,6 +114,9 @@ def get_feed_posts(
     elif feed_type == "trending":
         # コメント数が多い順
         query = query.order_by(desc(models.BoardPost.reply_count), desc(models.BoardPost.created_at))
+    elif feed_type == "no_comments":
+        # 返信がまだついていない投稿（コメント一番乗り）
+        query = query.filter(models.BoardPost.reply_count == 0).order_by(desc(models.BoardPost.created_at))
     else:
         # 最新順（デフォルト）
         query = query.order_by(desc(models.BoardPost.created_at))
