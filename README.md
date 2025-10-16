@@ -1,3 +1,81 @@
+# データ取得・集計クイックスタート（初心者向け）
+
+この手順では、GitHub から本リポジトリを取得し、Supabase のデータベースから全テーブルを CSV 出力→分析用に集約するところまでを最短で実行します。フロントやバックエンドを立ち上げる必要はありません（データ取得のみ）。
+
+注意: 機密情報（DB 接続 URL）を GitHub に絶対にプッシュしないでください。
+
+## 1. リポジトリを取得
+
+```bash
+git clone https://github.com/Shintaisei/Urib.git
+cd Uriv-app
+```
+
+## 2. Python 環境を用意（データ取得に必要）
+
+Python 3.9 以上を推奨。以下は macOS/Linux の例です（Windows は PowerShell の同等コマンドでOK）。
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+## 3. Supabase の接続 URL を用意
+
+Supabase Dashboard → Project Settings → Database → Connection string から PostgreSQL の接続 URL を取得します。パスワードに `#` が含まれる場合は `%23` に URL エンコードされていることを確認してください。
+
+例（Transaction Pooler 推奨・sslmode は自動付与されます）:
+
+```bash
+export SUPABASE_DB_URL="postgresql://<user>:<password>@aws-1-<region>.pooler.supabase.com:6543/postgres"
+```
+
+## 4. 全テーブルを CSV 出力
+
+```bash
+cd backend
+source .venv/bin/activate
+python export_csv.py --db "$SUPABASE_DB_URL"
+# 実行後、出力先パスが表示されます（例）
+# ✅ Export completed: backend/data_exports/2025MMDD_HHMMSS
+```
+
+フォルダ配下に `<table>.csv` が生成されます（UTF-8、1行目ヘッダー）。
+
+## 5. 集計 CSV を生成（ユーザー特徴・ユーザー×掲示板の関与）
+
+```bash
+# 直前のエクスポート出力ディレクトリを指定
+python aggregate_exports.py backend/data_exports/2025MMDD_HHMMSS
+# 実行後、aggregated/ 配下に集約 CSV が生成されます
+# ✅ Aggregation completed: backend/data_exports/2025MMDD_HHMMSS/aggregated
+```
+
+出力される主な集約 CSV:
+
+- `boards_summary.csv`: 掲示板ごとの投稿数・返信数・いいね数・ユニーク訪問者数・ユニーク投稿者数・最終投稿時刻
+- `users_summary.csv`: ユーザーごとの投稿数・返信数・付与/受領いいね（投稿/返信）
+- `users_features.csv`: ユーザー属性（email/university/year/department）+ 平均投稿文字数/平均返信文字数などの特徴量
+- `user_board_engagement.csv`: ユーザー×掲示板での関与（投稿/返信/付与いいね/受領いいね）
+
+これらをスプレッドシートやBIツールに読み込めば、各ユーザーの特徴やどの掲示板にどう行動しているかを分析できます。
+
+## 6. よくあるエラー
+
+- `ModuleNotFoundError: No module named 'sqlalchemy'`
+  - 仮想環境の有効化漏れ or `pip install -r requirements.txt` を未実施
+- `_csv.Error: field larger than field limit`
+  - 自動で上限緩和していますが、環境によっては再実行してください
+
+## 7. セキュリティの注意
+
+- Supabase の接続 URL は環境変数で扱い、リポジトリに保存しない
+- `.env` や `DEPLOYMENT_INFO.md` など機密ファイルは `.gitignore` 済み（プッシュしない）
+
+---
+
 # URIV - 大学生限定匿名コミュニティ
 
 大学生向けの匿名掲示板＆マーケットプレイスアプリケーション
