@@ -50,6 +50,11 @@ def get_board_stats(db: Session = Depends(database.get_db)):
         
         # 最終活動時刻をJSTのISO文字列に統一
         last_activity = ensure_jst_aware(latest_post.created_at).isoformat() if latest_post else None
+
+        # 参加者数を取得（この掲示板を一度でも開いたユーザー数）
+        participant_count = db.query(func.count(models.BoardVisit.id)).filter(
+            models.BoardVisit.board_id == str(board_id)
+        ).scalar() or 0
         
         # 人気のハッシュタグを取得（この掲示板の最新3件の投稿から）
         recent_posts_with_tags = db.query(models.BoardPost.hashtags).filter(
@@ -80,7 +85,8 @@ def get_board_stats(db: Session = Depends(database.get_db)):
             "reply_count": int(total_replies),
             "like_count": int(total_likes),
             "last_activity": last_activity,
-            "popular_hashtags": unique_tags
+            "popular_hashtags": unique_tags,
+            "participant_count": int(participant_count)
         })
     
     return {"stats": stats}

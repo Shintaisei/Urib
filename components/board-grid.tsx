@@ -130,7 +130,8 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
               replyCount: stat.reply_count,
               likeCount: stat.like_count,
               lastActivity: stat.last_activity ? getTimeDiff(stat.last_activity) : "-",
-              popularHashtags: stat.popular_hashtags || []
+              popularHashtags: stat.popular_hashtags || [],
+              memberCount: stat.participant_count ?? board.memberCount
             }
           }
           return board
@@ -232,6 +233,10 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
                   <Clock className="w-3 h-3 mr-1" />
                   {board.lastActivity}
                 </div>
+              </div>
+              <div className="flex items-center">
+                <Users className="w-4 h-4 mr-1" />
+                参加中 {board.memberCount}人
               </div>
               
               {board.popularHashtags && board.popularHashtags.length > 0 && (
