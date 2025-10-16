@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { Heart, MessageCircle, TrendingUp, Clock, Flame } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -51,6 +53,9 @@ export function PostFeed() {
   const [loading, setLoading] = useState(true)
   const [latestTab, setLatestTab] = useState<LatestTab>('posts')
   const [latestReplies, setLatestReplies] = useState<any[]>([])
+  const [replyOpenByPost, setReplyOpenByPost] = useState<Record<number, boolean>>({})
+  const [replyContentByPost, setReplyContentByPost] = useState<Record<number, string>>({})
+  const [submittingReply, setSubmittingReply] = useState<number | null>(null)
 
   useEffect(() => {
     fetchFeed()
@@ -130,6 +135,36 @@ export function PostFeed() {
   }
 
   // フィード内のコメントボタンは投稿詳細へ遷移（クイック返信は行わない）
+  const toggleReplyForm = (postId: number) => {
+    setReplyOpenByPost(prev => ({ ...prev, [postId]: !prev[postId] }))
+  }
+
+  const submitReply = async (postId: number) => {
+    const content = (replyContentByPost[postId] || '').trim()
+    if (!content) return
+    try {
+      setSubmittingReply(postId)
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const res = await fetch(`${API_BASE_URL}/board/posts/${postId}/replies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+        },
+        body: JSON.stringify({ content })
+      })
+      if (!res.ok) throw new Error('返信の投稿に失敗しました')
+      // 返信数を+1し、入力をクリア
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, reply_count: p.reply_count + 1 } : p))
+      setReplyContentByPost(prev => ({ ...prev, [postId]: '' }))
+      setReplyOpenByPost(prev => ({ ...prev, [postId]: false }))
+    } catch (e) {
+      // noop
+    } finally {
+      setSubmittingReply(null)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -278,8 +313,36 @@ export function PostFeed() {
                           </div>
                         </div>
 
-                        {/* フィード内 コメントボタンはカード遷移に任せる（ここでは何もしない） */}
-                        <div className="mt-2 text-xs text-muted-foreground">コメントは投稿ページで入力できます</div>
+                        {/* フィード内 ピンポイント返信 */}
+                        <div className="mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleReplyForm(post.id) }}
+                          >
+                            返信
+                          </Button>
+                        </div>
+                        {replyOpenByPost[post.id] && (
+                          <div className="mt-2" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                            <Textarea
+                              placeholder="返信を入力..."
+                              value={replyContentByPost[post.id] || ''}
+                              onChange={(e) => setReplyContentByPost(prev => ({ ...prev, [post.id]: e.target.value }))}
+                              className="min-h-[64px]"
+                              maxLength={500}
+                            />
+                            <div className="mt-2 flex items-center justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => submitReply(post.id)}
+                                disabled={submittingReply === post.id || !(replyContentByPost[post.id] || '').trim()}
+                              >
+                                {submittingReply === post.id ? '送信中...' : '返信する'}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -378,7 +441,35 @@ export function PostFeed() {
                           コメント一番乗り募集中
                         </div>
 
-                        <div className="mt-2 text-xs text-muted-foreground">コメントは投稿ページで入力できます</div>
+                        <div className="mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleReplyForm(post.id) }}
+                          >
+                            返信
+                          </Button>
+                        </div>
+                        {replyOpenByPost[post.id] && (
+                          <div className="mt-2" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                            <Textarea
+                              placeholder="返信を入力..."
+                              value={replyContentByPost[post.id] || ''}
+                              onChange={(e) => setReplyContentByPost(prev => ({ ...prev, [post.id]: e.target.value }))}
+                              className="min-h-[64px]"
+                              maxLength={500}
+                            />
+                            <div className="mt-2 flex items-center justify-end">
+                              <Button
+                                size="sm"
+                                onClick={() => submitReply(post.id)}
+                                disabled={submittingReply === post.id || !(replyContentByPost[post.id] || '').trim()}
+                              >
+                                {submittingReply === post.id ? '送信中...' : '返信する'}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
