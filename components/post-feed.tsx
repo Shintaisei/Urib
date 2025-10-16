@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Heart, MessageCircle, TrendingUp, Clock, Flame } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -44,6 +45,7 @@ type FeedType = 'latest' | 'popular' | 'trending'
 type LatestTab = 'posts' | 'replies' | 'no_comments'
 
 export function PostFeed() {
+  const router = useRouter()
   const [feedType, setFeedType] = useState<FeedType>('latest')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
@@ -101,6 +103,18 @@ export function PostFeed() {
     }
   }
 
+  // 表示中のリストの遷移先をプリフェッチして体感速度を改善
+  useEffect(() => {
+    try {
+      if (feedType !== 'latest') return
+      if (latestTab === 'posts' || latestTab === 'no_comments') {
+        posts.slice(0, 8).forEach((p) => router.prefetch(`/board/${p.board_id}?post_id=${p.id}`))
+      } else if (latestTab === 'replies') {
+        latestReplies.slice(0, 8).forEach((row: any) => router.prefetch(`/board/${row.post.board_id}?post_id=${row.post.id}`))
+      }
+    } catch {}
+  }, [router, feedType, latestTab, posts, latestReplies])
+
   const getTimeDiff = (createdAt: string): string => {
     const now = new Date()
     const created = new Date(createdAt)
@@ -114,6 +128,8 @@ export function PostFeed() {
     if (diffHours < 24) return `${diffHours}時間前`
     return `${diffDays}日前`
   }
+
+  // フィード内のコメントボタンは投稿詳細へ遷移（クイック返信は行わない）
 
   return (
     <div className="space-y-4">
@@ -261,6 +277,9 @@ export function PostFeed() {
                             {post.reply_count}
                           </div>
                         </div>
+
+                        {/* フィード内 コメントボタンはカード遷移に任せる（ここでは何もしない） */}
+                        <div className="mt-2 text-xs text-muted-foreground">コメントは投稿ページで入力できます</div>
                       </div>
                     </div>
                   </CardContent>
@@ -358,6 +377,8 @@ export function PostFeed() {
                         <div className="text-[10px] inline-flex items-center bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
                           コメント一番乗り募集中
                         </div>
+
+                        <div className="mt-2 text-xs text-muted-foreground">コメントは投稿ページで入力できます</div>
                       </div>
                     </div>
                   </CardContent>
