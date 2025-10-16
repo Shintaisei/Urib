@@ -83,7 +83,7 @@ export default function BoardPage({ params }: BoardPageProps) {
       <Header />
 
       <main className="container mx-auto px-4 py-6 max-w-4xl">
-        <BoardHeader title={board.title} description={board.description} memberCount={board.memberCount} />
+        <BoardHeader title={board.title} description={board.description} />
 
         <div className="mt-8 space-y-6">
           <PostForm boardId={resolvedParams.id} onPostCreated={handlePostCreated} />

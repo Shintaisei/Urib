@@ -3,16 +3,15 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Users, Bell } from "lucide-react"
+import { ArrowLeft, Bell } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface BoardHeaderProps {
   title: string
   description: string
-  memberCount: number
 }
 
-export function BoardHeader({ title, description, memberCount }: BoardHeaderProps) {
+export function BoardHeader({ title, description }: BoardHeaderProps) {
   const router = useRouter()
 
   return (
@@ -35,12 +34,6 @@ export function BoardHeader({ title, description, memberCount }: BoardHeaderProp
             <div className="space-y-2">
               <h1 className="text-2xl font-bold text-foreground">{title}</h1>
               <p className="text-muted-foreground">{description}</p>
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                <div className="flex items-center">
-                  <Users className="w-4 h-4 mr-1" />
-                  {memberCount.toLocaleString()}人が参加
-                </div>
-              </div>
             </div>
 
             <div className="flex items-center space-x-2">
