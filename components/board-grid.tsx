@@ -234,10 +234,6 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
                   {board.lastActivity}
                 </div>
               </div>
-              <div className="flex items-center">
-                <Users className="w-4 h-4 mr-1" />
-                参加中 {board.memberCount}人
-              </div>
               
               {board.popularHashtags && board.popularHashtags.length > 0 && (
                 <div className="pt-2 border-t border-border">
