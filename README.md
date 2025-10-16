@@ -4,15 +4,16 @@
 
 注意: 機密情報（DB 接続 URL）を GitHub に絶対にプッシュしないでください。
 
-## 0. .env に接続URLを書くだけ（推奨・コピペ）
+## 0. .env に接続URLを書くだけ（推奨）
 
-backend/.env（新規作成。gitignore済み）に以下をコピーして、`yourPassword%23`と接続情報を差し替えるだけでOKです。
+backend/.env（新規作成。gitignore 済み）に `SUPABASE_DB_URL` を1行だけ書きます。
 
 ```
-SUPABASE_DB_URL="postgresql://postgres.xxxxxxxxxxxxxxxxx:yourPassword%23@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"
+SUPABASE_DB_URL="<ここに接続URL>"
 ```
 
-> 補足: パスワードに `#` が含まれる場合は `%23` にエンコードしてください。
+接続URLはこのREADMEに記載しません（外部に漏れない手段で共有）。
+パスワードに `#` が含まれる場合は `%23` にエンコードしてください。
 
 ## 1. リポジトリを取得
 
@@ -36,11 +37,7 @@ pip install -r requirements.txt
 
 Supabase Dashboard → Project Settings → Database → Connection string から PostgreSQL の接続 URL を取得します。パスワードに `#` が含まれる場合は `%23` に URL エンコードされていることを確認してください。
 
-例（Transaction Pooler 推奨・sslmode は自動付与されます）:
-
-```bash
-export SUPABASE_DB_URL="postgresql://<user>:<password>@aws-1-<region>.pooler.supabase.com:6543/postgres"
-```
+（参考）環境変数で渡す場合は、個別に共有された接続URLを `SUPABASE_DB_URL` に設定してください。
 
 ## 4. 全テーブルを CSV 出力
 
