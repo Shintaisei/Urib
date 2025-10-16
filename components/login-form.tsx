@@ -92,7 +92,7 @@ export function LoginForm(): React.ReactElement {
       localStorage.setItem('university', data.university || '')
       localStorage.setItem('access_token', data.access_token || 'authenticated')
 
-      // ホームページに遷移
+      // 初回遷移: ホームの最新タブ
       router.push('/home')
     } catch (err: any) {
       setError(err.message || '認証に失敗しました')

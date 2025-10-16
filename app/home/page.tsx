@@ -10,7 +10,7 @@ import { MarketBoard } from "@/components/market-board"
 import { TrendingUp, LayoutGrid } from "lucide-react"
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market'>('boards')
+  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market'>('feed')
 
   return (
     <div className="min-h-screen bg-background">
