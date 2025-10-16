@@ -4,6 +4,16 @@
 
 注意: 機密情報（DB 接続 URL）を GitHub に絶対にプッシュしないでください。
 
+## 0. .env に接続URLを書くだけ（推奨・コピペ）
+
+backend/.env（新規作成。gitignore済み）に以下をコピーして、`yourPassword%23`と接続情報を差し替えるだけでOKです。
+
+```
+SUPABASE_DB_URL="postgresql://postgres.xxxxxxxxxxxxxxxxx:yourPassword%23@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"
+```
+
+> 補足: パスワードに `#` が含まれる場合は `%23` にエンコードしてください。
+
 ## 1. リポジトリを取得
 
 ```bash
@@ -37,6 +47,9 @@ export SUPABASE_DB_URL="postgresql://<user>:<password>@aws-1-<region>.pooler.sup
 ```bash
 cd backend
 source .venv/bin/activate
+# .env がある場合は --db は不要です
+python export_csv.py
+# or 直接指定する場合
 python export_csv.py --db "$SUPABASE_DB_URL"
 # 実行後、出力先パスが表示されます（例）
 # ✅ Export completed: backend/data_exports/2025MMDD_HHMMSS
@@ -71,7 +84,7 @@ python aggregate_exports.py backend/data_exports/2025MMDD_HHMMSS
 
 ## 7. セキュリティの注意
 
-- Supabase の接続 URL は環境変数で扱い、リポジトリに保存しない
+- Supabase の接続 URL は環境変数 or backend/.env で扱い、リポジトリに保存しない
 - `.env` や `DEPLOYMENT_INFO.md` など機密ファイルは `.gitignore` 済み（プッシュしない）
 
 ---

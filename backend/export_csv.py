@@ -2,6 +2,7 @@ import os
 import csv
 import datetime
 from typing import Optional
+from dotenv import load_dotenv
 from sqlalchemy import MetaData, select
 
 # 既存のSQLAlchemyエンジンを利用
@@ -18,7 +19,19 @@ def export_all_tables(output_root: Optional[str] = None, db_url: Optional[str] =
     base_dir = output_root or os.path.join(os.path.dirname(__file__), "data_exports", timestamp)
     os.makedirs(base_dir, exist_ok=True)
 
-    # 接続エンジンの決定（引数のdb_url優先）
+    # .env/.env.local 読み込み（存在すれば）
+    try:
+        # backend/直下の.env, .env.local を優先読み込み
+        env_dir = os.path.dirname(__file__)
+        load_dotenv(os.path.join(env_dir, ".env.local"))
+        load_dotenv(os.path.join(env_dir, ".env"))
+    except Exception:
+        pass
+
+    # 接続エンジンの決定（引数のdb_url > 環境変数 SUPABASE_DB_URL > 既定エンジン）
+    if not db_url:
+        db_url = os.getenv("SUPABASE_DB_URL")
+
     if db_url:
         connect_args = {}
         if db_url.startswith("postgresql") and "sslmode" not in db_url:
