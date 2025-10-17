@@ -274,7 +274,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   // ハイライトは1回だけ実施し、完了後はユーザー操作に干渉しない
   useEffect(() => {
     if (!highlightPostId || posts.length === 0) return
-    const postId = parseInt(highlightPostId)
+    const postId = parseInt(highlightPostId as string)
     if (isNaN(postId)) return
     // スクロールのみ（開閉はユーザー操作に委ねる）
     const el = document.getElementById(`post-${postId}`)

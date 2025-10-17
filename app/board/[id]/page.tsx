@@ -4,7 +4,7 @@ import { Header } from "@/components/header"
 import { BoardHeader } from "@/components/board-header"
 import { PostList } from "@/components/post-list"
 import { PostForm } from "@/components/post-form"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { use } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 
@@ -53,6 +53,8 @@ export default function BoardPage({ params }: BoardPageProps) {
   const searchParams = useSearchParams()
   const highlightPostId = searchParams.get('post_id')
   const router = useRouter()
+  // 初回のpost_idを保持（URLを消しても一度だけ使えるように）
+  const initialHighlightRef = useRef<string | null>(highlightPostId)
   const board = boardInfo[resolvedParams.id as keyof typeof boardInfo] || boardInfo["1"]
   const [refreshKey, setRefreshKey] = useState(0)
   useEffect(() => {
@@ -82,7 +84,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   // ナビゲート（post_idによるハイライト）は到達直後の1回だけ。
   // 一度ページに入ったらURLのpost_idクエリを消して恒久的に無効化する。
   useEffect(() => {
-    if (highlightPostId) {
+    if (initialHighlightRef.current) {
       // スクロールは親の初期描画で行われるため、ここではURLだけ消す
       router.replace(`/board/${resolvedParams.id}`, { scroll: false })
     }
@@ -97,8 +99,8 @@ export default function BoardPage({ params }: BoardPageProps) {
         <BoardHeader title={board.title} description={board.description} />
 
         <div className="mt-8 space-y-6">
-          <PostForm boardId={resolvedParams.id} onPostCreated={handlePostCreated} />
-          <PostList boardId={resolvedParams.id} refreshKey={refreshKey} highlightPostId={highlightPostId} />
+        <PostForm boardId={resolvedParams.id} onPostCreated={handlePostCreated} />
+        <PostList boardId={resolvedParams.id} refreshKey={refreshKey} highlightPostId={initialHighlightRef.current} />
         </div>
       </main>
     </div>
