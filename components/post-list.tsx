@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -272,16 +272,19 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   }, [boardId, refreshKey])
 
   // ハイライトは1回だけ実施し、完了後はユーザー操作に干渉しない
+  // ハイライトスクロールは1回だけ実行
+  const didHighlightRef = useRef(false)
   useEffect(() => {
+    if (didHighlightRef.current) return
     if (!highlightPostId || posts.length === 0) return
     const postId = parseInt(highlightPostId as string)
     if (isNaN(postId)) return
-    // スクロールのみ（開閉はユーザー操作に委ねる）
     const el = document.getElementById(`post-${postId}`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    // 以降はdependenciesに含めないことで1回限りにする
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts])
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      didHighlightRef.current = true
+    }
+  }, [posts, highlightPostId])
 
   const handleLike = async (postId: number) => {
     try {
