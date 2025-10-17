@@ -271,23 +271,17 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
     fetchPosts()
   }, [boardId, refreshKey])
 
-  // ハイライト対象の投稿を自動的に開く
+  // ハイライトは1回だけ実施し、完了後はユーザー操作に干渉しない
   useEffect(() => {
-    if (highlightPostId && posts.length > 0) {
-      const postId = parseInt(highlightPostId)
-      if (!isNaN(postId)) {
-        // 投稿を開く
-        setExpandedPostId(postId)
-        // 少し遅延させてからスクロール
-        setTimeout(() => {
-          const element = document.getElementById(`post-${postId}`)
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          }
-        }, 500)
-      }
-    }
-  }, [highlightPostId, posts])
+    if (!highlightPostId || posts.length === 0) return
+    const postId = parseInt(highlightPostId)
+    if (isNaN(postId)) return
+    // スクロールのみ（開閉はユーザー操作に委ねる）
+    const el = document.getElementById(`post-${postId}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    // 以降はdependenciesに含めないことで1回限りにする
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts])
 
   const handleLike = async (postId: number) => {
     try {

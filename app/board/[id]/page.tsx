@@ -6,7 +6,7 @@ import { PostList } from "@/components/post-list"
 import { PostForm } from "@/components/post-form"
 import { useState, useEffect } from "react"
 import { use } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 
 interface BoardPageProps {
   params: Promise<{
@@ -52,6 +52,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   const resolvedParams = use(params)
   const searchParams = useSearchParams()
   const highlightPostId = searchParams.get('post_id')
+  const router = useRouter()
   const board = boardInfo[resolvedParams.id as keyof typeof boardInfo] || boardInfo["1"]
   const [refreshKey, setRefreshKey] = useState(0)
   useEffect(() => {
@@ -77,6 +78,16 @@ export default function BoardPage({ params }: BoardPageProps) {
     // 投稿が作成されたら、PostListを更新
     setRefreshKey(prev => prev + 1)
   }
+
+  // ナビゲート（post_idによるハイライト）は到達直後の1回だけ。
+  // 一度ページに入ったらURLのpost_idクエリを消して恒久的に無効化する。
+  useEffect(() => {
+    if (highlightPostId) {
+      // スクロールは親の初期描画で行われるため、ここではURLだけ消す
+      router.replace(`/board/${resolvedParams.id}`, { scroll: false })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="min-h-screen bg-background">
