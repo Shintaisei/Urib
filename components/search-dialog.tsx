@@ -197,9 +197,9 @@ export function SearchDialog() {
                   
                   {result.hashtags && (
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {result.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).map((tag, index) => (
+                      {result.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).map((tag) => (
                         <span
-                          key={index}
+                          key={`search-${result.post_id}-tag-${tag}`}
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary"
                         >
                           #{highlightText(tag, searchQuery)}

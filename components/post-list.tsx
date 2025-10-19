@@ -442,9 +442,9 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
             
             {post.hashtags && (
               <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
-                {post.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).map((tag, index) => (
+              {post.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).map((tag) => (
                   <span
-                    key={index}
+                  key={`post-${post.id}-tag-${tag}`}
                     className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer transition-colors"
                   >
                     #{tag}

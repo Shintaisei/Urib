@@ -291,9 +291,9 @@ export function PostFeed() {
 
                         {post.hashtags && (
                           <div className="flex flex-wrap gap-1 mb-2">
-                            {post.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).slice(0, 3).map((tag, index) => (
+                            {post.hashtags.split(/[\s,]+/).filter(tag => tag.trim()).slice(0, 3).map((tag) => (
                               <span
-                                key={index}
+                                key={`feed-${post.id}-tag-${tag}`}
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary"
                               >
                                 #{tag}
@@ -359,8 +359,8 @@ export function PostFeed() {
                 <p className="text-sm">まだ返信がありません</p>
               </div>
             )}
-            {latestReplies.map((row: any, idx: number) => (
-              <Link key={idx} href={`/board/${row.post.board_id}?post_id=${row.post.id}`}>
+            {latestReplies.map((row: any) => (
+              <Link key={`reply-${row.reply.id}`} href={`/board/${row.post.board_id}?post_id=${row.post.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">

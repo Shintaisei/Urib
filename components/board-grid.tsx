@@ -238,9 +238,9 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
               {board.popularHashtags && board.popularHashtags.length > 0 && (
                 <div className="pt-2 border-t border-border">
                   <div className="flex flex-wrap gap-1">
-                    {board.popularHashtags.map((tag, index) => (
+                    {board.popularHashtags.map((tag) => (
                       <span
-                        key={index}
+                        key={`hashtag-${tag}`}
                         className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary"
                       >
                         #{tag}
