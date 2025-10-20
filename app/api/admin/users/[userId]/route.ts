@@ -1,3 +1,6 @@
+export const runtime = 'edge'
+export const dynamic = 'force-dynamic'
+
 export async function DELETE(_req: Request, { params }: { params: { userId: string } }) {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://urib-backend.onrender.com'
   try {
