@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const runtime = 'edge'
+export const preferredRegion = ['hnd1','kix1','icn1']
+export const dynamic = 'force-dynamic'
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export async function GET(_req: NextRequest, { params }: { params: { itemId: string } }) {

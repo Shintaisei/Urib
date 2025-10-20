@@ -1,3 +1,7 @@
+export const runtime = 'edge'
+export const preferredRegion = ['hnd1','kix1','icn1']
+export const dynamic = 'force-dynamic'
+
 export async function DELETE(req: Request, { params }: { params: { itemId: string } }) {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://urib-backend.onrender.com'
   const userId = req.headers.get('x-user-id') || undefined
