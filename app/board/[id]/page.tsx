@@ -5,14 +5,9 @@ import { BoardHeader } from "@/components/board-header"
 import { PostList } from "@/components/post-list"
 import { PostForm } from "@/components/post-form"
 import { useState, useEffect, useRef } from "react"
-import { use } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useSearchParams, useRouter, useParams } from "next/navigation"
 
-interface BoardPageProps {
-  params: Promise<{
-    id: string
-  }>
-}
+// route params are read via useParams on client
 
 // 掲示板情報（北大特化）
 const boardInfo = {
@@ -48,14 +43,14 @@ const boardInfo = {
   },
 }
 
-export default function BoardPage({ params }: BoardPageProps) {
-  const resolvedParams = use(params)
+export default function BoardPage() {
+  const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const highlightPostId = searchParams.get('post_id')
   const router = useRouter()
   // 初回のpost_idを保持（URLを消しても一度だけ使えるように）
   const initialHighlightRef = useRef<string | null>(highlightPostId)
-  const board = boardInfo[resolvedParams.id as keyof typeof boardInfo] || boardInfo["1"]
+  const board = boardInfo[id as keyof typeof boardInfo] || boardInfo["1"]
   const [refreshKey, setRefreshKey] = useState(0)
   useEffect(() => {
     const markVisited = async () => {
@@ -63,7 +58,7 @@ export default function BoardPage({ params }: BoardPageProps) {
         const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
         const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-        await fetch(`${API_BASE_URL}/board/visit/${resolvedParams.id}`, {
+        await fetch(`${API_BASE_URL}/board/visit/${id}`, {
           method: 'POST',
           headers: {
             ...(userId ? { 'X-User-Id': userId } : {}),
@@ -74,7 +69,7 @@ export default function BoardPage({ params }: BoardPageProps) {
     }
     markVisited()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedParams.id])
+  }, [id])
 
   const handlePostCreated = () => {
     // 投稿が作成されたら、PostListを更新
@@ -86,7 +81,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   useEffect(() => {
     if (initialHighlightRef.current) {
       // スクロールは親の初期描画で行われるため、ここではURLだけ消す
-      router.replace(`/board/${resolvedParams.id}`, { scroll: false })
+      router.replace(`/board/${id}`, { scroll: false })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -99,8 +94,8 @@ export default function BoardPage({ params }: BoardPageProps) {
         <BoardHeader title={board.title} description={board.description} />
 
         <div className="mt-8 space-y-6">
-        <PostForm boardId={resolvedParams.id} onPostCreated={handlePostCreated} />
-        <PostList boardId={resolvedParams.id} refreshKey={refreshKey} highlightPostId={initialHighlightRef.current} />
+        <PostForm boardId={id} onPostCreated={handlePostCreated} />
+        <PostList boardId={id} refreshKey={refreshKey} highlightPostId={initialHighlightRef.current} />
         </div>
       </main>
     </div>
