@@ -123,6 +123,24 @@ def check_email(email: str, db: Session = Depends(get_db)):
     else:
         return {"exists": False}
 
+# ユーザー検索（メンション補助）
+@app.get("/users/search")
+def search_users(name_prefix: str = "", limit: int = 10, db: Session = Depends(get_db)):
+    """匿名表示名の前方一致検索。最大10件まで。"""
+    name_prefix = (name_prefix or "").strip()
+    q = db.query(models.User)
+    if name_prefix:
+        q = q.filter(models.User.anonymous_name.like(f"{name_prefix}%"))
+    rows = q.order_by(models.User.anonymous_name.asc()).limit(max(1, min(limit, 20))).all()
+    return [
+        {
+            "id": u.id,
+            "anonymous_name": u.anonymous_name,
+            "email": u.email,
+        }
+        for u in rows
+    ]
+
 # 簡易ユーザー登録API（認証なし）
 @app.post("/users/quick-register", response_model=schemas.UserRegisterResponse)
 def quick_register(user: schemas.UserQuickRegister, db: Session = Depends(get_db)):

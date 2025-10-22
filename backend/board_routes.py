@@ -20,6 +20,40 @@ def ensure_jst_aware(dt):
     # tz-aware はJSTへ変換（UTCなどからのズレを解消）
     return dt.astimezone(models.JST)
 
+# -----------------------------
+# メンション検出と通知
+# -----------------------------
+
+MENTION_TOKEN = re.compile(r"@([^\s,.:;!?()]+)")
+
+def notify_mentions_if_any(db: Session, content: str, actor_id: int, entity_type: str, entity_id: int):
+    """本文から @name を抽出し、該当ユーザーに通知を作成する。"""
+    if not content:
+        return
+    names = set()
+    for m in MENTION_TOKEN.findall(content):
+        name = (m or "").strip()
+        if name:
+            names.add(name)
+    if not names:
+        return
+    mentioned_users = db.query(models.User).filter(models.User.anonymous_name.in_(list(names))).all()
+    for u in mentioned_users:
+        if u.id == actor_id:
+            continue
+        notif = models.Notification(
+            user_id=u.id,
+            actor_id=actor_id,
+            type="mention",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            title="あなたがメンションされました",
+            message=(content[:120] if content else None),
+        )
+        db.add(notif)
+    if mentioned_users:
+        db.commit()
+
 # 掲示板統計情報を取得
 @router.get("/stats")
 def get_board_stats(db: Session = Depends(database.get_db)):
@@ -501,6 +535,9 @@ def create_board_post(
     db.commit()
     db.refresh(new_post)
     
+    # メンション通知
+    notify_mentions_if_any(db, new_post.content, current_user.id, entity_type="board_post", entity_id=new_post.id)
+
     return schemas.BoardPostResponse(
         id=new_post.id,
         board_id=new_post.board_id,
@@ -716,6 +753,12 @@ def create_reply(
             )
             db.add(notif)
             db.commit()
+    except Exception:
+        pass
+
+    # メンション通知（返信本文）
+    try:
+        notify_mentions_if_any(db, new_reply.content, current_user.id, entity_type="board_reply", entity_id=new_reply.id)
     except Exception:
         pass
 
