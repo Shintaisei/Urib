@@ -80,7 +80,7 @@ export function ChatArea({ chatId }: ChatAreaProps) {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
-          <div key={msg.id} className={cn("flex", msg.is_own ? "justify-end" : "justify-start")}>
+          <div key={msg.id} className={cn("flex", msg.is_own ? "justify-start" : "justify-end")}>
             <div
               className={cn(
                 "max-w-[70%] rounded-lg px-4 py-2",
