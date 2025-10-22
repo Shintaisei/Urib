@@ -33,7 +33,7 @@ type Comment = {
   created_at: string
 }
 
-export function CircleSummaries(): React.ReactElement {
+export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactElement {
   const [list, setList] = useState<Summary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -83,6 +83,12 @@ export function CircleSummaries(): React.ReactElement {
     fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!focusId || list.length === 0) return
+    const el = document.getElementById(`circle-${focusId}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [focusId, list])
 
   const createSummary = async (): Promise<void> => {
     if (!title.trim() || !content.trim()) return
@@ -211,7 +217,7 @@ export function CircleSummaries(): React.ReactElement {
 
           <div className="space-y-3">
             {list.map((s) => (
-              <div key={s.id} className="border rounded p-3">
+              <div key={s.id} id={`circle-${s.id}`} className="border rounded p-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-base font-semibold text-foreground">{s.title}</div>
