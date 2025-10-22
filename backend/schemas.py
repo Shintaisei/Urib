@@ -159,3 +159,40 @@ class DMMessageResponse(BaseModel):
     sender_email: Optional[str] = None
     content: str
     created_at: str
+
+# =====================
+# Course Summary Schemas
+# =====================
+
+class CourseSummaryCreate(BaseModel):
+    title: str
+    course_name: Optional[str] = None
+    instructor: Optional[str] = None
+    department: Optional[str] = None
+    year_semester: Optional[str] = None
+    tags: Optional[str] = None
+    content: str
+
+class CourseSummaryResponse(BaseModel):
+    id: int
+    title: str
+    course_name: Optional[str] = None
+    instructor: Optional[str] = None
+    department: Optional[str] = None
+    year_semester: Optional[str] = None
+    tags: Optional[str] = None
+    content: str
+    author_name: str
+    like_count: int
+    comment_count: int
+    created_at: str
+
+class CourseSummaryCommentCreate(BaseModel):
+    content: str
+
+class CourseSummaryCommentResponse(BaseModel):
+    id: int
+    summary_id: int
+    author_name: str
+    content: str
+    created_at: str

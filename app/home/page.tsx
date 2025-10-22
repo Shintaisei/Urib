@@ -7,10 +7,11 @@ import { UniversityInfo } from "@/components/university-info"
 import { PostFeed } from "@/components/post-feed"
 import { MarketWidget } from "@/components/market-widget"
 import { MarketBoard } from "@/components/market-board"
-import { TrendingUp, LayoutGrid } from "lucide-react"
+import { TrendingUp, LayoutGrid, BookOpen } from "lucide-react"
+import { CourseSummaries } from "@/components/course-summaries"
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market'>('feed')
+  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'courses'>('feed')
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,6 +54,17 @@ export default function HomePage() {
           >
             書籍売買
           </button>
+          <button
+            onClick={() => setActiveTab('courses')}
+            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'courses'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 inline mr-2" />
+            授業まとめ情報
+          </button>
         </div>
 
         {/* タブコンテンツ */}
@@ -79,6 +91,13 @@ export default function HomePage() {
             <div>
               <h2 className="text-2xl font-bold text-foreground mb-6">書籍売買</h2>
               <MarketBoard />
+            </div>
+          )}
+
+          {activeTab === 'courses' && (
+            <div>
+              <h2 className="text-2xl font-bold text-foreground mb-6">授業まとめ情報</h2>
+              <CourseSummaries />
             </div>
           )}
         </div>

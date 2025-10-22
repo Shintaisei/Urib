@@ -321,3 +321,47 @@ class DMBlock(Base):
     blocker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     blocked_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
+# =====================
+# 授業まとめ（Course Summary）
+# =====================
+
+class CourseSummary(Base):
+    __tablename__ = "course_summaries"
+    __table_args__ = (
+        Index('idx_course_summaries_created', 'created_at'),
+        Index('idx_course_summaries_faculty_year', 'department', 'year_semester'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    course_name = Column(String(255), nullable=True, index=True)
+    instructor = Column(String(255), nullable=True, index=True)
+    department = Column(String(100), nullable=True, index=True)
+    year_semester = Column(String(50), nullable=True, index=True)  # 例: 2025春/2025秋
+    tags = Column(String(500), nullable=True)  # スペース/カンマ区切り
+    content = Column(Text, nullable=False)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_name = Column(String(100), nullable=False)
+    like_count = Column(Integer, default=0, index=True)
+    comment_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+    updated_at = Column(DateTime(timezone=True), default=jst_now, onupdate=jst_now, index=True)
+
+    author = relationship("User", backref="course_summaries")
+
+class CourseSummaryComment(Base):
+    __tablename__ = "course_summary_comments"
+    __table_args__ = (
+        Index('idx_course_summary_comments_summary_created', 'summary_id', 'created_at'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    summary_id = Column(Integer, ForeignKey("course_summaries.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_name = Column(String(100), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
+    summary = relationship("CourseSummary", backref="comments")
+    author = relationship("User")
