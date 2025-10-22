@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { MentionTextarea } from "@/components/mention-textarea"
 import { Heart, MessageCircle, Share, MoreHorizontal, Send, Loader2, AtSign, MessageSquare } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { UserPreview } from "@/components/user-preview"
 import { isAdminEmail } from "@/lib/utils"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -92,6 +93,8 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   const [replyContent, setReplyContent] = useState<{ [key: number]: string }>({})
   const [submittingReply, setSubmittingReply] = useState<number | null>(null)
   const [loadingReplies, setLoadingReplies] = useState<number | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewAnonymousName, setPreviewAnonymousName] = useState<string | undefined>(undefined)
   const userEmail = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
   const isAdmin = isAdminEmail(userEmail)
 
@@ -427,7 +430,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-[13px] font-medium text-foreground">{post.author_name}</p>
+                    <button type="button" className="text-[13px] font-medium text-foreground hover:underline" onClick={() => { setPreviewAnonymousName(post.author_name); setPreviewOpen(true) }}>{post.author_name}</button>
                     <button
                       type="button"
                       className="text-xs text-primary hover:underline"
@@ -531,7 +534,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                             </div>
                 <div className="flex items-center gap-2">
                               <div className="flex items-center gap-2">
-                                <p className="text-[13px] font-medium text-foreground">{reply.author_name}</p>
+                                <button type="button" className="text-[13px] font-medium text-foreground hover:underline" onClick={() => { setPreviewAnonymousName(reply.author_name); setPreviewOpen(true) }}>{reply.author_name}</button>
                                 {reply.author_department && reply.author_year && (
                                   <span className="text-xs text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
                                     {reply.author_department} {reply.author_year}
@@ -620,4 +623,8 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       </div>
     </div>
   )
+}
+
+function StartDMFromPreview({ onSelected }: { onSelected: (convId: string) => void }) {
+  return null
 }

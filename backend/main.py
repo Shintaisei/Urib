@@ -141,6 +141,35 @@ def search_users(name_prefix: str = "", limit: int = 10, db: Session = Depends(g
         for u in rows
     ]
 
+# 匿名名からユーザーを解決（公開情報のみ）
+@app.get("/users/resolve")
+def resolve_user(anonymous_name: str, db: Session = Depends(get_db)):
+    u = db.query(models.User).filter(models.User.anonymous_name == anonymous_name).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+    return {
+        "id": u.id,
+        "anonymous_name": u.anonymous_name,
+        "university": u.university,
+        "year": u.year,
+        "department": u.department,
+        # emailは原則返さない
+    }
+
+# ユーザーIDで公開情報を取得
+@app.get("/users/public/{user_id}")
+def get_user_public(user_id: int, db: Session = Depends(get_db)):
+    u = db.query(models.User).filter(models.User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+    return {
+        "id": u.id,
+        "anonymous_name": u.anonymous_name,
+        "university": u.university,
+        "year": u.year,
+        "department": u.department,
+    }
+
 # 簡易ユーザー登録API（認証なし）
 @app.post("/users/quick-register", response_model=schemas.UserRegisterResponse)
 def quick_register(user: schemas.UserQuickRegister, db: Session = Depends(get_db)):

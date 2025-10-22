@@ -4,9 +4,16 @@ import { Header } from "@/components/header"
 import { DMSidebar } from "@/components/dm-sidebar"
 import { ChatArea } from "@/components/chat-area"
 import { useState } from "react"
+import { DMApi } from "@/lib/dm-api"
 
 export default function DMPage() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
+  const handleStartDM = async (userIdOrEmail: { user_id?: number; email?: string }) => {
+    try {
+      const conv = await DMApi.createConversation(userIdOrEmail.user_id ? { partner_email: undefined as any } : { partner_email: userIdOrEmail.email! })
+      setSelectedChatId(String(conv.id))
+    } catch {}
+  }
   return (
     <div className="min-h-screen bg-background">
       <Header />
