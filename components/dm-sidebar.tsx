@@ -15,6 +15,8 @@ interface DMSidebarProps {
 export function DMSidebar({ selectedChatId, onSelectChat }: DMSidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [search, setSearch] = useState("")
+  const [year, setYear] = useState("")
+  const [department, setDepartment] = useState("")
 
   const refresh = async (): Promise<void> => {
     try {
@@ -54,9 +56,15 @@ export function DMSidebar({ selectedChatId, onSelectChat }: DMSidebarProps) {
           </Button>
         </div>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="ユーザーを検索..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input placeholder="ユーザーを検索..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <div className="flex gap-2">
+            <Input placeholder="学年(例: 1年生)" value={year} onChange={(e) => setYear(e.target.value)} />
+            <Input placeholder="学部(例: 工学部)" value={department} onChange={(e) => setDepartment(e.target.value)} />
+          </div>
         </div>
       </div>
 

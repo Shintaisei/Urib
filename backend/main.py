@@ -125,12 +125,16 @@ def check_email(email: str, db: Session = Depends(get_db)):
 
 # ユーザー検索（メンション補助）
 @app.get("/users/search")
-def search_users(name_prefix: str = "", limit: int = 10, db: Session = Depends(get_db)):
+def search_users(name_prefix: str = "", year: str = "", department: str = "", limit: int = 10, db: Session = Depends(get_db)):
     """匿名表示名の前方一致検索。最大10件まで。"""
     name_prefix = (name_prefix or "").strip()
     q = db.query(models.User)
     if name_prefix:
         q = q.filter(models.User.anonymous_name.like(f"{name_prefix}%"))
+    if year:
+        q = q.filter(models.User.year == year)
+    if department:
+        q = q.filter(models.User.department == department)
     rows = q.order_by(models.User.anonymous_name.asc()).limit(max(1, min(limit, 20))).all()
     return [
         {

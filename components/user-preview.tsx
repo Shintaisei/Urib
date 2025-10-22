@@ -59,8 +59,10 @@ export function UserPreview({ userId, anonymousName, open, onOpenChange, onStart
         ) : info ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+              <div className="relative w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-primary">匿</span>
+                {/* Badge */}
+                <span className="absolute -bottom-1 -right-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-500 text-white">{info.year || ''}</span>
               </div>
               <div>
                 <div className="text-sm font-medium">{info.anonymous_name}</div>
