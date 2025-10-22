@@ -421,11 +421,12 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         >
           <CardContent className="p-4">
             <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-primary">匿</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div>
+                  <div className="flex items-center gap-2">
                     <p className="text-[13px] font-medium text-foreground">{post.author_name}</p>
                     <button
                       type="button"
@@ -444,7 +445,6 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                   <p className="text-[11px] text-muted-foreground">{getTimeDiff(post.created_at)}</p>
                 </div>
               </div>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
