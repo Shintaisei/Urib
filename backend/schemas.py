@@ -196,3 +196,44 @@ class CourseSummaryCommentResponse(BaseModel):
     author_name: str
     content: str
     created_at: str
+
+# =====================
+# Circle Summary Schemas
+# =====================
+
+class CircleSummaryCreate(BaseModel):
+    title: str
+    circle_name: Optional[str] = None
+    category: Optional[str] = None
+    activity_days: Optional[str] = None
+    activity_place: Optional[str] = None
+    cost: Optional[str] = None
+    links: Optional[str] = None
+    tags: Optional[str] = None
+    content: str
+
+class CircleSummaryResponse(BaseModel):
+    id: int
+    title: str
+    circle_name: Optional[str] = None
+    category: Optional[str] = None
+    activity_days: Optional[str] = None
+    activity_place: Optional[str] = None
+    cost: Optional[str] = None
+    links: Optional[str] = None
+    tags: Optional[str] = None
+    content: str
+    author_name: str
+    like_count: int
+    comment_count: int
+    created_at: str
+
+class CircleSummaryCommentCreate(BaseModel):
+    content: str
+
+class CircleSummaryCommentResponse(BaseModel):
+    id: int
+    summary_id: int
+    author_name: str
+    content: str
+    created_at: str

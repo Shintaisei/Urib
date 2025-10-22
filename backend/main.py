@@ -5,6 +5,7 @@ import models, schemas, database, utils, univ_domains
 import market_routes
 import dm_routes
 import course_routes
+import circle_routes
 import board_routes
 import analytics_routes
 import os
@@ -305,6 +306,7 @@ app.include_router(dm_routes.router)
 
 # 授業まとめのルーターを追加
 app.include_router(course_routes.router)
+app.include_router(circle_routes.router)
 
 # =========================
 # 管理者専用: アカウント削除

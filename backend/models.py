@@ -365,3 +365,49 @@ class CourseSummaryComment(Base):
 
     summary = relationship("CourseSummary", backref="comments")
     author = relationship("User")
+
+# =====================
+# サークルまとめ（Circle Summary）
+# =====================
+
+class CircleSummary(Base):
+    __tablename__ = "circle_summaries"
+    __table_args__ = (
+        Index('idx_circle_summaries_created', 'created_at'),
+        Index('idx_circle_summaries_category', 'category'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    circle_name = Column(String(255), nullable=True, index=True)
+    category = Column(String(100), nullable=True, index=True)  # 例: 文化系/体育会/ボランティア
+    activity_days = Column(String(100), nullable=True)  # 例: 火・木
+    activity_place = Column(String(255), nullable=True)
+    cost = Column(String(100), nullable=True)  # 会費など
+    links = Column(String(500), nullable=True)  # 公式サイトやSNS
+    tags = Column(String(500), nullable=True)
+    content = Column(Text, nullable=False)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_name = Column(String(100), nullable=False)
+    like_count = Column(Integer, default=0, index=True)
+    comment_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+    updated_at = Column(DateTime(timezone=True), default=jst_now, onupdate=jst_now, index=True)
+
+    author = relationship("User", backref="circle_summaries")
+
+class CircleSummaryComment(Base):
+    __tablename__ = "circle_summary_comments"
+    __table_args__ = (
+        Index('idx_circle_summary_comments_summary_created', 'summary_id', 'created_at'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    summary_id = Column(Integer, ForeignKey("circle_summaries.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    author_name = Column(String(100), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
+    summary = relationship("CircleSummary", backref="comments")
+    author = relationship("User")
