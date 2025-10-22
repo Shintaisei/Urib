@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { MentionTextarea } from "@/components/mention-textarea"
-import { Heart, MessageCircle, Share, MoreHorizontal, Send, Loader2 } from "lucide-react"
+import { Heart, MessageCircle, Share, MoreHorizontal, Send, Loader2, AtSign, MessageSquare } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { isAdminEmail } from "@/lib/utils"
 
@@ -180,6 +180,24 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, new_replies_since_my_last_reply: 0 } : p))
       } catch {}
     }
+  }
+
+  const insertMentionForPost = (postId: number, name: string) => {
+    setExpandedPostId(postId)
+    setReplyContent(prev => {
+      const current = prev[postId] || ''
+      const joiner = current && !current.endsWith(' ') ? ' ' : ''
+      return { ...prev, [postId]: current + joiner + `@${name} ` }
+    })
+    // 返信入力にフォーカス
+    setTimeout(() => {
+      const ta = document.querySelector(`#reply-input-${postId} textarea`) as HTMLTextAreaElement | null
+      if (ta) {
+        ta.focus()
+        const len = ta.value.length
+        ta.setSelectionRange(len, len)
+      }
+    }, 0)
   }
 
   const submitReply = async (postId: number) => {
@@ -403,13 +421,20 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         >
           <CardContent className="p-4">
             <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                   <span className="text-xs font-medium text-primary">匿</span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                     <p className="text-[13px] font-medium text-foreground">{post.author_name}</p>
+                    <button
+                      type="button"
+                      className="text-xs text-primary hover:underline"
+                      onClick={() => insertMentionForPost(post.id, post.author_name)}
+                      title="この投稿者をメンション"
+                    >
+                      <AtSign className="inline w-3 h-3 mr-1" />
+                    </button>
                     {post.author_department && post.author_year && (
                       <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                         {post.author_department} {post.author_year}
@@ -504,7 +529,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                             <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
                               <span className="text-xs font-medium text-primary">匿</span>
                             </div>
-                            <div>
+                <div className="flex items-center gap-2">
                               <div className="flex items-center gap-2">
                                 <p className="text-[13px] font-medium text-foreground">{reply.author_name}</p>
                                 {reply.author_department && reply.author_year && (
@@ -515,6 +540,14 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                               </div>
                               <p className="text-[11px] text-muted-foreground">{getTimeDiff(reply.created_at)}</p>
                             </div>
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => insertMentionForPost(post.id, reply.author_name)}
+                  title="このユーザーをメンション"
+                >
+                  <AtSign className="inline w-3 h-3 mr-1" />メンション
+                </button>
                           </div>
                           {isAdmin && (
                             <Button
@@ -547,7 +580,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 )}
 
                 {/* 返信フォーム */}
-                <div className="space-y-2">
+                <div className="space-y-2" id={`reply-input-${post.id}`}>
                   <MentionTextarea
                     placeholder="返信を入力..."
                     value={replyContent[post.id] || ''}
