@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { isAdminEmail } from "@/lib/utils"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -56,6 +57,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [comments, setComments] = useState<Record<number, Comment[]>>({})
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({})
   const [commentSubmitting, setCommentSubmitting] = useState<number | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const fetchList = async () => {
     setLoading(true)
@@ -80,6 +82,11 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   useEffect(() => {
     fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+    setIsAdmin(isAdminEmail(email))
   }, [])
 
   // フォーカス対象があればスクロール
@@ -167,6 +174,41 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
     }
   }
 
+  const adminDeleteSummary = async (summaryId: number) => {
+    if (!isAdmin) return
+    if (!confirm('この授業まとめを削除しますか？')) return
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const res = await fetch(`${API_BASE_URL}/courses/admin/summaries/${summaryId}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Id': userId }
+      })
+      if (!res.ok) throw new Error('削除に失敗しました')
+      setList(prev => prev.filter(s => s.id !== summaryId))
+    } catch (e:any) {
+      alert(e?.message || '削除に失敗しました')
+    }
+  }
+
+  const adminDeleteComment = async (summaryId: number, commentId: number) => {
+    if (!isAdmin) return
+    if (!confirm('このコメントを削除しますか？')) return
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const res = await fetch(`${API_BASE_URL}/courses/admin/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Id': userId }
+      })
+      if (!res.ok) throw new Error('削除に失敗しました')
+      setComments(prev => ({ ...prev, [summaryId]: (prev[summaryId] || []).filter(c => c.id !== commentId) }))
+      setList(prev => prev.map(s => s.id === summaryId ? { ...s, comment_count: Math.max(0, s.comment_count - 1) } : s))
+    } catch (e:any) {
+      alert(e?.message || '削除に失敗しました')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -219,7 +261,16 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                     <div className="text-xs text-muted-foreground">{s.course_name} {s.instructor}</div>
                     <div className="text-xs text-muted-foreground">{s.department} {s.year_semester} {s.tags && `#${s.tags}`}</div>
                   </div>
-                  <div className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString('ja-JP')}</div>
+                  <div className="text-right space-y-1">
+                    <div className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString('ja-JP')}</div>
+                    {isAdmin && (
+                      <div className="text-right">
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => adminDeleteSummary(s.id)}>
+                          削除（管理者）
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="mt-2 text-sm text-foreground whitespace-pre-wrap">{s.content}</div>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
@@ -235,7 +286,12 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                         <div key={c.id} className="text-sm">
                           <div className="flex items-center justify-between">
                             <div className="font-medium">{c.author_name}</div>
-                            <div className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString('ja-JP')}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString('ja-JP')}</div>
+                              {isAdmin && (
+                                <Button size="sm" variant="ghost" className="h-6 px-2 text-destructive" onClick={() => adminDeleteComment(s.id, c.id)}>削除</Button>
+                              )}
+                            </div>
                           </div>
                           <div className="whitespace-pre-wrap text-foreground">{c.content}</div>
                         </div>
