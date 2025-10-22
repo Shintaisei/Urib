@@ -8,6 +8,7 @@ import { Heart, MessageCircle, Share, MoreHorizontal, Send, Loader2, AtSign, Mes
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { UserPreview } from "@/components/user-preview"
 import { isAdminEmail } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -85,6 +86,7 @@ function getTimeDiff(dateString: string): string {
 }
 
 export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps) {
+  const router = useRouter()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -95,6 +97,22 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   const [loadingReplies, setLoadingReplies] = useState<number | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewAnonymousName, setPreviewAnonymousName] = useState<string | undefined>(undefined)
+
+  const startDMFromPreview = async (args: { user_id?: number; email?: string }) => {
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const headers: any = { 'Content-Type': 'application/json', 'X-User-Id': userId }
+      const body: any = {}
+      if (args.user_id) body.partner_user_id = args.user_id
+      if (args.email) body.partner_email = args.email
+      await fetch(`${API_BASE_URL}/dm/conversations`, { method: 'POST', headers, body: JSON.stringify(body) })
+      setPreviewOpen(false)
+      router.push('/dm')
+    } catch (e) {
+      alert('DM開始に失敗しました')
+    }
+  }
   const userEmail = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
   const isAdmin = isAdminEmail(userEmail)
 
@@ -425,7 +443,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
           <CardContent className="p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center cursor-pointer" onClick={() => { setPreviewAnonymousName(post.author_name); setPreviewOpen(true) }} title="ユーザー情報を見る">
                   <span className="text-xs font-medium text-primary">匿</span>
                 </div>
                 <div>
@@ -529,7 +547,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                       <div key={reply.id} className="bg-muted/30 rounded-lg p-2.5">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">
-                            <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
+                            <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center cursor-pointer" onClick={() => { setPreviewAnonymousName(reply.author_name); setPreviewOpen(true) }} title="ユーザー情報を見る">
                               <span className="text-xs font-medium text-primary">匿</span>
                             </div>
                 <div className="flex items-center gap-2">
@@ -621,10 +639,14 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       )
       })}
       </div>
+      {/* User Preview Dialog */}
+      <UserPreview
+        anonymousName={previewAnonymousName}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        onStartDM={startDMFromPreview}
+      />
     </div>
   )
 }
 
-function StartDMFromPreview({ onSelected }: { onSelected: (convId: string) => void }) {
-  return null
-}
