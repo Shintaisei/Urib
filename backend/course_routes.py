@@ -108,6 +108,21 @@ def add_summary_comment(summary_id: int, payload: schemas.CourseSummaryCommentCr
     c = models.CourseSummaryComment(summary_id=summary_id, author_id=user.id, author_name=anon, content=payload.content)
     db.add(c)
     summary.comment_count += 1
+    # 通知: まとめ作者へ（自分以外）
+    try:
+        if summary.author_id and summary.author_id != user.id:
+            notif = models.Notification(
+                user_id=summary.author_id,
+                actor_id=user.id,
+                type="course_commented",
+                entity_type="course_summary",
+                entity_id=summary.id,
+                title="授業まとめにコメントがありました",
+                message=payload.content[:120],
+            )
+            db.add(notif)
+    except Exception:
+        pass
     db.commit()
     db.refresh(c)
     return schemas.CourseSummaryCommentResponse(
