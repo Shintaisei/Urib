@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
+import { AtSign } from "lucide-react"
 
 type MentionUser = { id: number; anonymous_name: string; email?: string | null }
 
@@ -23,6 +24,7 @@ export function MentionTextarea({ value, onChange, placeholder, maxLength, class
   const taRef = useRef<HTMLTextAreaElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const debounceRef = useRef<number | undefined>(undefined)
+  const forceOpenRef = useRef(false)
 
   const extractQuery = useCallback(() => {
     const ta = taRef.current
@@ -61,7 +63,8 @@ export function MentionTextarea({ value, onChange, placeholder, maxLength, class
     const { q } = extractQuery()
     setQuery(q)
     window.clearTimeout(debounceRef.current)
-    if (q) {
+    const shouldOpen = q || forceOpenRef.current
+    if (shouldOpen) {
       debounceRef.current = window.setTimeout(() => runSearch(q), 200)
     } else {
       setOpen(false)
@@ -105,8 +108,35 @@ export function MentionTextarea({ value, onChange, placeholder, maxLength, class
       if (choice) applySelection(choice.anonymous_name)
     } else if (e.key === 'Escape') {
       setOpen(false)
+      forceOpenRef.current = false
     }
   }, [open, items, activeIndex, applySelection])
+
+  const onClickMentionIcon = useCallback(async () => {
+    const ta = taRef.current
+    if (!ta) return
+    const pos = ta.selectionStart
+    const before = value.slice(0, pos)
+    const after = value.slice(pos)
+    // 直前が @ でなければ @ を挿入
+    const insert = before.endsWith("@") ? "" : "@"
+    const next = before + insert + after
+    if (insert) {
+      onChange(next)
+      requestAnimationFrame(() => {
+        const newPos = pos + insert.length
+        ta.setSelectionRange(newPos, newPos)
+        ta.focus()
+      })
+    } else {
+      ta.focus()
+    }
+    forceOpenRef.current = true
+    setOpen(true)
+    try {
+      await runSearch("")
+    } catch {}
+  }, [onChange, runSearch, value])
 
   return (
     <div ref={containerRef} className="relative">
@@ -119,6 +149,15 @@ export function MentionTextarea({ value, onChange, placeholder, maxLength, class
         className={className}
         maxLength={maxLength}
       />
+      <button
+        type="button"
+        aria-label="メンション"
+        className="absolute top-2 right-2 inline-flex items-center justify-center h-7 w-7 rounded border bg-background hover:bg-accent"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onClickMentionIcon}
+      >
+        <AtSign className="h-4 w-4" />
+      </button>
       {open && items.length > 0 && (
         <div className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
           {items.map((u, i) => (
