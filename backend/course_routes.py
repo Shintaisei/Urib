@@ -52,7 +52,7 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
     anon = get_or_create_anonymous_name(user, db)
     row = models.CourseSummary(
-        title=payload.title,
+        title=payload.title or (payload.course_name or "授業まとめ"),
         course_name=payload.course_name,
         instructor=payload.instructor,
         department=payload.department,

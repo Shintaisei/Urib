@@ -179,7 +179,6 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input placeholder="タイトル" value={title} onChange={(e) => setTitle(e.target.value)} />
             <Input placeholder="サークル名" value={circleName} onChange={(e) => setCircleName(e.target.value)} />
             <Input placeholder="カテゴリ（例: 文化系）" value={cat} onChange={(e) => setCat(e.target.value)} />
             <Input placeholder="活動日（例: 火・木）" value={days} onChange={(e) => setDays(e.target.value)} />

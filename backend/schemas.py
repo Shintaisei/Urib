@@ -165,7 +165,7 @@ class DMMessageResponse(BaseModel):
 # =====================
 
 class CourseSummaryCreate(BaseModel):
-    title: str
+    title: Optional[str] = None
     course_name: Optional[str] = None
     instructor: Optional[str] = None
     department: Optional[str] = None
@@ -202,7 +202,7 @@ class CourseSummaryCommentResponse(BaseModel):
 # =====================
 
 class CircleSummaryCreate(BaseModel):
-    title: str
+    title: Optional[str] = None
     circle_name: Optional[str] = None
     category: Optional[str] = None
     activity_days: Optional[str] = None

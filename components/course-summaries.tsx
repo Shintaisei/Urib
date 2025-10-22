@@ -176,7 +176,6 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input placeholder="タイトル" value={title} onChange={(e) => setTitle(e.target.value)} />
             <Input placeholder="授業名（例: 線形代数）" value={courseName} onChange={(e) => setCourseName(e.target.value)} />
             <Input placeholder="教員名" value={instructor} onChange={(e) => setInstructor(e.target.value)} />
             <Input placeholder="学部（例: 工学部）" value={department} onChange={(e) => setDepartment(e.target.value)} />
