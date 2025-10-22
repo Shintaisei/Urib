@@ -1,57 +1,54 @@
 "use client"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DMApi, type Conversation } from "@/lib/dm-api"
 
 interface DMSidebarProps {
   selectedChatId: string | null
   onSelectChat: (chatId: string) => void
 }
 
-const mockChats = [
-  {
-    id: "1",
-    anonymousId: "匿名ユーザー #A1B2",
-    lastMessage: "ありがとうございました！",
-    timestamp: "2分前",
-    unreadCount: 0,
-    isOnline: true,
-  },
-  {
-    id: "2",
-    anonymousId: "匿名ユーザー #C3D4",
-    lastMessage: "研究室の件、どうでしたか？",
-    timestamp: "15分前",
-    unreadCount: 2,
-    isOnline: false,
-  },
-  {
-    id: "3",
-    anonymousId: "匿名ユーザー #E5F6",
-    lastMessage: "明日の授業について教えてください",
-    timestamp: "1時間前",
-    unreadCount: 0,
-    isOnline: true,
-  },
-  {
-    id: "4",
-    anonymousId: "匿名ユーザー #G7H8",
-    lastMessage: "プログラミングの課題、解決しました",
-    timestamp: "3時間前",
-    unreadCount: 1,
-    isOnline: false,
-  },
-]
-
 export function DMSidebar({ selectedChatId, onSelectChat }: DMSidebarProps) {
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [search, setSearch] = useState("")
+
+  const refresh = async (): Promise<void> => {
+    try {
+      const list = await DMApi.getConversations()
+      setConversations(list)
+    } catch {
+      setConversations([])
+    }
+  }
+
+  useEffect(() => {
+    refresh()
+    const id = setInterval(refresh, 15000)
+    return () => clearInterval(id)
+  }, [])
+
+  const startNew = async (): Promise<void> => {
+    const email = window.prompt("相手のメールアドレスを入力")?.trim()
+    if (!email) return
+    try {
+      const conv = await DMApi.createConversation({ partner_email: email })
+      await refresh()
+      onSelectChat(String(conv.id))
+    } catch (e: any) {
+      alert(e?.message || "作成に失敗しました")
+    }
+  }
+
   return (
     <div className="w-80 bg-card border-r border-border flex flex-col">
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">DM</h2>
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={startNew}>
             <Plus className="w-4 h-4 mr-2" />
             新規
           </Button>
@@ -59,41 +56,40 @@ export function DMSidebar({ selectedChatId, onSelectChat }: DMSidebarProps) {
 
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="ユーザーを検索..." className="pl-10" />
+          <Input placeholder="ユーザーを検索..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {mockChats.map((chat) => (
+        {conversations
+          .filter((c) => !search || c.partner_name?.includes(search) || c.partner_email?.includes(search))
+          .map((chat) => (
           <div
             key={chat.id}
             className={cn(
               "p-4 border-b border-border cursor-pointer hover:bg-muted/50 transition-colors",
-              selectedChatId === chat.id && "bg-muted",
+              selectedChatId === String(chat.id) && "bg-muted",
             )}
-            onClick={() => onSelectChat(chat.id)}
+            onClick={() => onSelectChat(String(chat.id))}
           >
             <div className="flex items-start space-x-3">
               <div className="relative">
                 <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                   <span className="text-sm font-medium text-primary">匿</span>
                 </div>
-                {chat.isOnline && (
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background"></div>
-                )}
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium text-foreground truncate">{chat.anonymousId}</p>
-                  <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
+                  <p className="text-sm font-medium text-foreground truncate">{chat.partner_name || chat.partner_email}</p>
+                  <span className="text-xs text-muted-foreground">{chat.last_message_at ? new Date(chat.last_message_at).toLocaleTimeString() : ''}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
-                  {chat.unreadCount > 0 && (
+                  <p className="text-sm text-muted-foreground truncate">{chat.last_message || ''}</p>
+                  {chat.unread_count > 0 && (
                     <Badge variant="default" className="ml-2 h-5 min-w-[20px] text-xs">
-                      {chat.unreadCount}
+                      {chat.unread_count}
                     </Badge>
                   )}
                 </div>
