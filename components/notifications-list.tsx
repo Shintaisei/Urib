@@ -17,7 +17,7 @@ interface NotificationItem {
   created_at: string
 }
 
-export function NotificationsList({ inline = false }: { inline?: boolean }) {
+export function NotificationsList({ inline = false, mentionsOnly = false }: { inline?: boolean; mentionsOnly?: boolean }) {
   const [items, setItems] = useState<NotificationItem[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -34,8 +34,10 @@ export function NotificationsList({ inline = false }: { inline?: boolean }) {
         cache: 'no-store'
       })
       if (!res.ok) throw new Error('failed')
-      const data = await res.json()
-      setItems(data)
+      let data = await res.json()
+      if (!Array.isArray(data)) data = []
+      const filtered = mentionsOnly ? data.filter((n:any) => n?.type === 'mention') : data.filter((n:any) => n?.type !== 'mention')
+      setItems(filtered)
     } catch (e) {
       setItems([])
     } finally {
@@ -95,11 +97,11 @@ export function NotificationsList({ inline = false }: { inline?: boolean }) {
   return (
     <div className="py-1">
       {items.map(n => (
-        <div key={n.id} className={`px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer ${n.is_read ? '' : 'bg-primary/5'}`} onClick={() => navigate(n)}>
+        <div key={n.id} className={`px-2 py-2 text-sm hover:bg-muted/50 cursor-pointer ${n.is_read ? '' : (n.type === 'mention' ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-primary/5')}`} onClick={() => navigate(n)}>
           <div className="flex items-start justify-between gap-2">
             <div>
-              <div className="font-medium">{n.title || n.type}</div>
-              {n.message && <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</div>}
+              <div className={`font-medium ${n.type === 'mention' ? 'text-blue-600 dark:text-blue-400' : ''}`}>{n.title || n.type}</div>
+              {n.message && <div className={`text-xs mt-0.5 line-clamp-2 ${n.type === 'mention' ? 'text-blue-700 dark:text-blue-300' : 'text-muted-foreground'}`}>{n.message}</div>}
               <div className="text-[10px] text-muted-foreground mt-0.5">{new Date(n.created_at).toLocaleString('ja-JP')}</div>
             </div>
             {!n.is_read && (
