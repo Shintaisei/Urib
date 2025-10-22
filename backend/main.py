@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import models, schemas, database, utils, univ_domains
 import market_routes
+import dm_routes
 import board_routes
 import analytics_routes
 import os
@@ -246,6 +247,9 @@ app.include_router(board_routes.router)
 
 # アナリティクスのルーターを追加
 app.include_router(analytics_routes.router)
+
+# DMのルーターを追加
+app.include_router(dm_routes.router)
 
 # =========================
 # 管理者専用: アカウント削除

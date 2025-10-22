@@ -268,3 +268,56 @@ class BoardVisit(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     board_id = Column(String(50), nullable=False, index=True)
     last_seen = Column(DateTime(timezone=True), default=jst_now, index=True)
+
+# =====================
+# DM（Direct Message）
+# =====================
+
+class DMConversation(Base):
+    __tablename__ = "dm_conversations"
+    __table_args__ = (
+        # user1_id < user2_id のペアでユニークにする
+        UniqueConstraint('user1_id', 'user2_id', name='uq_dm_pair'),
+        Index('idx_dm_conversations_updated', 'updated_at'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user1_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user2_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    last_message = Column(Text, nullable=True)
+    last_message_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+    u1_unread = Column(Integer, default=0)
+    u2_unread = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+    updated_at = Column(DateTime(timezone=True), default=jst_now, onupdate=jst_now, index=True)
+
+    user1 = relationship("User", foreign_keys=[user1_id])
+    user2 = relationship("User", foreign_keys=[user2_id])
+
+class DMMessage(Base):
+    __tablename__ = "dm_messages"
+    __table_args__ = (
+        Index('idx_dm_messages_conv_created', 'conversation_id', 'created_at'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("dm_conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+    is_deleted = Column(Boolean, default=False)
+
+    sender = relationship("User")
+
+class DMBlock(Base):
+    __tablename__ = "dm_blocks"
+    __table_args__ = (
+        UniqueConstraint('blocker_id', 'blocked_id', name='uq_dm_block_pair'),
+        Index('idx_dm_block_blocker', 'blocker_id'),
+        Index('idx_dm_block_blocked', 'blocked_id'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    blocker_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    blocked_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)

@@ -130,3 +130,32 @@ class BoardReplyResponse(BaseModel):
     like_count: int = 0
     is_liked: bool = False
     created_at: str
+
+# =====================
+# DM Schemas
+# =====================
+
+class DMConversationCreate(BaseModel):
+    partner_email: Optional[str] = None
+    partner_user_id: Optional[int] = None
+
+class DMConversationResponse(BaseModel):
+    id: int
+    partner_email: Optional[str] = None
+    partner_name: Optional[str] = None
+    last_message: Optional[str] = None
+    last_message_at: Optional[str] = None
+    unread_count: int
+    created_at: str
+    updated_at: str
+
+class DMMessageCreate(BaseModel):
+    conversation_id: int
+    content: str
+
+class DMMessageResponse(BaseModel):
+    id: int
+    conversation_id: int
+    sender_email: Optional[str] = None
+    content: str
+    created_at: str
