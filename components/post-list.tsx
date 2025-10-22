@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { MentionTextarea } from "@/components/mention-textarea"
 import { Heart, MessageCircle, Share, MoreHorizontal, Send, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { isAdminEmail } from "@/lib/utils"
@@ -548,10 +548,10 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
 
                 {/* 返信フォーム */}
                 <div className="space-y-2">
-                  <Textarea
+                  <MentionTextarea
                     placeholder="返信を入力..."
                     value={replyContent[post.id] || ''}
-                    onChange={(e) => setReplyContent(prev => ({ ...prev, [post.id]: e.target.value }))}
+                    onChange={(val) => setReplyContent(prev => ({ ...prev, [post.id]: val }))}
                     className="min-h-[64px] resize-none"
                     maxLength={500}
                   />

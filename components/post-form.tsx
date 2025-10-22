@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { MentionTextarea } from "@/components/mention-textarea"
 import { Input } from "@/components/ui/input"
 import { Send, Loader2, Hash } from "lucide-react"
 
@@ -77,10 +77,10 @@ export function PostForm({ boardId, onPostCreated }: PostFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
+          <MentionTextarea
             placeholder="匿名で投稿できます。大学生活に関する情報や質問を自由に書き込んでください..."
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={setContent}
             className="min-h-[120px] resize-none"
             maxLength={500}
           />
