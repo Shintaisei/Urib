@@ -20,6 +20,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 export function Header() {
   const router = useRouter()
   const [unreadCount, setUnreadCount] = useState(0)
+  const [dmUnreadCount, setDmUnreadCount] = useState(0)
 
   useEffect(() => {
     const already = sessionStorage.getItem('pv_tracked')
@@ -52,8 +53,11 @@ export function Header() {
         })
         if (!res.ok) return
         const data = await res.json()
-        const unread = Array.isArray(data) ? data.filter((n:any) => !n.is_read).length : 0
-        setUnreadCount(unread)
+        const list = Array.isArray(data) ? data : []
+        const dmUnread = list.filter((n:any) => n?.type === 'dm_message' && !n?.is_read).length
+        const otherUnread = list.filter((n:any) => n?.type !== 'dm_message' && !n?.is_read).length
+        setDmUnreadCount(dmUnread)
+        setUnreadCount(otherUnread)
       } catch {}
     }
     fetchNotifications()
@@ -121,9 +125,12 @@ export function Header() {
           </DropdownMenu>
           
           <Link href="/dm">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" className="relative text-muted-foreground hover:text-foreground">
               <MessageCircle className="w-4 h-4 mr-2" />
               DM
+              {dmUnreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] leading-none px-1.5 py-0.5 rounded-full">{dmUnreadCount}</span>
+              )}
             </Button>
           </Link>
 
