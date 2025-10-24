@@ -10,6 +10,7 @@ import { MarketBoard } from "@/components/market-board"
 import { TrendingUp, LayoutGrid, BookOpen, Users } from "lucide-react"
 import { CourseSummaries } from "@/components/course-summaries"
 import { CircleSummaries } from "@/components/circle-summaries"
+import { FloatingPostButton } from "@/components/floating-post-button"
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'courses' | 'circles'>('feed')
@@ -121,6 +122,9 @@ export default function HomePage() {
           )}
         </div>
       </main>
+      
+      {/* フローティング投稿ボタン */}
+      <FloatingPostButton />
     </div>
   )
 }
