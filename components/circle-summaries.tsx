@@ -220,14 +220,14 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
           <CardDescription>新しいサークル情報のテンプレを埋めて共有しましょう</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input placeholder="サークル名" value={circleName} onChange={(e) => setCircleName(e.target.value)} />
-            <Input placeholder="カテゴリ（例: 文化系）" value={cat} onChange={(e) => setCat(e.target.value)} />
-            <Input placeholder="活動日（例: 火・木）" value={days} onChange={(e) => setDays(e.target.value)} />
-            <Input placeholder="活動場所" value={place} onChange={(e) => setPlace(e.target.value)} />
-            <Input placeholder="会費" value={cost} onChange={(e) => setCost(e.target.value)} />
-            <Input placeholder="リンク（SNS/サイト）" value={links} onChange={(e) => setLinks(e.target.value)} />
-            <Input placeholder="タグ（スペース区切り）" value={tags} onChange={(e) => setTags(e.target.value)} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Input placeholder="サークル名" value={circleName} onChange={(e) => setCircleName(e.target.value)} className="text-sm" />
+            <Input placeholder="カテゴリ（例: 文化系）" value={cat} onChange={(e) => setCat(e.target.value)} className="text-sm" />
+            <Input placeholder="活動日（例: 火・木）" value={days} onChange={(e) => setDays(e.target.value)} className="text-sm" />
+            <Input placeholder="活動場所" value={place} onChange={(e) => setPlace(e.target.value)} className="text-sm" />
+            <Input placeholder="会費" value={cost} onChange={(e) => setCost(e.target.value)} className="text-sm" />
+            <Input placeholder="リンク（SNS/サイト）" value={links} onChange={(e) => setLinks(e.target.value)} className="text-sm" />
+            <Input placeholder="タグ（スペース区切り）" value={tags} onChange={(e) => setTags(e.target.value)} className="text-sm sm:col-span-2" />
           </div>
           <Textarea placeholder="活動内容、雰囲気、募集状況、初心者歓迎か、参加方法…" value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[120px]" />
           <div className="flex justify-end">
@@ -244,9 +244,9 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
           <CardDescription>検索やカテゴリで絞り込めます</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Input placeholder="キーワード検索" value={q} onChange={(e) => setQ(e.target.value)} />
-            <Input placeholder="カテゴリ（例: 文化系）" value={category} onChange={(e) => setCategory(e.target.value)} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Input placeholder="キーワード検索" value={q} onChange={(e) => setQ(e.target.value)} className="text-sm" />
+            <Input placeholder="カテゴリ（例: 文化系）" value={category} onChange={(e) => setCategory(e.target.value)} className="text-sm" />
           </div>
           <div className="flex justify-end">
             <Button variant="outline" onClick={fetchList}>絞り込み</Button>
@@ -258,26 +258,28 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
 
           <div className="space-y-3">
             {list.map((s) => (
-              <div key={s.id} id={`circle-${s.id}`} className="border rounded p-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-base font-semibold text-foreground">{s.title}</div>
-                    <div className="text-xs text-muted-foreground">{s.circle_name} {s.category}</div>
-                    <div className="text-xs text-muted-foreground">{s.activity_days} {s.activity_place} {s.cost}</div>
-                    <div className="text-xs text-muted-foreground">{s.links} {s.tags && `#${s.tags}`}</div>
+              <div key={s.id} id={`circle-${s.id}`} className="border rounded p-2 sm:p-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm sm:text-base font-semibold text-foreground break-words">{s.title}</div>
+                    <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                      <div className="break-words">{s.circle_name} {s.category}</div>
+                      <div className="break-words">{s.activity_days} {s.activity_place} {s.cost}</div>
+                      <div className="break-words">{s.links} {s.tags && `#${s.tags}`}</div>
+                    </div>
                   </div>
-                  <div className="text-right space-y-1">
+                  <div className="text-right space-y-1 flex-shrink-0">
                     <div className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString('ja-JP')}</div>
                     {isAdmin && (
                       <div className="text-right">
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => adminDeleteSummary(s.id)}>
-                          削除（管理者）
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-destructive text-xs" onClick={() => adminDeleteSummary(s.id)}>
+                          削除
                         </Button>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-foreground whitespace-pre-wrap">{s.content}</div>
+                <div className="mt-2 text-sm text-foreground whitespace-pre-wrap break-words">{s.content}</div>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                   <div>投稿者: {s.author_name}</div>
                   <button className="text-primary hover:underline" onClick={() => toggleComments(s.id)}>
@@ -289,22 +291,22 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
                     <div className="space-y-2">
                       {(comments[s.id] || []).map(c => (
                         <div key={c.id} className="text-sm">
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                             <div className="font-medium">{c.author_name}</div>
                             <div className="flex items-center gap-2">
                               <div className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString('ja-JP')}</div>
                               {isAdmin && (
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-destructive" onClick={() => adminDeleteComment(s.id, c.id)}>削除</Button>
+                                <Button size="sm" variant="ghost" className="h-6 px-2 text-destructive text-xs" onClick={() => adminDeleteComment(s.id, c.id)}>削除</Button>
                               )}
                             </div>
                           </div>
-                          <div className="whitespace-pre-wrap text-foreground">{c.content}</div>
+                          <div className="whitespace-pre-wrap text-foreground break-words">{c.content}</div>
                         </div>
                       ))}
                     </div>
-                    <div className="flex gap-2">
-                      <Input placeholder="コメントを入力" value={commentInputs[s.id] || ''} onChange={(e) => setCommentInputs(prev => ({ ...prev, [s.id]: e.target.value }))} />
-                      <Button size="sm" onClick={() => addComment(s.id)} disabled={commentSubmitting === s.id}>送信</Button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input placeholder="コメントを入力" value={commentInputs[s.id] || ''} onChange={(e) => setCommentInputs(prev => ({ ...prev, [s.id]: e.target.value }))} className="text-sm flex-1" />
+                      <Button size="sm" onClick={() => addComment(s.id)} disabled={commentSubmitting === s.id} className="text-xs">送信</Button>
                     </div>
                   </div>
                 )}

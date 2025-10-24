@@ -217,12 +217,12 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           <CardDescription>新しい授業・レビューのテンプレを埋めて共有しましょう</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <Input placeholder="授業名（例: 線形代数）" value={courseName} onChange={(e) => setCourseName(e.target.value)} />
-            <Input placeholder="教員名" value={instructor} onChange={(e) => setInstructor(e.target.value)} />
-            <Input placeholder="学部（例: 工学部）" value={department} onChange={(e) => setDepartment(e.target.value)} />
-            <Input placeholder="学期（例: 2025春）" value={yearSemester} onChange={(e) => setYearSemester(e.target.value)} />
-            <Input placeholder="タグ（スペース区切り）" value={tags} onChange={(e) => setTags(e.target.value)} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Input placeholder="授業名（例: 線形代数）" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="text-sm" />
+            <Input placeholder="教員名" value={instructor} onChange={(e) => setInstructor(e.target.value)} className="text-sm" />
+            <Input placeholder="学部（例: 工学部）" value={department} onChange={(e) => setDepartment(e.target.value)} className="text-sm" />
+            <Input placeholder="学期（例: 2025春）" value={yearSemester} onChange={(e) => setYearSemester(e.target.value)} className="text-sm" />
+            <Input placeholder="タグ（スペース区切り）" value={tags} onChange={(e) => setTags(e.target.value)} className="text-sm sm:col-span-2" />
           </div>
           <Textarea placeholder="授業概要、評価方法、難易度、おすすめポイント、注意点…" value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[120px]" />
           <div className="flex justify-end">
@@ -239,10 +239,10 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           <CardDescription>検索や学部・学期で絞り込めます</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <Input placeholder="キーワード検索" value={q} onChange={(e) => setQ(e.target.value)} />
-            <Input placeholder="学部（例: 工学部）" value={dept} onChange={(e) => setDept(e.target.value)} />
-            <Input placeholder="学期（例: 2025春）" value={ys} onChange={(e) => setYs(e.target.value)} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <Input placeholder="キーワード検索" value={q} onChange={(e) => setQ(e.target.value)} className="text-sm" />
+            <Input placeholder="学部（例: 工学部）" value={dept} onChange={(e) => setDept(e.target.value)} className="text-sm" />
+            <Input placeholder="学期（例: 2025春）" value={ys} onChange={(e) => setYs(e.target.value)} className="text-sm" />
           </div>
           <div className="flex justify-end">
             <Button variant="outline" onClick={fetchList}>絞り込み</Button>
@@ -254,25 +254,27 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
 
           <div className="space-y-3">
             {list.map((s) => (
-              <div key={s.id} id={`course-${s.id}`} className="border rounded p-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-base font-semibold text-foreground">{s.title}</div>
-                    <div className="text-xs text-muted-foreground">{s.course_name} {s.instructor}</div>
-                    <div className="text-xs text-muted-foreground">{s.department} {s.year_semester} {s.tags && `#${s.tags}`}</div>
+              <div key={s.id} id={`course-${s.id}`} className="border rounded p-2 sm:p-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm sm:text-base font-semibold text-foreground break-words">{s.title}</div>
+                    <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                      <div className="break-words">{s.course_name} {s.instructor}</div>
+                      <div className="break-words">{s.department} {s.year_semester} {s.tags && `#${s.tags}`}</div>
+                    </div>
                   </div>
-                  <div className="text-right space-y-1">
+                  <div className="text-right space-y-1 flex-shrink-0">
                     <div className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString('ja-JP')}</div>
                     {isAdmin && (
                       <div className="text-right">
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => adminDeleteSummary(s.id)}>
-                          削除（管理者）
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-destructive text-xs" onClick={() => adminDeleteSummary(s.id)}>
+                          削除
                         </Button>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-foreground whitespace-pre-wrap">{s.content}</div>
+                <div className="mt-2 text-sm text-foreground whitespace-pre-wrap break-words">{s.content}</div>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                   <div>投稿者: {s.author_name}</div>
                   <button className="text-primary hover:underline" onClick={() => toggleComments(s.id)}>
@@ -284,22 +286,22 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                     <div className="space-y-2">
                       {(comments[s.id] || []).map(c => (
                         <div key={c.id} className="text-sm">
-                          <div className="flex items-center justify-between">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                             <div className="font-medium">{c.author_name}</div>
                             <div className="flex items-center gap-2">
                               <div className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleString('ja-JP')}</div>
                               {isAdmin && (
-                                <Button size="sm" variant="ghost" className="h-6 px-2 text-destructive" onClick={() => adminDeleteComment(s.id, c.id)}>削除</Button>
+                                <Button size="sm" variant="ghost" className="h-6 px-2 text-destructive text-xs" onClick={() => adminDeleteComment(s.id, c.id)}>削除</Button>
                               )}
                             </div>
                           </div>
-                          <div className="whitespace-pre-wrap text-foreground">{c.content}</div>
+                          <div className="whitespace-pre-wrap text-foreground break-words">{c.content}</div>
                         </div>
                       ))}
                     </div>
-                    <div className="flex gap-2">
-                      <Input placeholder="コメントを入力" value={commentInputs[s.id] || ''} onChange={(e) => setCommentInputs(prev => ({ ...prev, [s.id]: e.target.value }))} />
-                      <Button size="sm" onClick={() => addComment(s.id)} disabled={commentSubmitting === s.id}>送信</Button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input placeholder="コメントを入力" value={commentInputs[s.id] || ''} onChange={(e) => setCommentInputs(prev => ({ ...prev, [s.id]: e.target.value }))} className="text-sm flex-1" />
+                      <Button size="sm" onClick={() => addComment(s.id)} disabled={commentSubmitting === s.id} className="text-xs">送信</Button>
                     </div>
                   </div>
                 )}
