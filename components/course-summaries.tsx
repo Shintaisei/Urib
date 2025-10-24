@@ -99,7 +99,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   }, [focusId, list])
 
   const createSummary = async (): Promise<void> => {
-    if (!title.trim() || !content.trim()) return
+    if (!content.trim()) return
     setSubmitting(true)
     try {
       const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
@@ -226,7 +226,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           </div>
           <Textarea placeholder="授業概要、評価方法、難易度、おすすめポイント、注意点…" value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[120px]" />
           <div className="flex justify-end">
-            <Button onClick={createSummary} disabled={submitting || !title.trim() || !content.trim()}>
+            <Button onClick={createSummary} disabled={submitting || !content.trim()}>
               {submitting ? '投稿中…' : '投稿する'}
             </Button>
           </div>
