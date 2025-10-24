@@ -34,10 +34,11 @@ export function FloatingPostButton() {
       const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
       if (!userId) throw new Error('ユーザーIDが見つかりません')
       
-      const res = await fetch(`${API_BASE_URL}/boards/${boardId}/posts`, {
+      const res = await fetch(`${API_BASE_URL}/board/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
         body: JSON.stringify({
+          board_id: boardId,
           content: content.trim(),
           hashtags: hashtags.trim() || null
         })
