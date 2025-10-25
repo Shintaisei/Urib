@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Search, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DMApi, type Conversation } from "@/lib/dm-api"
+import { LoadingProgress } from "@/components/loading-progress"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface DMSidebarProps {
@@ -115,7 +116,11 @@ export function DMSidebar({ selectedChatId, onSelectChat }: DMSidebarProps) {
         {(search || year || department) && (
           <div className="p-2">
             <div className="text-xs text-muted-foreground mb-1">ユーザー</div>
-            {loadingUsers && <div className="text-xs text-muted-foreground p-2">検索中...</div>}
+            {loadingUsers && (
+              <div className="p-2">
+                <LoadingProgress isLoading={true} text="ユーザーを検索中..." />
+              </div>
+            )}
             {!loadingUsers && userResults.length === 0 && (
               <div className="text-xs text-muted-foreground p-2">一致するユーザーがいません</div>
             )}

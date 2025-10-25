@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { LoadingProgress } from "@/components/loading-progress"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -55,7 +56,9 @@ export function UserPreview({ userId, anonymousName, open, onOpenChange, onStart
           <DialogTitle>ユーザー情報</DialogTitle>
         </DialogHeader>
         {loading ? (
-          <div className="py-8 text-center text-muted-foreground">読み込み中...</div>
+          <div className="py-8">
+            <LoadingProgress isLoading={true} text="ユーザー情報を読み込み中..." />
+          </div>
         ) : info ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2">

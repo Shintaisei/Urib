@@ -9,6 +9,7 @@ import { Send, MoreVertical } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { DMApi, type Message } from "@/lib/dm-api"
+import { LoadingProgress } from "@/components/loading-progress"
 
 interface ChatAreaProps { chatId: string }
 
@@ -16,13 +17,17 @@ export function ChatArea({ chatId }: ChatAreaProps) {
   const [message, setMessage] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [partnerLabel, setPartnerLabel] = useState<string>("相手")
+  const [loading, setLoading] = useState(false)
 
   const fetchMessages = async () => {
     try {
+      setLoading(true)
       const rows = await DMApi.getMessages(chatId)
       setMessages(rows)
     } catch {
       setMessages([])
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -79,7 +84,12 @@ export function ChatArea({ chatId }: ChatAreaProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => (
+        {loading ? (
+          <div className="py-8">
+            <LoadingProgress isLoading={true} text="メッセージを読み込み中..." />
+          </div>
+        ) : (
+          messages.map((msg) => (
           <div key={msg.id} className={cn("flex", msg.is_own ? "justify-start" : "justify-end")}>
             <div
               className={cn(
@@ -93,7 +103,8 @@ export function ChatArea({ chatId }: ChatAreaProps) {
               </p>
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Message Input */}

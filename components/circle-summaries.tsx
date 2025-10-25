@@ -61,6 +61,7 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [comments, setComments] = useState<Record<number, Comment[]>>({})
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({})
   const [commentSubmitting, setCommentSubmitting] = useState<number | null>(null)
+  const [loadingComments, setLoadingComments] = useState<number | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
   const fetchList = async () => {
@@ -146,11 +147,14 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
     setOpenComments(prev => ({ ...prev, [summaryId]: next }))
     if (next && !comments[summaryId]) {
       try {
+        setLoadingComments(summaryId)
         const res = await fetch(`${API_BASE_URL}/circles/summaries/${summaryId}/comments`, { cache: 'no-store' })
         const data = await res.json()
         setComments(prev => ({ ...prev, [summaryId]: data || [] }))
       } catch {
         setComments(prev => ({ ...prev, [summaryId]: [] }))
+      } finally {
+        setLoadingComments(null)
       }
     }
   }
@@ -265,8 +269,13 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
                 </div>
                 {openComments[s.id] && (
                   <div className="mt-2 border-t pt-2 space-y-2">
-                    <div className="space-y-2">
-                      {(comments[s.id] || []).map(c => (
+                    {loadingComments === s.id ? (
+                      <div className="py-2">
+                        <LoadingProgress isLoading={true} text="コメントを読み込み中..." />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {(comments[s.id] || []).map(c => (
                         <div key={c.id} className="text-sm">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                             <div className="font-medium">{c.author_name}</div>
@@ -279,8 +288,9 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
                           </div>
                           <div className="whitespace-pre-wrap text-foreground break-words">{c.content}</div>
                         </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex flex-col sm:flex-row gap-2">
                       <Input placeholder="コメントを入力" value={commentInputs[s.id] || ''} onChange={(e) => setCommentInputs(prev => ({ ...prev, [s.id]: e.target.value }))} className="text-sm flex-1" />
                       <Button size="sm" onClick={() => addComment(s.id)} disabled={commentSubmitting === s.id} className="text-xs">送信</Button>

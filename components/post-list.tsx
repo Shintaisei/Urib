@@ -539,8 +539,8 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               <div className="mt-3 pt-3 border-t border-border space-y-3">
                 {/* 返信一覧 */}
                 {loadingReplies === post.id ? (
-                  <div className="text-center py-4 text-muted-foreground text-sm">
-                    返信を読み込み中...
+                  <div className="py-4">
+                    <LoadingProgress isLoading={true} text="返信を読み込み中..." />
                   </div>
                 ) : replies[post.id]?.length > 0 ? (
                   <div className="space-y-3">
