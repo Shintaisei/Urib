@@ -3,7 +3,6 @@
 import { Header } from "@/components/header"
 import { BoardHeader } from "@/components/board-header"
 import { PostList } from "@/components/post-list"
-import { PostForm } from "@/components/post-form"
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams, useRouter, useParams } from "next/navigation"
 
@@ -71,10 +70,6 @@ export default function BoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  const handlePostCreated = () => {
-    // 投稿が作成されたら、PostListを更新
-    setRefreshKey(prev => prev + 1)
-  }
 
   // ナビゲート（post_idによるハイライト）は到達直後の1回だけ。
   // 一度ページに入ったらURLのpost_idクエリを消して恒久的に無効化する。
@@ -94,7 +89,6 @@ export default function BoardPage() {
         <BoardHeader title={board.title} description={board.description} />
 
         <div className="mt-8 space-y-6">
-        <PostForm boardId={id} onPostCreated={handlePostCreated} />
         <PostList boardId={id} refreshKey={refreshKey} highlightPostId={initialHighlightRef.current} />
         </div>
       </main>

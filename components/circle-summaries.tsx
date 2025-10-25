@@ -216,30 +216,6 @@ export function CircleSummaries({ focusId }: { focusId?: number }): React.ReactE
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>サークルまとめを投稿</CardTitle>
-          <CardDescription>新しいサークル情報のテンプレを埋めて共有しましょう</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <Input placeholder="サークル名" value={circleName} onChange={(e) => setCircleName(e.target.value)} className="text-sm" />
-            <Input placeholder="カテゴリ（例: 文化系）" value={cat} onChange={(e) => setCat(e.target.value)} className="text-sm" />
-            <Input placeholder="活動日（例: 火・木）" value={days} onChange={(e) => setDays(e.target.value)} className="text-sm" />
-            <Input placeholder="活動場所" value={place} onChange={(e) => setPlace(e.target.value)} className="text-sm" />
-            <Input placeholder="会費" value={cost} onChange={(e) => setCost(e.target.value)} className="text-sm" />
-            <Input placeholder="リンク（SNS/サイト）" value={links} onChange={(e) => setLinks(e.target.value)} className="text-sm" />
-            <Input placeholder="タグ（スペース区切り）" value={tags} onChange={(e) => setTags(e.target.value)} className="text-sm sm:col-span-2" />
-          </div>
-          <Textarea placeholder="活動内容、雰囲気、募集状況、初心者歓迎か、参加方法…" value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[120px]" />
-          <div className="flex justify-end">
-            <Button onClick={createSummary} disabled={submitting || !content.trim()}>
-              {submitting ? '投稿中…' : '投稿する'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>サークルまとめ一覧</CardTitle>
           <CardDescription>検索やカテゴリで絞り込めます</CardDescription>
         </CardHeader>

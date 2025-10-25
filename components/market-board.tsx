@@ -243,13 +243,6 @@ export function MarketBoard() {
                 大学内で商品の売買や無料譲渡を行える掲示板です
               </p>
             </div>
-            <Button 
-              onClick={() => setShowCreateModal(true)}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              出品する
-            </Button>
           </div>
 
           {/* 統計情報 */}

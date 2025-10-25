@@ -213,28 +213,6 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>授業まとめを投稿</CardTitle>
-          <CardDescription>新しい授業・レビューのテンプレを埋めて共有しましょう</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <Input placeholder="授業名（例: 線形代数）" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="text-sm" />
-            <Input placeholder="教員名" value={instructor} onChange={(e) => setInstructor(e.target.value)} className="text-sm" />
-            <Input placeholder="学部（例: 工学部）" value={department} onChange={(e) => setDepartment(e.target.value)} className="text-sm" />
-            <Input placeholder="学期（例: 2025春）" value={yearSemester} onChange={(e) => setYearSemester(e.target.value)} className="text-sm" />
-            <Input placeholder="タグ（スペース区切り）" value={tags} onChange={(e) => setTags(e.target.value)} className="text-sm sm:col-span-2" />
-          </div>
-          <Textarea placeholder="授業概要、評価方法、難易度、おすすめポイント、注意点…" value={content} onChange={(e) => setContent(e.target.value)} className="min-h-[120px]" />
-          <div className="flex justify-end">
-            <Button onClick={createSummary} disabled={submitting || !content.trim()}>
-              {submitting ? '投稿中…' : '投稿する'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle>授業まとめ一覧</CardTitle>
           <CardDescription>検索や学部・学期で絞り込めます</CardDescription>
         </CardHeader>
