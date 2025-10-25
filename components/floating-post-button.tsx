@@ -34,9 +34,17 @@ export function FloatingPostButton() {
       const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
       if (!userId) throw new Error('ユーザーIDが見つかりません')
       
-      const res = await fetch(`${API_BASE_URL}/board/posts`, {
+      // キャッシュバスティング用のタイムスタンプを追加
+      const cacheBuster = `?_t=${Date.now()}`
+      const res = await fetch(`${API_BASE_URL}/board/posts${cacheBuster}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-User-Id': userId,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
         body: JSON.stringify({
           board_id: boardId,
           content: content.trim(),
