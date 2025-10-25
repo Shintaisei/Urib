@@ -36,9 +36,10 @@ export function FloatingPostButton() {
   // Market item fields
   const [title, setTitle] = useState("")
   const [price, setPrice] = useState("")
-  const [condition, setCondition] = useState("")
+  const [condition, setCondition] = useState("good")
   const [description, setDescription] = useState("")
-  const [contactInfo, setContactInfo] = useState("")
+  const [type, setType] = useState("sell")
+  const [contactMethod, setContactMethod] = useState("dm")
 
   // Course summary fields
   const [courseName, setCourseName] = useState("")
@@ -111,16 +112,21 @@ export function FloatingPostButton() {
           hashtags: hashtags.trim() || null
         }
       } else if (postType === 'market') {
-        if (!title.trim() || !price.trim() || !description.trim()) {
-          throw new Error('タイトル、価格、説明は必須です')
+        if (!title.trim() || !description.trim()) {
+          throw new Error('タイトルと説明は必須です')
+        }
+        if (type !== 'free' && (!price.trim() || parseInt(price) <= 0)) {
+          throw new Error('価格を正しく入力してください')
         }
         endpoint = `${API_BASE_URL}/market/items${cacheBuster}`
         body = {
           title: title.trim(),
-          price: parseInt(price) || 0,
-          condition: condition.trim() || null,
           description: description.trim(),
-          contact_info: contactInfo.trim() || null
+          type: type,
+          price: type === 'free' ? null : parseInt(price) || null,
+          condition: condition,
+          contact_method: contactMethod,
+          images: []
         }
       } else if (postType === 'course') {
         if (!courseContent.trim()) throw new Error('内容を入力してください')
@@ -186,9 +192,10 @@ export function FloatingPostButton() {
     setBoardId("1")
     setTitle("")
     setPrice("")
-    setCondition("")
+    setCondition("good")
     setDescription("")
-    setContactInfo("")
+    setType("sell")
+    setContactMethod("dm")
     setCourseName("")
     setInstructor("")
     setDepartment("")
@@ -286,24 +293,61 @@ export function FloatingPostButton() {
                       className="text-sm"
                     />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">価格（円）</label>
-                    <Input
-                      type="number"
-                      placeholder="1000"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      className="text-sm"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">種類</label>
+                      <Select value={type} onValueChange={setType}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sell">売ります</SelectItem>
+                          <SelectItem value="buy">買います</SelectItem>
+                          <SelectItem value="free">譲ります</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">価格（円）</label>
+                      <Input
+                        type="number"
+                        placeholder="1000"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        className="text-sm"
+                        disabled={type === 'free'}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">状態</label>
-                    <Input
-                      placeholder="例: 美品、書き込みあり"
-                      value={condition}
-                      onChange={(e) => setCondition(e.target.value)}
-                      className="text-sm"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">状態</label>
+                      <Select value={condition} onValueChange={setCondition}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="new">新品</SelectItem>
+                          <SelectItem value="like_new">ほぼ新品</SelectItem>
+                          <SelectItem value="good">良好</SelectItem>
+                          <SelectItem value="fair">普通</SelectItem>
+                          <SelectItem value="poor">傷あり</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">連絡方法</label>
+                      <Select value={contactMethod} onValueChange={setContactMethod}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="dm">DM</SelectItem>
+                          <SelectItem value="email">メール</SelectItem>
+                          <SelectItem value="phone">電話</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">説明</label>
@@ -312,15 +356,6 @@ export function FloatingPostButton() {
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       className="min-h-[100px] text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">連絡先</label>
-                    <Input
-                      placeholder="例: メールアドレス、SNS"
-                      value={contactInfo}
-                      onChange={(e) => setContactInfo(e.target.value)}
-                      className="text-sm"
                     />
                   </div>
                 </>
@@ -442,7 +477,7 @@ export function FloatingPostButton() {
                   onClick={handleSubmit}
                   disabled={submitting || (
                     postType === 'board' && !content.trim() ||
-                    postType === 'market' && (!title.trim() || !price.trim() || !description.trim()) ||
+                    postType === 'market' && (!title.trim() || !description.trim() || (type !== 'free' && (!price.trim() || parseInt(price) <= 0))) ||
                     postType === 'course' && !courseContent.trim() ||
                     postType === 'circle' && !circleContent.trim()
                   )}
