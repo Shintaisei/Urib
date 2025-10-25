@@ -77,10 +77,10 @@ export function FloatingPostButton() {
       {/* フローティングボタン */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-primary hover:bg-primary/90"
-        size="icon"
+        className="fixed bottom-6 right-6 z-50 h-16 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 bg-primary hover:bg-primary/90 flex items-center gap-2 text-white font-semibold"
       >
         <Plus className="h-6 w-6" />
+        <span className="hidden sm:inline">投稿する</span>
       </Button>
 
       {/* モーダル */}
