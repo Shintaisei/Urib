@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { UserPreview } from "@/components/user-preview"
 import { isAdminEmail } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { LoadingProgress } from "@/components/loading-progress"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -394,8 +395,8 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-foreground">最新の投稿</h2>
-        <div className="text-center py-8 text-muted-foreground">
-          読み込み中...
+        <div className="py-8">
+          <LoadingProgress isLoading={loading} text="投稿を読み込み中..." />
         </div>
       </div>
     )

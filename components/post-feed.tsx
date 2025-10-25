@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Heart, MessageCircle, TrendingUp, Clock, Flame } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { LoadingProgress } from "@/components/loading-progress"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -245,9 +246,8 @@ export function PostFeed() {
       {/* 投稿リスト / 最新返信リスト */}
       <div className="space-y-3">
         {loading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground text-sm">読み込み中...</p>
+          <div className="py-8">
+            <LoadingProgress isLoading={loading} text="投稿を読み込み中..." />
           </div>
         )}
 

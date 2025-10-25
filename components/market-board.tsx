@@ -17,6 +17,7 @@ import {
   MessageCircle,
   MapPin
 } from "lucide-react"
+import { LoadingProgress } from "@/components/loading-progress"
 import { MarketItem, MarketItemType, type MarketItemCreate } from "@/types"
 import type { MarketFilter } from "@/lib/market-api"
 import { MarketItemCard } from "./market-item-card"
@@ -378,11 +379,8 @@ export function MarketBoard() {
 
             {loading ? (
               <Card className="bg-muted/30">
-                <CardContent className="p-8 text-center">
-                  <div className="text-muted-foreground mb-4">
-                    <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                    <p className="text-lg">商品を読み込み中...</p>
-                  </div>
+                <CardContent className="p-8">
+                  <LoadingProgress isLoading={loading} text="商品を読み込み中..." />
                 </CardContent>
               </Card>
             ) : error ? (

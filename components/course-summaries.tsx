@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { isAdminEmail } from "@/lib/utils"
+import { LoadingProgress } from "@/components/loading-progress"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -226,7 +227,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
             <Button variant="outline" onClick={fetchList}>絞り込み</Button>
           </div>
 
-          {loading && <div className="text-sm text-muted-foreground">読み込み中…</div>}
+          <LoadingProgress isLoading={loading} text="授業まとめを読み込み中..." />
           {error && <div className="text-sm text-red-500">{error}</div>}
           {!loading && !error && list.length === 0 && <div className="text-sm text-muted-foreground">まだまとめがありません</div>}
 
