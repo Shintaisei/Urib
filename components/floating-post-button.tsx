@@ -177,8 +177,20 @@ export function FloatingPostButton() {
       resetForm()
       setIsOpen(false)
       
-      // ページをリロードして新しい投稿を表示
-      window.location.reload()
+      // 成功メッセージを表示
+      const postTypeText = {
+        'board': '投稿',
+        'market': '書籍出品',
+        'course': '授業まとめ',
+        'circle': 'サークルまとめ'
+      }[postType] || '投稿'
+      
+      alert(`${postTypeText}が完了しました！ページを更新して新しい投稿を確認してください。`)
+      
+      // 必要に応じてページをリロード（ユーザーの選択に委ねる）
+      if (confirm('ページを更新して新しい投稿を表示しますか？')) {
+        window.location.reload()
+      }
     } catch (e: any) {
       alert(e?.message || '投稿に失敗しました')
     } finally {
