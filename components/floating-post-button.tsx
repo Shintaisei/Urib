@@ -177,7 +177,7 @@ export function FloatingPostButton() {
       resetForm()
       setIsOpen(false)
       
-      // 成功メッセージを表示
+      // 成功メッセージを表示（リロードなし）
       const postTypeText = {
         'board': '投稿',
         'market': '書籍出品',
@@ -185,12 +185,7 @@ export function FloatingPostButton() {
         'circle': 'サークルまとめ'
       }[postType] || '投稿'
       
-      alert(`${postTypeText}が完了しました！ページを更新して新しい投稿を確認してください。`)
-      
-      // 必要に応じてページをリロード（ユーザーの選択に委ねる）
-      if (confirm('ページを更新して新しい投稿を表示しますか？')) {
-        window.location.reload()
-      }
+      alert(`${postTypeText}が完了しました！新しい投稿を確認するには手動でページを更新してください。`)
     } catch (e: any) {
       alert(e?.message || '投稿に失敗しました')
     } finally {
