@@ -1,8 +1,8 @@
 "use client"
 
 import { Header } from "@/components/header"
-import { BoardHeader } from "@/components/board-header"
-import { PostList } from "@/components/post-list"
+import { BoardHeader } from "@/components/board/board-header"
+import { PostList } from "@/components/board/post-list"
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams, useRouter, useParams } from "next/navigation"
 

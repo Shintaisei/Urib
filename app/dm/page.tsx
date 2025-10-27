@@ -1,8 +1,8 @@
 "use client"
 
 import { Header } from "@/components/header"
-import { DMSidebar } from "@/components/dm-sidebar"
-import { ChatArea } from "@/components/chat-area"
+import { DMSidebar } from "@/components/dm/dm-sidebar"
+import { ChatArea } from "@/components/dm/chat-area"
 import { useState } from "react"
 import { DMApi } from "@/lib/dm-api"
 

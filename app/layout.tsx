@@ -3,7 +3,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ChunkRecovery } from '@/components/chunk-recovery'
-import { FloatingPostButton } from '@/components/floating-post-button'
+import { FloatingPostButton } from '@/components/ui/forms/floating-post-button'
 import './globals.css'
 
 export const metadata: Metadata = {

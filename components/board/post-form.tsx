@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MentionTextarea } from "@/components/mention-textarea"
+import { MentionTextarea } from "@/components/ui/forms/mention-textarea"
 import { Input } from "@/components/ui/input"
 import { Send, Loader2, Hash } from "lucide-react"
 
