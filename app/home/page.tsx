@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Header } from "@/components/header"
 import { BoardGrid } from "@/components/board/board-grid"
 import { UniversityInfo } from "@/components/university-info"
@@ -10,9 +10,52 @@ import { MarketBoard } from "@/components/market/market-board"
 import { TrendingUp, LayoutGrid, BookOpen, Users } from "lucide-react"
 import { CourseSummaries } from "@/components/course-summaries"
 import { CircleSummaries } from "@/components/circle-summaries"
+import { useParallelFetch } from "@/lib/api-cache"
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'courses' | 'circles'>('feed')
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false)
+  const { fetchMultiple } = useParallelFetch()
+
+  // 初期データの並列読み込み
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        const userId = localStorage.getItem('user_id')
+        const headers = userId ? { 'X-User-Id': userId } : {}
+
+        // 複数のAPIを並列で呼び出し
+        await fetchMultiple([
+          {
+            url: `${API_BASE_URL}/board/stats`,
+            options: { headers },
+            cacheKey: 'board-stats',
+            ttl: 60000 // 1分キャッシュ
+          },
+          {
+            url: `${API_BASE_URL}/board/posts/feed?feed_type=latest&limit=10`,
+            options: { headers },
+            cacheKey: 'latest-feed',
+            ttl: 30000 // 30秒キャッシュ
+          },
+          {
+            url: `${API_BASE_URL}/market/items?limit=6`,
+            options: { headers },
+            cacheKey: 'market-items',
+            ttl: 60000 // 1分キャッシュ
+          }
+        ])
+        
+        setInitialDataLoaded(true)
+      } catch (error) {
+        console.error('初期データ読み込みエラー:', error)
+        setInitialDataLoaded(true) // エラーでも続行
+      }
+    }
+
+    loadInitialData()
+  }, [fetchMultiple])
 
   return (
     <div className="min-h-screen bg-background">

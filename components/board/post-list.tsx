@@ -10,6 +10,7 @@ import { UserPreview } from "@/components/dm/user-preview"
 import { isAdminEmail } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { LoadingProgress } from "@/components/loading-progress"
+import { useCachedFetch, useParallelFetch } from "@/lib/api-cache"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -98,6 +99,9 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   const [loadingReplies, setLoadingReplies] = useState<number | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewAnonymousName, setPreviewAnonymousName] = useState<string | undefined>(undefined)
+  
+  const { fetchWithCache, invalidateCache } = useCachedFetch()
+  const { fetchMultiple } = useParallelFetch()
 
   const startDMFromPreview = async (args: { user_id?: number; email?: string }) => {
     try {
@@ -131,16 +135,13 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         headers['X-Dev-Email'] = email
       }
       
-      const response = await fetch(`${API_BASE_URL}/board/posts/${boardId}`, {
-        headers,
-        cache: 'no-store'
-      })
+      const data = await fetchWithCache(
+        `${API_BASE_URL}/board/posts/${boardId}`,
+        { headers },
+        `posts-${boardId}`,
+        30000 // 30秒キャッシュ
+      )
 
-      if (!response.ok) {
-        throw new Error('投稿の取得に失敗しました')
-      }
-
-      const data = await response.json()
       setPosts(data)
       setError("")
     } catch (err: any) {
@@ -160,15 +161,13 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         headers['X-User-Id'] = userId
       }
       
-      const response = await fetch(`${API_BASE_URL}/board/posts/${postId}/replies`, {
-        headers,
-      })
+      const data = await fetchWithCache(
+        `${API_BASE_URL}/board/posts/${postId}/replies`,
+        { headers },
+        `replies-${postId}`,
+        60000 // 1分キャッシュ
+      )
 
-      if (!response.ok) {
-        throw new Error('返信の取得に失敗しました')
-      }
-
-      const data = await response.json()
       setReplies(prev => ({ ...prev, [postId]: data }))
     } catch (err: any) {
       console.error('返信取得エラー:', err)
@@ -248,6 +247,10 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
 
       // 返信が投稿されたら、返信一覧を再取得
       await fetchReplies(postId)
+      
+      // キャッシュを無効化
+      invalidateCache(`posts-${boardId}`)
+      invalidateCache(`replies-${postId}`)
 
       // 投稿の返信数を更新
       setPosts(prevPosts => 
