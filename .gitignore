@@ -17,6 +17,9 @@ build/
 *.sqlite
 *.sqlite3
 
+# Data exports (development only)
+data_exports/
+
 # Node.js
 node_modules/
 .next/

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Header } from "@/components/header"
-import { ProfileSettings } from "@/components/profile-settings"
+import { ProfileSettings } from "@/components/auth/profile-settings"
 import { isAdminEmail } from "@/lib/utils"
 
 export default function ProfilePage() {

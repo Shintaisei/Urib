@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { SimpleLogin } from "@/components/simple-login"
-import { ProfileSetup } from "@/components/profile-setup"
+import { SimpleLogin } from "@/components/auth/simple-login"
+import { ProfileSetup } from "@/components/auth/profile-setup"
 
 export default function LoginPage() {
   const router = useRouter()
