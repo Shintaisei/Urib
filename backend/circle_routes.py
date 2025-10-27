@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from typing import List
 import models, schemas, database
-from board_routes import get_current_user_id, get_user_by_id, get_or_create_anonymous_name, ensure_jst_aware
+from board_routes import get_current_user_id, get_user_by_id, get_or_create_anonymous_name, ensure_jst_aware, is_admin_user
 
 router = APIRouter(prefix="/circles", tags=["circles"])
 
@@ -137,4 +137,40 @@ def add_summary_comment(summary_id: int, payload: schemas.CircleSummaryCommentCr
         created_at=ensure_jst_aware(c.created_at).isoformat(),
     )
 
+# =====================
+# Admin operations
+# =====================
 
+@router.delete("/admin/summaries/{summary_id}")
+def admin_delete_summary(summary_id: int, request: Request, db: Session = Depends(get_db)):
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    user = get_user_by_id(db, current_user_id)
+    if not is_admin_user(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが実行できます")
+    row = db.query(models.CircleSummary).filter(models.CircleSummary.id == summary_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="まとめが見つかりません")
+    db.query(models.CircleSummaryComment).filter(models.CircleSummaryComment.summary_id == summary_id).delete(synchronize_session=False)
+    db.delete(row)
+    db.commit()
+    return {"message": "deleted", "id": summary_id}
+
+@router.delete("/admin/comments/{comment_id}")
+def admin_delete_summary_comment(comment_id: int, request: Request, db: Session = Depends(get_db)):
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    user = get_user_by_id(db, current_user_id)
+    if not is_admin_user(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="管理者のみが実行できます")
+    c = db.query(models.CircleSummaryComment).filter(models.CircleSummaryComment.id == comment_id).first()
+    if not c:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="コメントが見つかりません")
+    parent = db.query(models.CircleSummary).filter(models.CircleSummary.id == c.summary_id).first()
+    if parent and parent.comment_count > 0:
+        parent.comment_count -= 1
+    db.delete(c)
+    db.commit()
+    return {"message": "deleted", "id": comment_id}
