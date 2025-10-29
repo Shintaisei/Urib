@@ -20,6 +20,52 @@ const BOARD_OPTIONS = [
   { value: "6", label: "相談" }
 ]
 
+const DEPARTMENT_OPTIONS = [
+  { value: "総合理系", label: "総合理系（1年生向け）" },
+  { value: "工学部", label: "工学部" },
+  { value: "工学部 機械工学科", label: "工学部 機械工学科" },
+  { value: "工学部 電気電子工学科", label: "工学部 電気電子工学科" },
+  { value: "工学部 情報工学科", label: "工学部 情報工学科" },
+  { value: "工学部 建築学科", label: "工学部 建築学科" },
+  { value: "工学部 応用理工系学科", label: "工学部 応用理工系学科" },
+  { value: "工学部 環境社会工学科", label: "工学部 環境社会工学科" },
+  { value: "理学部", label: "理学部" },
+  { value: "理学部 数学科", label: "理学部 数学科" },
+  { value: "理学部 物理学科", label: "理学部 物理学科" },
+  { value: "理学部 化学科", label: "理学部 化学科" },
+  { value: "理学部 生物科学科", label: "理学部 生物科学科" },
+  { value: "理学部 地球惑星科学科", label: "理学部 地球惑星科学科" },
+  { value: "農学部", label: "農学部" },
+  { value: "農学部 生物資源科学科", label: "農学部 生物資源科学科" },
+  { value: "農学部 応用生命科学科", label: "農学部 応用生命科学科" },
+  { value: "農学部 生物機能化学科", label: "農学部 生物機能化学科" },
+  { value: "農学部 森林科学科", label: "農学部 森林科学科" },
+  { value: "農学部 畜産科学科", label: "農学部 畜産科学科" },
+  { value: "農学部 生物環境工学科", label: "農学部 生物環境工学科" },
+  { value: "農学部 農業経済学科", label: "農学部 農業経済学科" },
+  { value: "獣医学部", label: "獣医学部" },
+  { value: "獣医学部 獣医学科", label: "獣医学部 獣医学科" },
+  { value: "獣医学部 共同獣医学課程", label: "獣医学部 共同獣医学課程" },
+  { value: "医学部", label: "医学部" },
+  { value: "医学部 医学科", label: "医学部 医学科" },
+  { value: "医学部 保健学科", label: "医学部 保健学科" },
+  { value: "歯学部", label: "歯学部" },
+  { value: "歯学部 歯学科", label: "歯学部 歯学科" },
+  { value: "薬学部", label: "薬学部" },
+  { value: "薬学部 薬学科", label: "薬学部 薬学科" },
+  { value: "薬学部 薬科学科", label: "薬学部 薬科学科" },
+  { value: "文学部", label: "文学部" },
+  { value: "文学部 人文学科", label: "文学部 人文学科" },
+  { value: "教育学部", label: "教育学部" },
+  { value: "教育学部 教育学科", label: "教育学部 教育学科" },
+  { value: "法学部", label: "法学部" },
+  { value: "法学部 法学課程", label: "法学部 法学課程" },
+  { value: "経済学部", label: "経済学部" },
+  { value: "経済学部 経済学科", label: "経済学部 経済学科" },
+  { value: "経済学部 経営学科", label: "経済学部 経営学科" },
+  { value: "その他", label: "その他" },
+]
+
 type PostType = 'board' | 'market' | 'course' | 'circle'
 
 export function FloatingPostButton() {
@@ -393,12 +439,18 @@ export function FloatingPostButton() {
                       onChange={(e) => setInstructor(e.target.value)}
                       className="text-sm"
                     />
-                    <Input
-                      placeholder="学部（例: 工学部）"
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="text-sm"
-                    />
+                    <Select value={department} onValueChange={setDepartment}>
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder="学部・学科・コースを選択" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-60">
+                        {DEPARTMENT_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input
                       placeholder="学期（例: 2025春）"
                       value={yearSemester}
