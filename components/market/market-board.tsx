@@ -421,6 +421,9 @@ export function MarketBoard() {
                       onDeleted={(itemId) => {
                         setItems(prev => prev.filter(i => i.id !== itemId))
                       }}
+                      onStatusChanged={(itemId, isAvailable) => {
+                        setItems(prev => prev.map(i => i.id === itemId ? { ...i, is_available: isAvailable } : i))
+                      }}
                     />
                   </div>
                 ))}

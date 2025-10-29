@@ -47,10 +47,12 @@ interface MarketItemCardProps {
   item: MarketItem
   onLike: (itemId: string) => void
   onDeleted?: (itemId: string) => void
+  onStatusChanged?: (itemId: string, isAvailable: boolean) => void
 }
 
-export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps) {
+export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: MarketItemCardProps) {
   const [isLiking, setIsLiking] = useState(false)
+  const [isToggling, setIsToggling] = useState(false)
   const [comments, setComments] = useState<MarketItemComment[]>([])
   const [commentInput, setCommentInput] = useState("")
   const [posting, setPosting] = useState(false)
@@ -183,20 +185,7 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
             </div>
           )}
           
-          {/* ステータスバッジ（大きめ） */}
-          <div className="absolute -left-8 top-3 rotate-[-20deg]">
-            <span
-              className={`inline-block px-4 py-1.5 rounded text-sm font-bold shadow ${
-                item.is_available
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-gray-800 text-white'
-              }`}
-            >
-              {item.is_available ? '出品中' : '購入済み'}
-            </span>
-          </div>
-
-          {/* 商品タイプバッジ */}
+          {/* 商品タイプバッジ（左上） */}
           <div className="absolute top-1.5 left-1.5">
             <Badge 
               className={`${typeInfo.bgColor} ${typeInfo.borderColor} ${typeInfo.color} border text-[11px] h-6`}
@@ -206,8 +195,17 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
             </Badge>
           </div>
 
-          {/* 価格表示 */}
-          <div className="absolute top-1.5 right-1.5">
+          {/* ステータス + 価格（右上に縦積み） */}
+          <div className="absolute top-1.5 right-1.5 flex flex-col items-end gap-1">
+            <span
+              className={`inline-block px-3 py-1 rounded text-[11px] font-bold shadow ${
+                item.is_available
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-800 text-white'
+              }`}
+            >
+              {item.is_available ? '出品中' : '購入済み'}
+            </span>
             <Badge 
               variant="secondary" 
               className="bg-background/90 text-foreground font-semibold text-[11px] h-6"
@@ -300,7 +298,30 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
             </div>
           </div>
 
-          {/* 不要なアクションボタンは表示しない */}
+          {/* 出品者用: ステータス切替（バックエンドで権限チェック） */}
+          {myUserId && (
+            <div className="mt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                disabled={isToggling}
+                onClick={async () => {
+                  try {
+                    setIsToggling(true)
+                    const updated = await MarketApi.updateItem(item.id, { is_available: !item.is_available })
+                    if (onStatusChanged) onStatusChanged(item.id, updated.is_available)
+                  } catch (e: any) {
+                    alert(e?.message || 'ステータスの更新に失敗しました（権限がない可能性があります）')
+                  } finally {
+                    setIsToggling(false)
+                  }
+                }}
+              >
+                {item.is_available ? '購入済みにする' : '出品中に戻す'}
+              </Button>
+            </div>
+          )}
 
           {/* 取引可能状態（本文側の補助表示） */}
           {!item.is_available && (
