@@ -183,6 +183,19 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
             </div>
           )}
           
+          {/* ステータスバッジ（大きめ） */}
+          <div className="absolute -left-8 top-3 rotate-[-20deg]">
+            <span
+              className={`inline-block px-4 py-1.5 rounded text-sm font-bold shadow ${
+                item.is_available
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-800 text-white'
+              }`}
+            >
+              {item.is_available ? '出品中' : '購入済み'}
+            </span>
+          </div>
+
           {/* 商品タイプバッジ */}
           <div className="absolute top-1.5 left-1.5">
             <Badge 
@@ -289,10 +302,10 @@ export function MarketItemCard({ item, onLike, onDeleted }: MarketItemCardProps)
 
           {/* 不要なアクションボタンは表示しない */}
 
-          {/* 取引可能状態 */}
+          {/* 取引可能状態（本文側の補助表示） */}
           {!item.is_available && (
             <div className="mt-2">
-              <Badge variant="destructive" className="text-xs">取引済み</Badge>
+              <Badge variant="destructive" className="text-xs">購入済み</Badge>
             </div>
           )}
 

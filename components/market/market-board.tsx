@@ -147,7 +147,8 @@ export function MarketBoard() {
 
   // 検索とフィルタリングの処理
   useEffect(() => {
-    let filtered = items
+    // 取引済みは一覧から除外（出品中のみ表示）
+    let filtered = items.filter(i => i.is_available)
 
     // 検索クエリでフィルタリング
     if (searchQuery) {
@@ -225,11 +226,12 @@ export function MarketBoard() {
   }
 
   // 統計情報の計算
+  const availableItems = items.filter(i => i.is_available)
   const stats = {
-    totalItems: items.length,
-    buyItems: items.filter(item => item.type === "buy").length,
-    sellItems: items.filter(item => item.type === "sell").length,
-    freeItems: items.filter(item => item.type === "free").length
+    totalItems: availableItems.length,
+    buyItems: availableItems.filter(item => item.type === "buy").length,
+    sellItems: availableItems.filter(item => item.type === "sell").length,
+    freeItems: availableItems.filter(item => item.type === "free").length
   }
 
   return (
