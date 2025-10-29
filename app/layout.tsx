@@ -7,9 +7,12 @@ import { FloatingPostButton } from '@/components/ui/forms/floating-post-button'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: 'Uriv - 大学掲示板',
+  description: '大学専用の掲示板・マーケット・DMアプリ',
+  generator: 'Next.js',
+  icons: {
+    icon: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({

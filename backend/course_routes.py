@@ -32,11 +32,12 @@ def list_summaries(
             query = query.filter(models.CourseSummary.department == department)
         if year_semester:
             query = query.filter(models.CourseSummary.year_semester == year_semester)
-        if grade_level:
+        # 新しいフィールドは存在する場合のみフィルタリング
+        if grade_level and hasattr(models.CourseSummary, 'grade_level'):
             query = query.filter(models.CourseSummary.grade_level == grade_level)
-        if grade_score:
+        if grade_score and hasattr(models.CourseSummary, 'grade_score'):
             query = query.filter(models.CourseSummary.grade_score == grade_score)
-        if difficulty_level:
+        if difficulty_level and hasattr(models.CourseSummary, 'difficulty_level'):
             query = query.filter(models.CourseSummary.difficulty_level == difficulty_level)
         if q:
             like = f"%{q}%"
@@ -64,11 +65,11 @@ def list_summaries(
                 author_name=r.author_name,
                 like_count=r.like_count,
                 comment_count=r.comment_count,
-                grade_level=r.grade_level,
-                grade_score=r.grade_score,
-                difficulty_level=r.difficulty_level,
+                grade_level=getattr(r, 'grade_level', None),
+                grade_score=getattr(r, 'grade_score', None),
+                difficulty_level=getattr(r, 'difficulty_level', None),
                 created_at=ensure_jst_aware(r.created_at).isoformat(),
-                is_liked=bool(current_user_id and db.query(models.CourseSummaryLike).filter(
+                is_liked=bool(current_user_id and hasattr(models, 'CourseSummaryLike') and db.query(models.CourseSummaryLike).filter(
                     models.CourseSummaryLike.summary_id == r.id,
                     models.CourseSummaryLike.user_id == current_user_id
                 ).first()) if current_user_id else None,
