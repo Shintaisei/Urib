@@ -23,7 +23,7 @@ export default function HomePage() {
       try {
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
         const userId = localStorage.getItem('user_id')
-        const headers = userId ? { 'X-User-Id': userId } : {}
+        const headers: HeadersInit = userId ? { 'X-User-Id': String(userId) } : {}
 
         // 複数のAPIを並列で呼び出し
         await fetchMultiple([
