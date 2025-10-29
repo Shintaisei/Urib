@@ -14,12 +14,137 @@ from typing import Optional
 
 app = FastAPI()
 
+async def run_migrations():
+    """データベースマイグレーションを実行"""
+    try:
+        from sqlalchemy import create_engine, text
+        from sqlalchemy.exc import SQLAlchemyError
+        
+        engine = database.engine
+        
+        with engine.connect() as conn:
+            # トランザクション開始
+            trans = conn.begin()
+            
+            try:
+                print("🔄 データベースマイグレーション開始...")
+                
+                # CourseSummaryテーブルに新しいフィールドを追加
+                migrations = [
+                    ("grade_level", "VARCHAR(20)"),
+                    ("grade_score", "VARCHAR(20)"),
+                    ("difficulty_level", "VARCHAR(20)")
+                ]
+                
+                for field_name, field_type in migrations:
+                    try:
+                        conn.execute(text(f"ALTER TABLE course_summaries ADD COLUMN {field_name} {field_type}"))
+                        print(f"✅ {field_name}フィールドを追加しました")
+                    except SQLAlchemyError as e:
+                        if "already exists" in str(e) or "duplicate column name" in str(e):
+                            print(f"⚠️ {field_name}フィールドは既に存在します")
+                        else:
+                            print(f"❌ {field_name}フィールド追加エラー: {e}")
+                
+                # インデックスを追加
+                indexes = [
+                    "idx_course_summaries_grade_level",
+                    "idx_course_summaries_grade_score", 
+                    "idx_course_summaries_difficulty_level"
+                ]
+                
+                for index_name in indexes:
+                    field_name = index_name.replace("idx_course_summaries_", "")
+                    try:
+                        conn.execute(text(f"CREATE INDEX IF NOT EXISTS {index_name} ON course_summaries({field_name})"))
+                        print(f"✅ {index_name}インデックスを追加しました")
+                    except SQLAlchemyError as e:
+                        print(f"⚠️ {index_name}インデックス追加エラー: {e}")
+                
+                # CourseSummaryLikeテーブルが存在するか確認
+                try:
+                    conn.execute(text("SELECT 1 FROM course_summary_likes LIMIT 1"))
+                    print("✅ CourseSummaryLikeテーブルが存在します")
+                except SQLAlchemyError:
+                    print("⚠️ CourseSummaryLikeテーブルが存在しません。作成中...")
+                    conn.execute(text("""
+                        CREATE TABLE course_summary_likes (
+                            id SERIAL PRIMARY KEY,
+                            summary_id INTEGER NOT NULL,
+                            user_id INTEGER NOT NULL,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                            UNIQUE(summary_id, user_id)
+                        )
+                    """))
+                    print("✅ CourseSummaryLikeテーブルを作成しました")
+                
+                # CircleSummaryテーブルが存在するか確認
+                try:
+                    conn.execute(text("SELECT 1 FROM circle_summaries LIMIT 1"))
+                    print("✅ CircleSummaryテーブルが存在します")
+                except SQLAlchemyError:
+                    print("⚠️ CircleSummaryテーブルが存在しません。作成中...")
+                    conn.execute(text("""
+                        CREATE TABLE circle_summaries (
+                            id SERIAL PRIMARY KEY,
+                            title VARCHAR(255) NOT NULL,
+                            circle_name VARCHAR(255),
+                            category VARCHAR(100),
+                            activity_days VARCHAR(100),
+                            activity_place VARCHAR(255),
+                            cost VARCHAR(100),
+                            links VARCHAR(500),
+                            tags VARCHAR(500),
+                            content TEXT NOT NULL,
+                            author_id INTEGER NOT NULL,
+                            author_name VARCHAR(100) NOT NULL,
+                            like_count INTEGER DEFAULT 0,
+                            comment_count INTEGER DEFAULT 0,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                        )
+                    """))
+                    print("✅ CircleSummaryテーブルを作成しました")
+                
+                # CircleSummaryCommentテーブルが存在するか確認
+                try:
+                    conn.execute(text("SELECT 1 FROM circle_summary_comments LIMIT 1"))
+                    print("✅ CircleSummaryCommentテーブルが存在します")
+                except SQLAlchemyError:
+                    print("⚠️ CircleSummaryCommentテーブルが存在しません。作成中...")
+                    conn.execute(text("""
+                        CREATE TABLE circle_summary_comments (
+                            id SERIAL PRIMARY KEY,
+                            summary_id INTEGER NOT NULL,
+                            author_id INTEGER NOT NULL,
+                            author_name VARCHAR(100) NOT NULL,
+                            content TEXT NOT NULL,
+                            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                        )
+                    """))
+                    print("✅ CircleSummaryCommentテーブルを作成しました")
+                
+                # トランザクションコミット
+                trans.commit()
+                print("✅ マイグレーション完了")
+                
+            except Exception as e:
+                trans.rollback()
+                print(f"❌ マイグレーションエラー: {e}")
+                raise
+                
+    except Exception as e:
+        print(f"❌ マイグレーション実行エラー: {e}")
+
 # データベーステーブルを作成（起動時に実行）
 @app.on_event("startup")
 async def startup_event():
     try:
         models.Base.metadata.create_all(bind=database.engine)
         print("データベーステーブルが正常に作成されました")
+        
+        # マイグレーション実行
+        await run_migrations()
         
         # デモユーザーを作成（開発モード用）
         db = database.SessionLocal()

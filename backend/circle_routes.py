@@ -16,31 +16,77 @@ def get_db():
 
 @router.get("/summaries", response_model=List[schemas.CircleSummaryResponse])
 def list_summaries(category: str = "", q: str = "", limit: int = 50, db: Session = Depends(get_db)):
-    query = db.query(models.CircleSummary)
-    if category:
-        query = query.filter(models.CircleSummary.category == category)
-    if q:
-        like = f"%{q}%"
-        query = query.filter((models.CircleSummary.title.like(like)) | (models.CircleSummary.circle_name.like(like)))
-    rows = query.order_by(desc(models.CircleSummary.created_at)).limit(max(1, min(limit, 100))).all()
-    return [
-        schemas.CircleSummaryResponse(
-            id=r.id,
-            title=r.title,
-            circle_name=r.circle_name,
-            category=r.category,
-            activity_days=r.activity_days,
-            activity_place=r.activity_place,
-            cost=r.cost,
-            links=r.links,
-            tags=r.tags,
-            content=r.content,
-            author_name=r.author_name,
-            like_count=r.like_count,
-            comment_count=r.comment_count,
-            created_at=ensure_jst_aware(r.created_at).isoformat(),
-        ) for r in rows
-    ]
+    try:
+        # データベース接続確認
+        print(f"🔍 CircleSummary データベース接続確認: {db}")
+        
+        # CircleSummaryテーブルの存在確認
+        if not hasattr(models, 'CircleSummary'):
+            print("❌ CircleSummaryモデルが存在しません")
+            raise HTTPException(status_code=500, detail="CircleSummaryモデルが見つかりません")
+        
+        # テーブルが存在するか確認
+        try:
+            # まず基本的なクエリを試す
+            test_query = db.query(models.CircleSummary.id, models.CircleSummary.title, models.CircleSummary.content).first()
+            print("✅ CircleSummaryテーブルにアクセス成功")
+        except Exception as table_error:
+            print(f"❌ CircleSummaryテーブルアクセスエラー: {table_error}")
+            raise HTTPException(status_code=500, detail=f"CircleSummaryテーブルにアクセスできません: {str(table_error)}")
+        
+        query = db.query(models.CircleSummary)
+        if category:
+            query = query.filter(models.CircleSummary.category == category)
+        if q:
+            like = f"%{q}%"
+            query = query.filter((models.CircleSummary.title.like(like)) | (models.CircleSummary.circle_name.like(like)))
+        
+        # クエリ実行
+        try:
+            rows = query.order_by(desc(models.CircleSummary.created_at)).limit(max(1, min(limit, 100))).all()
+            print(f"✅ CircleSummaryクエリ実行成功: {len(rows)}件のレコードを取得")
+        except Exception as query_error:
+            print(f"❌ CircleSummaryクエリ実行エラー: {query_error}")
+            raise HTTPException(status_code=500, detail=f"クエリの実行に失敗しました: {str(query_error)}")
+        
+        # レスポンス生成
+        try:
+            result = []
+            for r in rows:
+                try:
+                    summary_response = schemas.CircleSummaryResponse(
+                        id=r.id,
+                        title=r.title,
+                        circle_name=r.circle_name,
+                        category=r.category,
+                        activity_days=r.activity_days,
+                        activity_place=r.activity_place,
+                        cost=r.cost,
+                        links=r.links,
+                        tags=r.tags,
+                        content=r.content,
+                        author_name=r.author_name,
+                        like_count=r.like_count,
+                        comment_count=r.comment_count,
+                        created_at=ensure_jst_aware(r.created_at).isoformat(),
+                    )
+                    result.append(summary_response)
+                except Exception as row_error:
+                    print(f"⚠️ CircleSummaryレコード処理エラー (ID: {r.id}): {row_error}")
+                    continue
+            
+            print(f"✅ CircleSummaryレスポンス生成成功: {len(result)}件")
+            return result
+        except Exception as response_error:
+            print(f"❌ CircleSummaryレスポンス生成エラー: {response_error}")
+            raise HTTPException(status_code=500, detail=f"レスポンスの生成に失敗しました: {str(response_error)}")
+            
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"❌ CircleSummary取得エラー: {e}")
+        print(f"❌ エラー詳細: {error_details}")
+        raise HTTPException(status_code=500, detail=f"サークルまとめの取得に失敗しました: {str(e)}")
 
 @router.post("/summaries", response_model=schemas.CircleSummaryResponse)
 def create_summary(payload: schemas.CircleSummaryCreate, request: Request, db: Session = Depends(get_db)):

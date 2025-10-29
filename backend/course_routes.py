@@ -37,8 +37,29 @@ def list_summaries(
         
         # テーブルが存在するか確認
         try:
-            db.query(models.CourseSummary).first()
+            # まず基本的なクエリを試す
+            test_query = db.query(models.CourseSummary.id, models.CourseSummary.title, models.CourseSummary.content).first()
             print("✅ CourseSummaryテーブルにアクセス成功")
+            
+            # 新しいフィールドの存在確認
+            try:
+                db.query(models.CourseSummary.grade_level).first()
+                print("✅ grade_levelフィールドが存在します")
+            except Exception as field_error:
+                print(f"⚠️ grade_levelフィールドが存在しません: {field_error}")
+                
+            try:
+                db.query(models.CourseSummary.grade_score).first()
+                print("✅ grade_scoreフィールドが存在します")
+            except Exception as field_error:
+                print(f"⚠️ grade_scoreフィールドが存在しません: {field_error}")
+                
+            try:
+                db.query(models.CourseSummary.difficulty_level).first()
+                print("✅ difficulty_levelフィールドが存在します")
+            except Exception as field_error:
+                print(f"⚠️ difficulty_levelフィールドが存在しません: {field_error}")
+                
         except Exception as table_error:
             print(f"❌ CourseSummaryテーブルアクセスエラー: {table_error}")
             raise HTTPException(status_code=500, detail=f"CourseSummaryテーブルにアクセスできません: {str(table_error)}")
