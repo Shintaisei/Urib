@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { isAdminEmail } from "@/lib/utils"
 import { LoadingProgress } from "@/components/loading-progress"
 
@@ -22,7 +23,11 @@ type Summary = {
   author_name: string
   like_count: number
   comment_count: number
+  grade_level?: string
+  grade_score?: string
+  difficulty_level?: string
   created_at: string
+  is_liked?: boolean
 }
 
 type Comment = {
@@ -42,6 +47,9 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [q, setQ] = useState("")
   const [dept, setDept] = useState("")
   const [ys, setYs] = useState("")
+  const [gradeLevel, setGradeLevel] = useState("")
+  const [gradeScore, setGradeScore] = useState("")
+  const [difficultyLevel, setDifficultyLevel] = useState("")
 
   // new summary
   const [title, setTitle] = useState("")
@@ -69,6 +77,9 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
       if (q) params.set('q', q)
       if (dept) params.set('department', dept)
       if (ys) params.set('year_semester', ys)
+      if (gradeLevel) params.set('grade_level', gradeLevel)
+      if (gradeScore) params.set('grade_score', gradeScore)
+      if (difficultyLevel) params.set('difficulty_level', difficultyLevel)
       const res = await fetch(`${API_BASE_URL}/courses/summaries?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('取得に失敗しました')
       const data = await res.json()
@@ -214,6 +225,31 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
     }
   }
 
+  const handleLike = async (summaryId: number) => {
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      
+      const res = await fetch(`${API_BASE_URL}/courses/summaries/${summaryId}/like`, {
+        method: 'POST',
+        headers: { 'X-User-Id': userId }
+      })
+      
+      if (!res.ok) throw new Error('いいねの更新に失敗しました')
+      
+      const data = await res.json()
+      
+      // リストを更新
+      setList(prev => prev.map(s => 
+        s.id === summaryId 
+          ? { ...s, like_count: data.like_count, is_liked: data.is_liked }
+          : s
+      ))
+    } catch (e: any) {
+      alert(e?.message || 'いいねの更新に失敗しました')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -226,6 +262,53 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
             <Input placeholder="キーワード検索" value={q} onChange={(e) => setQ(e.target.value)} className="text-sm" />
             <Input placeholder="学部（例: 工学部）" value={dept} onChange={(e) => setDept(e.target.value)} className="text-sm" />
             <Input placeholder="学期（例: 2025春）" value={ys} onChange={(e) => setYs(e.target.value)} className="text-sm" />
+          </div>
+          
+          {/* 評価フィルタ */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Select value={gradeLevel} onValueChange={setGradeLevel}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="学年で絞り込み" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">すべて</SelectItem>
+                <SelectItem value="1年">1年</SelectItem>
+                <SelectItem value="2年">2年</SelectItem>
+                <SelectItem value="3年">3年</SelectItem>
+                <SelectItem value="4年">4年</SelectItem>
+                <SelectItem value="修士">修士</SelectItem>
+                <SelectItem value="博士">博士</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={gradeScore} onValueChange={setGradeScore}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="成績で絞り込み" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">すべて</SelectItem>
+                <SelectItem value="A+">A+</SelectItem>
+                <SelectItem value="A">A</SelectItem>
+                <SelectItem value="B">B</SelectItem>
+                <SelectItem value="C">C</SelectItem>
+                <SelectItem value="D">D</SelectItem>
+                <SelectItem value="F">F</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="取りやすさで絞り込み" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">すべて</SelectItem>
+                <SelectItem value="ど仏">ど仏</SelectItem>
+                <SelectItem value="仏">仏</SelectItem>
+                <SelectItem value="普通">普通</SelectItem>
+                <SelectItem value="鬼">鬼</SelectItem>
+                <SelectItem value="ど鬼">ど鬼</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex justify-end">
             <Button variant="outline" onClick={fetchList}>絞り込み</Button>
@@ -244,6 +327,32 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                     <div className="text-xs text-muted-foreground mt-1 space-y-1">
                       <div className="break-words">{s.course_name} {s.instructor}</div>
                       <div className="break-words">{s.department} {s.year_semester} {s.tags && `#${s.tags}`}</div>
+                      {/* 評価情報 */}
+                      {(s.grade_level || s.grade_score || s.difficulty_level) && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {s.grade_level && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
+                              学年: {s.grade_level}
+                            </span>
+                          )}
+                          {s.grade_score && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">
+                              成績: {s.grade_score}
+                            </span>
+                          )}
+                          {s.difficulty_level && (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs ${
+                              s.difficulty_level === 'ど仏' ? 'bg-green-100 text-green-700' :
+                              s.difficulty_level === '仏' ? 'bg-green-100 text-green-700' :
+                              s.difficulty_level === '普通' ? 'bg-yellow-100 text-yellow-700' :
+                              s.difficulty_level === '鬼' ? 'bg-red-100 text-red-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              取りやすさ: {s.difficulty_level}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-right space-y-1 flex-shrink-0">
@@ -259,7 +368,18 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                 </div>
                 <div className="mt-2 text-sm text-foreground whitespace-pre-wrap break-words">{s.content}</div>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <div>投稿者: {s.author_name}</div>
+                  <div className="flex items-center gap-3">
+                    <div>投稿者: {s.author_name}</div>
+                    <button 
+                      className={`flex items-center gap-1 hover:underline ${
+                        s.is_liked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+                      }`}
+                      onClick={() => handleLike(s.id)}
+                    >
+                      <span className={s.is_liked ? 'text-red-500' : ''}>❤️</span>
+                      {s.like_count}
+                    </button>
+                  </div>
                   <button className="text-primary hover:underline" onClick={() => toggleComments(s.id)}>
                     コメントを{openComments[s.id] ? '閉じる' : '見る'} ({s.comment_count})
                   </button>

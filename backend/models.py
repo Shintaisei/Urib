@@ -345,6 +345,10 @@ class CourseSummary(Base):
     author_name = Column(String(100), nullable=False)
     like_count = Column(Integer, default=0, index=True)
     comment_count = Column(Integer, default=0)
+    # 新しい評価フィールド
+    grade_level = Column(String(20), nullable=True, index=True)  # 学年: 1年, 2年, 3年, 4年, 修士, 博士
+    grade_score = Column(String(20), nullable=True, index=True)  # 成績: A+, A, B, C, D, F
+    difficulty_level = Column(String(20), nullable=True, index=True)  # 取りやすさ: ど仏, 仏, 普通, 鬼, ど鬼
     created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
     updated_at = Column(DateTime(timezone=True), default=jst_now, onupdate=jst_now, index=True)
 
@@ -365,6 +369,23 @@ class CourseSummaryComment(Base):
 
     summary = relationship("CourseSummary", backref="comments")
     author = relationship("User")
+
+# 授業まとめのいいねテーブル
+class CourseSummaryLike(Base):
+    __tablename__ = "course_summary_likes"
+    __table_args__ = (
+        UniqueConstraint('summary_id', 'user_id', name='uq_course_summary_likes'),
+        Index('idx_course_summary_likes_summary', 'summary_id'),
+        Index('idx_course_summary_likes_user', 'user_id'),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    summary_id = Column(Integer, ForeignKey("course_summaries.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
+
+    summary = relationship("CourseSummary")
+    user = relationship("User")
 
 # =====================
 # サークルまとめ（Circle Summary）

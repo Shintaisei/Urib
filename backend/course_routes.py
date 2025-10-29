@@ -15,16 +15,37 @@ def get_db():
         db.close()
 
 @router.get("/summaries", response_model=List[schemas.CourseSummaryResponse])
-def list_summaries(department: str = "", year_semester: str = "", q: str = "", limit: int = 50, db: Session = Depends(get_db)):
+def list_summaries(
+    department: str = "", 
+    year_semester: str = "", 
+    grade_level: str = "",
+    grade_score: str = "",
+    difficulty_level: str = "",
+    q: str = "", 
+    limit: int = 50, 
+    request: Request = None,
+    db: Session = Depends(get_db)
+):
     query = db.query(models.CourseSummary)
     if department:
         query = query.filter(models.CourseSummary.department == department)
     if year_semester:
         query = query.filter(models.CourseSummary.year_semester == year_semester)
+    if grade_level:
+        query = query.filter(models.CourseSummary.grade_level == grade_level)
+    if grade_score:
+        query = query.filter(models.CourseSummary.grade_score == grade_score)
+    if difficulty_level:
+        query = query.filter(models.CourseSummary.difficulty_level == difficulty_level)
     if q:
         like = f"%{q}%"
         query = query.filter((models.CourseSummary.title.like(like)) | (models.CourseSummary.course_name.like(like)) | (models.CourseSummary.instructor.like(like)))
+    
     rows = query.order_by(desc(models.CourseSummary.created_at)).limit(max(1, min(limit, 100))).all()
+    
+    # 現在のユーザーを取得（いいね状態の確認用）
+    current_user_id = get_current_user_id(request) if request else None
+    
     return [
         schemas.CourseSummaryResponse(
             id=r.id,
@@ -38,7 +59,14 @@ def list_summaries(department: str = "", year_semester: str = "", q: str = "", l
             author_name=r.author_name,
             like_count=r.like_count,
             comment_count=r.comment_count,
+            grade_level=r.grade_level,
+            grade_score=r.grade_score,
+            difficulty_level=r.difficulty_level,
             created_at=ensure_jst_aware(r.created_at).isoformat(),
+            is_liked=bool(current_user_id and db.query(models.CourseSummaryLike).filter(
+                models.CourseSummaryLike.summary_id == r.id,
+                models.CourseSummaryLike.user_id == current_user_id
+            ).first()) if current_user_id else None,
         ) for r in rows
     ]
 
@@ -59,6 +87,9 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
         year_semester=payload.year_semester,
         tags=payload.tags,
         content=payload.content,
+        grade_level=payload.grade_level,
+        grade_score=payload.grade_score,
+        difficulty_level=payload.difficulty_level,
         author_id=user.id,
         author_name=anon,
     )
@@ -77,7 +108,11 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
         author_name=row.author_name,
         like_count=row.like_count,
         comment_count=row.comment_count,
+        grade_level=row.grade_level,
+        grade_score=row.grade_score,
+        difficulty_level=row.difficulty_level,
         created_at=ensure_jst_aware(row.created_at).isoformat(),
+        is_liked=False,  # 新規作成時はいいねなし
     )
 
 @router.get("/summaries/{summary_id}/comments", response_model=List[schemas.CourseSummaryCommentResponse])
@@ -170,5 +205,51 @@ def admin_delete_summary_comment(comment_id: int, request: Request, db: Session 
     db.delete(c)
     db.commit()
     return {"message": "deleted", "id": comment_id}
+
+# =====================
+# Like operations
+# =====================
+
+@router.post("/summaries/{summary_id}/like")
+def toggle_summary_like(summary_id: int, request: Request, db: Session = Depends(get_db)):
+    """授業まとめのいいねをトグル"""
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    
+    # まとめの存在確認
+    summary = db.query(models.CourseSummary).filter(models.CourseSummary.id == summary_id).first()
+    if not summary:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="まとめが見つかりません")
+    
+    # 既存のいいねを確認
+    existing_like = db.query(models.CourseSummaryLike).filter(
+        models.CourseSummaryLike.summary_id == summary_id,
+        models.CourseSummaryLike.user_id == current_user_id
+    ).first()
+    
+    if existing_like:
+        # いいねを削除
+        db.delete(existing_like)
+        summary.like_count = max(0, summary.like_count - 1)
+        is_liked = False
+    else:
+        # いいねを追加
+        new_like = models.CourseSummaryLike(
+            summary_id=summary_id,
+            user_id=current_user_id
+        )
+        db.add(new_like)
+        summary.like_count += 1
+        is_liked = True
+    
+    db.commit()
+    
+    return {
+        "message": "いいねを更新しました",
+        "summary_id": summary_id,
+        "like_count": summary.like_count,
+        "is_liked": is_liked
+    }
 
 

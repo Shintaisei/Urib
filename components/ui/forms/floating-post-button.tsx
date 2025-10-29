@@ -48,6 +48,10 @@ export function FloatingPostButton() {
   const [yearSemester, setYearSemester] = useState("")
   const [courseTags, setCourseTags] = useState("")
   const [courseContent, setCourseContent] = useState("")
+  // 新しい評価フィールド
+  const [gradeLevel, setGradeLevel] = useState("")
+  const [gradeScore, setGradeScore] = useState("")
+  const [difficultyLevel, setDifficultyLevel] = useState("")
 
   // Circle summary fields
   const [circleName, setCircleName] = useState("")
@@ -134,11 +138,14 @@ export function FloatingPostButton() {
         body = {
           title: null,
           course_name: courseName.trim() || null,
-          instructor_name: instructor.trim() || null,
+          instructor: instructor.trim() || null,
           department: department.trim() || null,
           year_semester: yearSemester.trim() || null,
           tags: courseTags.trim() || null,
-          content: courseContent.trim()
+          content: courseContent.trim(),
+          grade_level: gradeLevel.trim() || null,
+          grade_score: gradeScore.trim() || null,
+          difficulty_level: difficultyLevel.trim() || null
         }
       } else if (postType === 'circle') {
         if (!circleContent.trim()) throw new Error('内容を入力してください')
@@ -209,6 +216,9 @@ export function FloatingPostButton() {
     setYearSemester("")
     setCourseTags("")
     setCourseContent("")
+    setGradeLevel("")
+    setGradeScore("")
+    setDifficultyLevel("")
     setCircleName("")
     setCategory("")
     setActivityDays("")
@@ -402,6 +412,58 @@ export function FloatingPostButton() {
                       className="text-sm sm:col-span-2"
                     />
                   </div>
+                  
+                  {/* 評価フィールド */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">学年</label>
+                      <Select value={gradeLevel} onValueChange={setGradeLevel}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1年">1年</SelectItem>
+                          <SelectItem value="2年">2年</SelectItem>
+                          <SelectItem value="3年">3年</SelectItem>
+                          <SelectItem value="4年">4年</SelectItem>
+                          <SelectItem value="修士">修士</SelectItem>
+                          <SelectItem value="博士">博士</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">成績</label>
+                      <Select value={gradeScore} onValueChange={setGradeScore}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A+">A+</SelectItem>
+                          <SelectItem value="A">A</SelectItem>
+                          <SelectItem value="B">B</SelectItem>
+                          <SelectItem value="C">C</SelectItem>
+                          <SelectItem value="D">D</SelectItem>
+                          <SelectItem value="F">F</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">取りやすさ</label>
+                      <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
+                        <SelectTrigger className="text-sm">
+                          <SelectValue placeholder="選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ど仏">ど仏</SelectItem>
+                          <SelectItem value="仏">仏</SelectItem>
+                          <SelectItem value="普通">普通</SelectItem>
+                          <SelectItem value="鬼">鬼</SelectItem>
+                          <SelectItem value="ど鬼">ど鬼</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
                   <div>
                     <label className="text-sm font-medium mb-2 block">内容</label>
                     <Textarea
