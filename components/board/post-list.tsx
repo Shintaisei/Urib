@@ -438,7 +438,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         const isHighlighted = highlightPostId && parseInt(highlightPostId) === post.id
         return (
         <Card 
-          key={post.id} 
+          key={`board-post-${post.id}`} 
           id={`post-${post.id}`}
           className={`bg-card border-border hover:shadow-sm transition-all ${
             isHighlighted ? 'ring-2 ring-primary shadow-lg' : ''
@@ -548,7 +548,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 ) : replies[post.id]?.length > 0 ? (
                   <div className="space-y-3">
                     {replies[post.id].map((reply) => (
-                      <div key={reply.id} className="bg-muted/30 rounded-lg p-2.5">
+                      <div key={`board-reply-${reply.id}`} className="bg-muted/30 rounded-lg p-2.5">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center cursor-pointer" onClick={() => { setPreviewAnonymousName(reply.author_name); setPreviewOpen(true) }} title="ユーザー情報を見る">

@@ -237,7 +237,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
 
           <div className="space-y-3">
             {list.map((s) => (
-              <div key={s.id} id={`course-${s.id}`} className="border rounded p-2 sm:p-3">
+              <div key={`course-summary-${s.id}`} id={`course-${s.id}`} className="border rounded p-2 sm:p-3">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="text-sm sm:text-base font-semibold text-foreground break-words">{s.title}</div>
@@ -273,7 +273,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                     ) : (
                       <div className="space-y-2">
                         {(comments[s.id] || []).map(c => (
-                        <div key={c.id} className="text-sm">
+                        <div key={`course-comment-${c.id}`} className="text-sm">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                             <div className="font-medium">{c.author_name}</div>
                             <div className="flex items-center gap-2">

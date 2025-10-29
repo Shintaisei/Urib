@@ -412,7 +412,7 @@ export function MarketBoard() {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
                 {filteredItems.map((item) => (
-                  <div key={item.id} id={`market-${item.id}`}>
+                  <div key={`market-item-${item.id}`} id={`market-${item.id}`}>
                     <MarketItemCard
                       item={item}
                       onLike={handleLike}

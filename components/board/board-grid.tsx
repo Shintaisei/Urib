@@ -191,7 +191,7 @@ export function BoardGrid({ boards }: BoardGridProps): React.ReactElement {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {displayBoards.map((board: BoardData) => (
-        <Card key={board.id} className="hover:shadow-md transition-shadow">
+        <Card key={`board-${board.id}`} className="hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
             <div className="mb-2">
               <Badge variant="outline" className={categoryColors[board.category] || categoryColors["全体"]}>

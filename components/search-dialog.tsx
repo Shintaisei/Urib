@@ -168,7 +168,7 @@ export function SearchDialog() {
           )}
 
           {results.map((result) => (
-            <Card key={result.post_id} className="hover:shadow-md transition-shadow">
+            <Card key={`search-result-${result.post_id}`} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-2">
                   <Badge variant="outline" className="text-xs">
@@ -218,7 +218,7 @@ export function SearchDialog() {
                       マッチしたコメント（{result.matched_replies.length}件）:
                     </p>
                     {result.matched_replies.slice(0, 2).map((reply) => (
-                      <div key={reply.id} className="bg-muted/30 rounded p-2">
+                      <div key={`search-reply-${reply.id}`} className="bg-muted/30 rounded p-2">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-medium">{reply.author_name}</span>
                           <Badge variant="secondary" className="text-xs">コメント</Badge>
