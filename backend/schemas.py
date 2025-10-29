@@ -174,7 +174,7 @@ class CourseSummaryCreate(BaseModel):
     content: str
     # 新しい評価フィールド
     grade_level: Optional[str] = None  # 学年: 1年, 2年, 3年, 4年, 修士, 博士
-    grade_score: Optional[str] = None  # 成績: A+, A, B, C, D, F
+    grade_score: Optional[str] = None  # 成績: A+, A, A-, B+, B, B-, C+, C, D, D-, F
     difficulty_level: Optional[str] = None  # 取りやすさ: ど仏, 仏, 普通, 鬼, ど鬼
 
 class CourseSummaryResponse(BaseModel):

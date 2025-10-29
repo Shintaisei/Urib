@@ -440,9 +440,14 @@ export function FloatingPostButton() {
                         <SelectContent>
                           <SelectItem value="A+">A+</SelectItem>
                           <SelectItem value="A">A</SelectItem>
+                          <SelectItem value="A-">A-</SelectItem>
+                          <SelectItem value="B+">B+</SelectItem>
                           <SelectItem value="B">B</SelectItem>
+                          <SelectItem value="B-">B-</SelectItem>
+                          <SelectItem value="C+">C+</SelectItem>
                           <SelectItem value="C">C</SelectItem>
                           <SelectItem value="D">D</SelectItem>
+                          <SelectItem value="D-">D-</SelectItem>
                           <SelectItem value="F">F</SelectItem>
                         </SelectContent>
                       </Select>
