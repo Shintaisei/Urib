@@ -16,6 +16,7 @@ def get_db():
 
 @router.get("/summaries", response_model=List[schemas.CourseSummaryResponse])
 def list_summaries(
+    request: Request,
     department: str = "", 
     year_semester: str = "", 
     grade_level: str = "",
@@ -23,52 +24,59 @@ def list_summaries(
     difficulty_level: str = "",
     q: str = "", 
     limit: int = 50, 
-    request: Request,
     db: Session = Depends(get_db)
 ):
-    query = db.query(models.CourseSummary)
-    if department:
-        query = query.filter(models.CourseSummary.department == department)
-    if year_semester:
-        query = query.filter(models.CourseSummary.year_semester == year_semester)
-    if grade_level:
-        query = query.filter(models.CourseSummary.grade_level == grade_level)
-    if grade_score:
-        query = query.filter(models.CourseSummary.grade_score == grade_score)
-    if difficulty_level:
-        query = query.filter(models.CourseSummary.difficulty_level == difficulty_level)
-    if q:
-        like = f"%{q}%"
-        query = query.filter((models.CourseSummary.title.like(like)) | (models.CourseSummary.course_name.like(like)) | (models.CourseSummary.instructor.like(like)))
-    
-    rows = query.order_by(desc(models.CourseSummary.created_at)).limit(max(1, min(limit, 100))).all()
-    
-    # 現在のユーザーを取得（いいね状態の確認用）
-    current_user_id = get_current_user_id(request) if request else None
-    
-    return [
-        schemas.CourseSummaryResponse(
-            id=r.id,
-            title=r.title,
-            course_name=r.course_name,
-            instructor=r.instructor,
-            department=r.department,
-            year_semester=r.year_semester,
-            tags=r.tags,
-            content=r.content,
-            author_name=r.author_name,
-            like_count=r.like_count,
-            comment_count=r.comment_count,
-            grade_level=r.grade_level,
-            grade_score=r.grade_score,
-            difficulty_level=r.difficulty_level,
-            created_at=ensure_jst_aware(r.created_at).isoformat(),
-            is_liked=bool(current_user_id and db.query(models.CourseSummaryLike).filter(
-                models.CourseSummaryLike.summary_id == r.id,
-                models.CourseSummaryLike.user_id == current_user_id
-            ).first()) if current_user_id else None,
-        ) for r in rows
-    ]
+    try:
+        query = db.query(models.CourseSummary)
+        if department:
+            query = query.filter(models.CourseSummary.department == department)
+        if year_semester:
+            query = query.filter(models.CourseSummary.year_semester == year_semester)
+        if grade_level:
+            query = query.filter(models.CourseSummary.grade_level == grade_level)
+        if grade_score:
+            query = query.filter(models.CourseSummary.grade_score == grade_score)
+        if difficulty_level:
+            query = query.filter(models.CourseSummary.difficulty_level == difficulty_level)
+        if q:
+            like = f"%{q}%"
+            query = query.filter((models.CourseSummary.title.like(like)) | (models.CourseSummary.course_name.like(like)) | (models.CourseSummary.instructor.like(like)))
+        
+        rows = query.order_by(desc(models.CourseSummary.created_at)).limit(max(1, min(limit, 100))).all()
+        
+        # 現在のユーザーを取得（いいね状態の確認用）
+        current_user_id = None
+        try:
+            current_user_id = get_current_user_id(request) if request else None
+        except Exception as e:
+            print(f"⚠️ ユーザーID取得エラー: {e}")
+        
+        return [
+            schemas.CourseSummaryResponse(
+                id=r.id,
+                title=r.title,
+                course_name=r.course_name,
+                instructor=r.instructor,
+                department=r.department,
+                year_semester=r.year_semester,
+                tags=r.tags,
+                content=r.content,
+                author_name=r.author_name,
+                like_count=r.like_count,
+                comment_count=r.comment_count,
+                grade_level=r.grade_level,
+                grade_score=r.grade_score,
+                difficulty_level=r.difficulty_level,
+                created_at=ensure_jst_aware(r.created_at).isoformat(),
+                is_liked=bool(current_user_id and db.query(models.CourseSummaryLike).filter(
+                    models.CourseSummaryLike.summary_id == r.id,
+                    models.CourseSummaryLike.user_id == current_user_id
+                ).first()) if current_user_id else None,
+            ) for r in rows
+        ]
+    except Exception as e:
+        print(f"❌ 授業まとめ取得エラー: {e}")
+        raise HTTPException(status_code=500, detail=f"授業まとめの取得に失敗しました: {str(e)}")
 
 @router.post("/summaries", response_model=schemas.CourseSummaryResponse)
 def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: Session = Depends(get_db)):

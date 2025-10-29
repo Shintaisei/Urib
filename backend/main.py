@@ -59,41 +59,37 @@ async def startup_event():
         time.sleep(5)
         models.Base.metadata.create_all(bind=database.engine)
 
-# CORS設定（環境変数で制御）
+# CORS設定（包括的設定）
 ENV = os.getenv("ENV", "development")
 ALLOWED_ORIGINS_ENV = os.getenv("ALLOWED_ORIGINS", "")
-ALLOWED_ORIGIN_REGEX_ENV = os.getenv("ALLOWED_ORIGIN_REGEX", "")
 
-if ENV == "production":
-    # 本番環境：環境変数で指定されたオリジンのみ許可
-    if ALLOWED_ORIGINS_ENV:
-        origins = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
-    else:
-        # フォールバック：環境変数が未設定の場合
-        origins = ["https://uriv.vercel.app"]
-        print("⚠️  ALLOWED_ORIGINS環境変数が未設定です。デフォルト値を使用します。")
-    
-    print(f"✅ 本番環境モード - 許可されたオリジン: {origins}")
-    # vercelプレビューも許可するための正規表現（必要に応じて環境変数で上書き可能）
-    origin_regex = ALLOWED_ORIGIN_REGEX_ENV or r"https://.*\\.vercel\\.app"
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_origin_regex=origin_regex,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# デフォルトの許可オリジン
+default_origins = [
+    "https://uriv.vercel.app",
+    "https://urib.vercel.app",  # 旧URLも許可
+    "http://localhost:3000",
+    "http://localhost:3001"
+]
+
+if ALLOWED_ORIGINS_ENV:
+    # 環境変数で指定されたオリジン
+    origins = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
+    origins.extend(default_origins)  # デフォルトも追加
 else:
-    # 開発環境：全てのオリジンを許可
-    print("✅ 開発環境モード - 全てのオリジンを許可")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # デフォルトオリジンを使用
+    origins = default_origins
+
+print(f"✅ CORS設定 - 許可されたオリジン: {origins}")
+
+# CORSミドルウェアを追加
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Vercelプレビューも許可
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # DBセッションを取得する依存関数
 def get_db():
