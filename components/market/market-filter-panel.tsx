@@ -38,9 +38,11 @@ export function MarketFilterPanel({ filter, onFilterChange, onClose }: MarketFil
 
   // 個別フィルターの更新
   const updateFilter = (key: keyof MarketFilter, value: any) => {
+    // "all"の場合はundefinedに変換
+    const processedValue = value === "all" ? undefined : value
     setLocalFilter(prev => ({
       ...prev,
-      [key]: value
+      [key]: processedValue
     }))
   }
 
@@ -124,7 +126,7 @@ export function MarketFilterPanel({ filter, onFilterChange, onClose }: MarketFil
               <SelectValue placeholder="状態を選択" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">すべて</SelectItem>
+              <SelectItem value="all">すべて</SelectItem>
               {conditions.map((condition) => (
                 <SelectItem key={condition.value} value={condition.value}>
                   {condition.label}
@@ -145,7 +147,7 @@ export function MarketFilterPanel({ filter, onFilterChange, onClose }: MarketFil
               <SelectValue placeholder="大学を選択" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">すべて</SelectItem>
+              <SelectItem value="all">すべて</SelectItem>
               <SelectItem value="北海道大学">北海道大学</SelectItem>
               <SelectItem value="東京大学">東京大学</SelectItem>
               <SelectItem value="京都大学">京都大学</SelectItem>

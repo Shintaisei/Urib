@@ -70,7 +70,7 @@ if ENV == "production":
         origins = [origin.strip() for origin in ALLOWED_ORIGINS_ENV.split(",") if origin.strip()]
     else:
         # フォールバック：環境変数が未設定の場合
-        origins = ["https://urib.vercel.app"]
+        origins = ["https://uriv.vercel.app"]
         print("⚠️  ALLOWED_ORIGINS環境変数が未設定です。デフォルト値を使用します。")
     
     print(f"✅ 本番環境モード - 許可されたオリジン: {origins}")

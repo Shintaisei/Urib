@@ -23,7 +23,7 @@ def list_summaries(
     difficulty_level: str = "",
     q: str = "", 
     limit: int = 50, 
-    request: Request = None,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     query = db.query(models.CourseSummary)
