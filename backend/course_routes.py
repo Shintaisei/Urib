@@ -27,6 +27,22 @@ def list_summaries(
     db: Session = Depends(get_db)
 ):
     try:
+        # データベース接続確認
+        print(f"🔍 データベース接続確認: {db}")
+        
+        # CourseSummaryテーブルの存在確認
+        if not hasattr(models, 'CourseSummary'):
+            print("❌ CourseSummaryモデルが存在しません")
+            raise HTTPException(status_code=500, detail="CourseSummaryモデルが見つかりません")
+        
+        # テーブルが存在するか確認
+        try:
+            db.query(models.CourseSummary).first()
+            print("✅ CourseSummaryテーブルにアクセス成功")
+        except Exception as table_error:
+            print(f"❌ CourseSummaryテーブルアクセスエラー: {table_error}")
+            raise HTTPException(status_code=500, detail=f"CourseSummaryテーブルにアクセスできません: {str(table_error)}")
+        
         query = db.query(models.CourseSummary)
         if department:
             query = query.filter(models.CourseSummary.department == department)
@@ -43,40 +59,73 @@ def list_summaries(
             like = f"%{q}%"
             query = query.filter((models.CourseSummary.title.like(like)) | (models.CourseSummary.course_name.like(like)) | (models.CourseSummary.instructor.like(like)))
         
-        rows = query.order_by(desc(models.CourseSummary.created_at)).limit(max(1, min(limit, 100))).all()
+        # クエリ実行
+        try:
+            rows = query.order_by(desc(models.CourseSummary.created_at)).limit(max(1, min(limit, 100))).all()
+            print(f"✅ クエリ実行成功: {len(rows)}件のレコードを取得")
+        except Exception as query_error:
+            print(f"❌ クエリ実行エラー: {query_error}")
+            raise HTTPException(status_code=500, detail=f"クエリの実行に失敗しました: {str(query_error)}")
         
         # 現在のユーザーを取得（いいね状態の確認用）
         current_user_id = None
         try:
             current_user_id = get_current_user_id(request) if request else None
+            print(f"✅ ユーザーID取得成功: {current_user_id}")
         except Exception as e:
             print(f"⚠️ ユーザーID取得エラー: {e}")
         
-        return [
-            schemas.CourseSummaryResponse(
-                id=r.id,
-                title=r.title,
-                course_name=r.course_name,
-                instructor=r.instructor,
-                department=r.department,
-                year_semester=r.year_semester,
-                tags=r.tags,
-                content=r.content,
-                author_name=r.author_name,
-                like_count=r.like_count,
-                comment_count=r.comment_count,
-                grade_level=getattr(r, 'grade_level', None),
-                grade_score=getattr(r, 'grade_score', None),
-                difficulty_level=getattr(r, 'difficulty_level', None),
-                created_at=ensure_jst_aware(r.created_at).isoformat(),
-                is_liked=bool(current_user_id and hasattr(models, 'CourseSummaryLike') and db.query(models.CourseSummaryLike).filter(
-                    models.CourseSummaryLike.summary_id == r.id,
-                    models.CourseSummaryLike.user_id == current_user_id
-                ).first()) if current_user_id else None,
-            ) for r in rows
-        ]
+        # レスポンス生成
+        try:
+            result = []
+            for r in rows:
+                try:
+                    # いいね状態の確認
+                    is_liked = None
+                    if current_user_id and hasattr(models, 'CourseSummaryLike'):
+                        try:
+                            like_exists = db.query(models.CourseSummaryLike).filter(
+                                models.CourseSummaryLike.summary_id == r.id,
+                                models.CourseSummaryLike.user_id == current_user_id
+                            ).first()
+                            is_liked = bool(like_exists)
+                        except Exception as like_error:
+                            print(f"⚠️ いいね状態確認エラー: {like_error}")
+                            is_liked = None
+                    
+                    summary_response = schemas.CourseSummaryResponse(
+                        id=r.id,
+                        title=r.title,
+                        course_name=r.course_name,
+                        instructor=r.instructor,
+                        department=r.department,
+                        year_semester=r.year_semester,
+                        tags=r.tags,
+                        content=r.content,
+                        author_name=r.author_name,
+                        like_count=r.like_count,
+                        comment_count=r.comment_count,
+                        grade_level=getattr(r, 'grade_level', None),
+                        grade_score=getattr(r, 'grade_score', None),
+                        difficulty_level=getattr(r, 'difficulty_level', None),
+                        created_at=ensure_jst_aware(r.created_at).isoformat(),
+                        is_liked=is_liked,
+                    )
+                    result.append(summary_response)
+                except Exception as row_error:
+                    print(f"⚠️ レコード処理エラー (ID: {r.id}): {row_error}")
+                    continue
+            
+            print(f"✅ レスポンス生成成功: {len(result)}件")
+            return result
+        except Exception as response_error:
+            print(f"❌ レスポンス生成エラー: {response_error}")
+            raise HTTPException(status_code=500, detail=f"レスポンスの生成に失敗しました: {str(response_error)}")
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         print(f"❌ 授業まとめ取得エラー: {e}")
+        print(f"❌ エラー詳細: {error_details}")
         raise HTTPException(status_code=500, detail=f"授業まとめの取得に失敗しました: {str(e)}")
 
 @router.post("/summaries", response_model=schemas.CourseSummaryResponse)
