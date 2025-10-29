@@ -77,9 +77,9 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
       if (q) params.set('q', q)
       if (dept) params.set('department', dept)
       if (ys) params.set('year_semester', ys)
-      if (gradeLevel) params.set('grade_level', gradeLevel)
-      if (gradeScore) params.set('grade_score', gradeScore)
-      if (difficultyLevel) params.set('difficulty_level', difficultyLevel)
+      if (gradeLevel && gradeLevel !== 'all') params.set('grade_level', gradeLevel)
+      if (gradeScore && gradeScore !== 'all') params.set('grade_score', gradeScore)
+      if (difficultyLevel && difficultyLevel !== 'all') params.set('difficulty_level', difficultyLevel)
       const res = await fetch(`${API_BASE_URL}/courses/summaries?${params.toString()}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('取得に失敗しました')
       const data = await res.json()
@@ -271,7 +271,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                 <SelectValue placeholder="学年で絞り込み" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">すべて</SelectItem>
+                <SelectItem value="all">すべて</SelectItem>
                 <SelectItem value="1年">1年</SelectItem>
                 <SelectItem value="2年">2年</SelectItem>
                 <SelectItem value="3年">3年</SelectItem>
@@ -286,7 +286,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                 <SelectValue placeholder="成績で絞り込み" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">すべて</SelectItem>
+                <SelectItem value="all">すべて</SelectItem>
                 <SelectItem value="A+">A+</SelectItem>
                 <SelectItem value="A">A</SelectItem>
                 <SelectItem value="B">B</SelectItem>
@@ -301,7 +301,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                 <SelectValue placeholder="取りやすさで絞り込み" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">すべて</SelectItem>
+                <SelectItem value="all">すべて</SelectItem>
                 <SelectItem value="ど仏">ど仏</SelectItem>
                 <SelectItem value="仏">仏</SelectItem>
                 <SelectItem value="普通">普通</SelectItem>
