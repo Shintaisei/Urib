@@ -69,7 +69,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [loadingComments, setLoadingComments] = useState<number | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
-  const fetchList = async () => {
+  const fetchList = async (retryCount = 0) => {
     setLoading(true)
     setError("")
     try {
@@ -80,13 +80,40 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
       if (gradeLevel && gradeLevel !== 'all') params.set('grade_level', gradeLevel)
       if (gradeScore && gradeScore !== 'all') params.set('grade_score', gradeScore)
       if (difficultyLevel && difficultyLevel !== 'all') params.set('difficulty_level', difficultyLevel)
-      const res = await fetch(`${API_BASE_URL}/courses/summaries?${params.toString()}`, { cache: 'no-store' })
-      if (!res.ok) throw new Error('取得に失敗しました')
+      
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10秒タイムアウト
+      
+      const res = await fetch(`${API_BASE_URL}/courses/summaries?${params.toString()}`, { 
+        cache: 'no-store',
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (!res.ok) {
+        if (res.status === 500 && retryCount < 2) {
+          // 500エラーの場合は最大2回まで再試行
+          console.log(`500エラー、${retryCount + 1}回目の再試行...`)
+          setTimeout(() => fetchList(retryCount + 1), 2000 * (retryCount + 1))
+          return
+        }
+        throw new Error(`取得に失敗しました (${res.status})`)
+      }
+      
       const data = await res.json()
       setList(data || [])
-    } catch (e:any) {
-      setError(e?.message || '取得に失敗しました')
-      setList([])
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        setError('タイムアウトしました。しばらく待ってから再試行してください。')
+      } else if (retryCount < 2) {
+        console.log(`エラー発生、${retryCount + 1}回目の再試行...`, e.message)
+        setTimeout(() => fetchList(retryCount + 1), 2000 * (retryCount + 1))
+        return
+      } else {
+        setError(e?.message || '取得に失敗しました')
+        setList([])
+      }
     } finally {
       setLoading(false)
     }
@@ -96,6 +123,17 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
     fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // フィルタ変更時の再取得（デバウンス付き）
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (q || dept || ys || gradeLevel || gradeScore || difficultyLevel) {
+        fetchList()
+      }
+    }, 500) // 500msデバウンス
+
+    return () => clearTimeout(timeoutId)
+  }, [q, dept, ys, gradeLevel, gradeScore, difficultyLevel])
 
   useEffect(() => {
     const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
