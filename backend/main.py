@@ -531,6 +531,11 @@ def update_my_profile(payload: schemas.UserUpdate, request: Request, db: Session
         "department": user.department,
     }
 
+# 互換: POSTでも同じ更新を受け付ける（古いフロント対応）
+@app.post("/users/me")
+def update_my_profile_post(payload: schemas.UserUpdate, request: Request, db: Session = Depends(get_db)):
+    return update_my_profile(payload, request, db)
+
 @app.delete("/users/me")
 def delete_my_account(request: Request, db: Session = Depends(get_db)):
     """管理者専用: 自分のアカウントを削除"""
