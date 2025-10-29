@@ -499,6 +499,38 @@ def delete_user_deep(db: Session, target: models.User):
     # 最後にユーザー
     db.delete(target)
 
+@app.put("/users/me")
+def update_my_profile(payload: schemas.UserUpdate, request: Request, db: Session = Depends(get_db)):
+    """現在のユーザーのプロフィールを更新する（anonymous_name/year/department）"""
+    user = resolve_user_from_headers(request, db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="認証が必要です")
+
+    # 匿名名の重複チェック（変更時のみ）
+    if payload.anonymous_name is not None:
+        new_name = (payload.anonymous_name or "").strip()
+        if len(new_name) < 2:
+            raise HTTPException(status_code=400, detail="表示名は2文字以上で入力してください")
+        if new_name != user.anonymous_name:
+            exists = db.query(models.User).filter(models.User.anonymous_name == new_name).first()
+            if exists:
+                raise HTTPException(status_code=400, detail="この表示名は既に使用されています")
+            user.anonymous_name = new_name
+
+    if payload.year is not None:
+        user.year = payload.year
+    if payload.department is not None:
+        user.department = payload.department
+
+    db.commit()
+    return {
+        "id": user.id,
+        "anonymous_name": user.anonymous_name,
+        "university": user.university,
+        "year": user.year,
+        "department": user.department,
+    }
+
 @app.delete("/users/me")
 def delete_my_account(request: Request, db: Session = Depends(get_db)):
     """管理者専用: 自分のアカウントを削除"""

@@ -27,6 +27,12 @@ class UserRegisterResponse(BaseModel):
     year: str
     department: str
 
+# プロフィール更新用
+class UserUpdate(BaseModel):
+    anonymous_name: Optional[str] = None
+    year: Optional[str] = None
+    department: Optional[str] = None
+
 # 市場掲示板関連のスキーマ
 class MarketItemCreate(BaseModel):
     title: str

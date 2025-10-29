@@ -9,10 +9,11 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { School, Shield, Bell, Eye, Save, Check } from "lucide-react"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://urib-backend.onrender.com'
 import { isAdminEmail } from "@/lib/utils"
 
 export function ProfileSettings() {
-  const [nickname, setNickname] = useState("匿名ユーザー #A1B2")
+  const [nickname, setNickname] = useState("")
   const [notifications, setNotifications] = useState(true)
   const [showOnlineStatus, setShowOnlineStatus] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -20,6 +21,8 @@ export function ProfileSettings() {
   const [email, setEmail] = useState("")
   const [university, setUniversity] = useState("")
   const [isAdmin, setIsAdmin] = useState(false)
+  const [year, setYear] = useState("")
+  const [department, setDepartment] = useState("")
 
   useEffect(() => {
     const storedEmail = typeof window !== 'undefined' ? (localStorage.getItem('user_email') || '') : ''
@@ -27,17 +30,53 @@ export function ProfileSettings() {
     setEmail(storedEmail)
     setUniversity(storedUniversity)
     setIsAdmin(isAdminEmail(storedEmail))
+    // 初期プロフィール取得
+    const loadProfile = async () => {
+      try {
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+        const headers: HeadersInit = userId ? { 'X-User-Id': String(userId) } : {}
+        const res = await fetch(`${API_BASE_URL}/users/public/${userId}`, { headers })
+        if (res.ok) {
+          const p = await res.json()
+          setNickname(p.anonymous_name || "")
+          setUniversity(p.university || "")
+          setYear(p.year || "")
+          setDepartment(p.department || "")
+        }
+      } catch {}
+    }
+    loadProfile()
   }, [])
 
   const handleSave = async () => {
-    setIsSaving(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsSaving(false)
+    try {
+      setIsSaving(true)
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(userId ? { 'X-User-Id': String(userId) } : {}),
+      }
+      const body = {
+        anonymous_name: nickname,
+        year,
+        department,
+      }
+      const res = await fetch(`${API_BASE_URL}/users/me`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.detail || '保存に失敗しました')
+      }
       setIsSaved(true)
       setTimeout(() => setIsSaved(false), 2000)
-    }, 1000)
+    } catch (e: any) {
+      alert(e?.message || '保存に失敗しました')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -86,9 +125,18 @@ export function ProfileSettings() {
               placeholder="表示名を入力"
               maxLength={20}
             />
-            <p className="text-xs text-muted-foreground">
-              他のユーザーに表示される名前です。いつでも変更できます。
-            </p>
+            <p className="text-xs text-muted-foreground">他のユーザーに表示される名前です。</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="year">学年</Label>
+              <Input id="year" value={year} onChange={(e) => setYear(e.target.value)} placeholder="例: 1年/2年/3年/4年/修士/博士" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="department">学部</Label>
+              <Input id="department" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="例: 工学部" />
+            </div>
           </div>
 
           <Separator />
