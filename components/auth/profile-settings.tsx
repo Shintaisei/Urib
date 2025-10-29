@@ -5,17 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { School, Shield, Bell, Eye, Save, Check } from "lucide-react"
+import { School, Shield, Save, Check } from "lucide-react"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://urib-backend.onrender.com'
 import { isAdminEmail } from "@/lib/utils"
 
 export function ProfileSettings() {
   const [nickname, setNickname] = useState("")
-  const [notifications, setNotifications] = useState(true)
-  const [showOnlineStatus, setShowOnlineStatus] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
   const [email, setEmail] = useState("")
@@ -30,18 +27,34 @@ export function ProfileSettings() {
     setEmail(storedEmail)
     setUniversity(storedUniversity)
     setIsAdmin(isAdminEmail(storedEmail))
-    // 初期プロフィール取得
+    // 初期プロフィール取得（user_id が無い場合はメールで解決）
     const loadProfile = async () => {
       try {
         const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
-        const headers: HeadersInit = userId ? { 'X-User-Id': String(userId) } : {}
-        const res = await fetch(`${API_BASE_URL}/users/public/${userId}`, { headers })
-        if (res.ok) {
-          const p = await res.json()
-          setNickname(p.anonymous_name || "")
-          setUniversity(p.university || "")
-          setYear(p.year || "")
-          setDepartment(p.department || "")
+        const devEmail = typeof window !== 'undefined' ? (localStorage.getItem('dev_user_email') || localStorage.getItem('user_email')) : null
+        if (userId) {
+          const headers: HeadersInit = { 'X-User-Id': String(userId) }
+          const res = await fetch(`${API_BASE_URL}/users/public/${userId}`, { headers })
+          if (res.ok) {
+            const p = await res.json()
+            setNickname(p.anonymous_name || "")
+            setUniversity(p.university || "")
+            setYear(p.year || "")
+            setDepartment(p.department || "")
+            return
+          }
+        }
+        if (devEmail) {
+          const res = await fetch(`${API_BASE_URL}/users/check-email?email=${encodeURIComponent(devEmail)}`)
+          if (res.ok) {
+            const j = await res.json()
+            if (j?.user) {
+              setNickname(j.user.anonymous_name || "")
+              setUniversity(j.user.university || "")
+              setYear(j.user.year || "")
+              setDepartment(j.user.department || "")
+            }
+          }
         }
       } catch {}
     }
@@ -52,9 +65,16 @@ export function ProfileSettings() {
     try {
       setIsSaving(true)
       const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      const devEmail = typeof window !== 'undefined' ? (localStorage.getItem('dev_user_email') || localStorage.getItem('user_email')) : null
+      if (!userId && !devEmail) {
+        alert('保存にはログインが必要です。メール認証を行ってください。')
+        setIsSaving(false)
+        return
+      }
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...(userId ? { 'X-User-Id': String(userId) } : {}),
+        ...(devEmail ? { 'X-Dev-Email': `dev:${devEmail}` } : {}),
       }
       const body = {
         anonymous_name: nickname,
@@ -113,7 +133,7 @@ export function ProfileSettings() {
       <Card>
         <CardHeader>
           <CardTitle>プロフィール設定</CardTitle>
-          <CardDescription>表示名に関する設定</CardDescription>
+          <CardDescription>表示名・学年・学部の設定</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -140,95 +160,10 @@ export function ProfileSettings() {
           </div>
 
           <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="online-status">オンライン状態を表示</Label>
-              <p className="text-sm text-muted-foreground">DMでオンライン状態を他のユーザーに表示します</p>
-            </div>
-            <Switch id="online-status" checked={showOnlineStatus} onCheckedChange={setShowOnlineStatus} />
-          </div>
         </CardContent>
       </Card>
 
-      {/* Notification Settings */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Bell className="w-5 h-5 text-primary" />
-            <CardTitle>通知設定</CardTitle>
-          </div>
-          <CardDescription>アプリからの通知に関する設定</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="notifications">プッシュ通知</Label>
-              <p className="text-sm text-muted-foreground">新しいメッセージや返信の通知を受け取ります</p>
-            </div>
-            <Switch id="notifications" checked={notifications} onCheckedChange={setNotifications} />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Privacy & Safety */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-2">
-            <Eye className="w-5 h-5 text-primary" />
-            <CardTitle>プライバシーと安全</CardTitle>
-          </div>
-          <CardDescription>アカウントの安全性に関する設定</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <Button variant="outline" className="w-full justify-start bg-transparent">
-              ブロックしたユーザーを管理
-            </Button>
-            <Button variant="outline" className="w-full justify-start bg-transparent">
-              報告履歴を確認
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start text-destructive hover:text-destructive bg-transparent"
-              onClick={async () => {
-                if (!isAdmin) {
-                  alert('この操作は管理者のみが実行できます')
-                  return
-                }
-                if (!confirm('アカウントを削除します。よろしいですか？\nこの操作は取り消せません。')) return
-                try {
-                  const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
-                  const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
-                  let res: Response
-                  if (userId) {
-                    // 管理者として対象ユーザーIDを直接削除
-                    res = await fetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
-                      method: 'DELETE',
-                    })
-                  } else {
-                    // フォールバック（通常は到達しない）
-                    res = await fetch('/api/profile/delete', { method: 'DELETE' })
-                  }
-                  if (!res.ok) {
-                    const j = await res.json().catch(() => ({}))
-                    throw new Error(j.detail || '削除に失敗しました')
-                  }
-                  alert('アカウントを削除しました。トップへ戻ります。')
-                  if (typeof window !== 'undefined') {
-                    localStorage.clear()
-                    window.location.href = '/'
-                  }
-                } catch (e: any) {
-                  alert(e.message || '削除に失敗しました')
-                }
-              }}
-            >
-              アカウントを削除
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* 通知設定・プライバシー機能は未実装のため一旦非表示 */}
 
       {/* Save Button */}
       <div className="flex justify-end">
