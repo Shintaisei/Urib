@@ -24,6 +24,7 @@ import { MarketItemCard } from "./market-item-card"
 import { MarketFilterPanel } from "./market-filter-panel"
 import { MarketCreateModal } from "./market-create-modal"
 import { MarketApi, setDevUserEmail } from "@/lib/market-api"
+import { useCachedFetch } from "@/lib/api-cache"
 import { useAuth } from "@/contexts/AuthContext"
 
 // モックデータ（実際のAPIから取得するデータ）
@@ -108,6 +109,7 @@ const mockMarketItems: MarketItem[] = [
 
 export function MarketBoard() {
   const { user } = useAuth()
+  const { invalidateCache } = useCachedFetch()
   const [items, setItems] = useState<MarketItem[]>([])
   const [filteredItems, setFilteredItems] = useState<MarketItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -218,6 +220,7 @@ export function MarketBoard() {
         images: (createdItem.images && createdItem.images.length > 0) ? createdItem.images : (newItem.images || [])
       }
       setItems(prevItems => [itemToAdd, ...prevItems])
+      invalidateCache('market-items')
       setShowCreateModal(false)
     } catch (error) {
       console.error('商品作成エラー:', error)
@@ -420,9 +423,11 @@ export function MarketBoard() {
                       onLike={handleLike}
                       onDeleted={(itemId) => {
                         setItems(prev => prev.filter(i => i.id !== itemId))
+                        invalidateCache('market-items')
                       }}
                       onStatusChanged={(itemId, isAvailable) => {
                         setItems(prev => prev.map(i => i.id === itemId ? { ...i, is_available: isAvailable } : i))
+                        invalidateCache('market-items')
                       }}
                     />
                   </div>

@@ -18,6 +18,7 @@ import { MarketItem } from "@/types"
 import { MarketApi, MarketCommentsApi, type MarketItemComment, deleteItemComment, adminDeleteItem } from "@/lib/market-api"
 import { isAdminEmail } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
+import { useCachedFetch } from "@/lib/api-cache"
 
 function ExpandableText({ text, maxChars = 120 }: { text: string; maxChars?: number }) {
   const [expanded, setExpanded] = useState(false)
@@ -56,6 +57,7 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
   const [comments, setComments] = useState<MarketItemComment[]>([])
   const [commentInput, setCommentInput] = useState("")
   const [posting, setPosting] = useState(false)
+  const { invalidateCache } = useCachedFetch()
   // 管理者ボタンは非表示にする（依頼により）
   const userEmail = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
   const userIdStr = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
@@ -311,6 +313,7 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
                     setIsToggling(true)
                     const updated = await MarketApi.updateItem(item.id, { is_available: !item.is_available })
                     if (onStatusChanged) onStatusChanged(item.id, updated.is_available)
+                    invalidateCache('market-items')
                   } catch (e: any) {
                     alert(e?.message || 'ステータスの更新に失敗しました（権限がない可能性があります）')
                   } finally {

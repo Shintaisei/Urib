@@ -3,26 +3,41 @@
 import { useState, useEffect, useCallback } from 'react'
 
 // シンプルなメモリキャッシュ
+type CacheEntry = { data: any; timestamp: number; ttl: number }
+
+const LS_PREFIX = 'apiCache:'
+
 class APICache {
-  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>()
+  private cache = new Map<string, CacheEntry>()
   
   set(key: string, data: any, ttl: number = 30000) { // デフォルト30秒
-    this.cache.set(key, {
-      data,
-      timestamp: Date.now(),
-      ttl
-    })
+    const entry: CacheEntry = { data, timestamp: Date.now(), ttl }
+    this.cache.set(key, entry)
+    try {
+      if (ttl > 0) {
+        localStorage.setItem(LS_PREFIX + key, JSON.stringify(entry))
+      }
+    } catch {}
   }
   
   get(key: string): any | null {
-    const item = this.cache.get(key)
+    let item = this.cache.get(key)
+    if (!item) {
+      // localStorageから復元
+      try {
+        const raw = localStorage.getItem(LS_PREFIX + key)
+        if (raw) {
+          const parsed: CacheEntry = JSON.parse(raw)
+          item = parsed
+          this.cache.set(key, parsed)
+        }
+      } catch {}
+    }
     if (!item) return null
-    
     if (Date.now() - item.timestamp > item.ttl) {
-      this.cache.delete(key)
+      this.delete(key)
       return null
     }
-    
     return item.data
   }
   
@@ -32,6 +47,7 @@ class APICache {
   
   delete(key: string) {
     this.cache.delete(key)
+    try { localStorage.removeItem(LS_PREFIX + key) } catch {}
   }
 }
 
@@ -60,7 +76,7 @@ export function useCachedFetch() {
       const response = await fetch(url, {
         ...options,
         headers: {
-          'Cache-Control': 'max-age=30',
+          'Cache-Control': 'no-store',
           ...options.headers
         }
       })

@@ -31,19 +31,19 @@ export default function HomePage() {
             url: `${API_BASE_URL}/board/stats`,
             options: { headers },
             cacheKey: 'board-stats',
-            ttl: 60000 // 1分キャッシュ
+            ttl: 600000 // 10分キャッシュ
           },
           {
             url: `${API_BASE_URL}/board/posts/feed?feed_type=latest&limit=10`,
             options: { headers },
             cacheKey: 'latest-feed',
-            ttl: 30000 // 30秒キャッシュ
+            ttl: 120000 // 2分キャッシュ
           },
           {
             url: `${API_BASE_URL}/market/items?limit=6`,
             options: { headers },
             cacheKey: 'market-items',
-            ttl: 60000 // 1分キャッシュ
+            ttl: 600000 // 10分キャッシュ
           }
         ])
         
