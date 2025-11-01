@@ -17,7 +17,7 @@ interface NotificationItem {
   created_at: string
 }
 
-export function NotificationsList({ inline = false, mentionsOnly = false }: { inline?: boolean; mentionsOnly?: boolean }) {
+export function NotificationsList({ inline = false, mentionsOnly = false, refreshToken }: { inline?: boolean; mentionsOnly?: boolean; refreshToken?: number }) {
   const [items, setItems] = useState<NotificationItem[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
@@ -48,7 +48,7 @@ export function NotificationsList({ inline = false, mentionsOnly = false }: { in
   useEffect(() => {
     fetchNotifs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [refreshToken])
 
   const markRead = async (id: number) => {
     try {
