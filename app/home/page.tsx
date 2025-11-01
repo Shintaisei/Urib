@@ -110,7 +110,7 @@ export default function HomePage() {
             }`}
           >
             <BookOpen className="w-4 h-4 inline mr-2" />
-            まとめ情報
+            サークル授業レビュー
           </button>
         </div>
 
@@ -172,7 +172,7 @@ export default function HomePage() {
 
           {activeTab === 'summaries' && (
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-6">まとめ情報</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-6">サークル授業レビュー</h2>
               {/* 内部タブ */}
               <div className="flex gap-2 mb-4">
                 <button
