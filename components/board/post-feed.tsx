@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Heart, MessageCircle, TrendingUp, Clock, Flame } from "lucide-react"
+import { Heart, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCachedFetch } from "@/lib/api-cache"
@@ -45,12 +45,10 @@ interface FeedPost {
   is_liked: boolean
 }
 
-type FeedType = 'latest' | 'popular' | 'trending'
 type LatestTab = 'posts' | 'replies' | 'no_comments'
 
 export function PostFeed() {
   const router = useRouter()
-  const [feedType, setFeedType] = useState<FeedType>('latest')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [loading, setLoading] = useState(true)
   const [latestTab, setLatestTab] = useState<LatestTab>('posts')
@@ -64,10 +62,10 @@ export function PostFeed() {
 
   useEffect(() => {
     fetchFeed()
-  }, [feedType])
+  }, [])
 
   useEffect(() => {
-    if (feedType !== 'latest') return
+    if (latestTab !== 'replies') return
     const fetchReplies = async () => {
       try {
         const cacheKey = 'feed-latest-replies'
@@ -90,11 +88,11 @@ export function PostFeed() {
       }
     }
     fetchReplies()
-  }, [feedType, getCached, fetchWithCache])
+  }, [latestTab, getCached, fetchWithCache])
 
   const fetchFeed = async () => {
     try {
-      const cacheKey = `feed-${feedType}`
+      const cacheKey = `feed-latest`
       const cached = getCached(cacheKey)
       if (cached) {
         setPosts(cached.posts || [])
@@ -110,7 +108,7 @@ export function PostFeed() {
       }
       
       const data = await fetchWithCache(
-        `${API_BASE_URL}/board/posts/feed?feed_type=${feedType}&limit=10`,
+        `${API_BASE_URL}/board/posts/feed?feed_type=latest&limit=10`,
         { headers },
         cacheKey,
         120000 // 2分
@@ -147,14 +145,13 @@ export function PostFeed() {
   // 表示中のリストの遷移先をプリフェッチして体感速度を改善
   useEffect(() => {
     try {
-      if (feedType !== 'latest') return
       if (latestTab === 'posts' || latestTab === 'no_comments') {
         posts.slice(0, 8).forEach((p) => router.prefetch(`/board/${p.board_id}?post_id=${p.id}`))
       } else if (latestTab === 'replies') {
         latestReplies.slice(0, 8).forEach((row: any) => router.prefetch(`/board/${row.post.board_id}?post_id=${row.post.id}`))
       }
     } catch {}
-  }, [router, feedType, latestTab, posts, latestReplies])
+  }, [router, latestTab, posts, latestReplies])
 
   const getTimeDiff = (createdAt: string): string => {
     const now = new Date()
@@ -239,62 +236,7 @@ export function PostFeed() {
   return (
     <div className="space-y-4">
 
-      {/* タブ */}
-      <div className="flex gap-2 border-b border-border">
-        <button
-          onClick={() => setFeedType('latest')}
-          onMouseEnter={() => {
-            // プリフェッチ
-            const userId = localStorage.getItem('user_id')
-            const headers: any = {}
-            if (userId) headers['X-User-Id'] = userId
-            fetchWithCache(`${API_BASE_URL}/board/posts/feed?feed_type=latest&limit=10`, { headers }, 'feed-latest', 120000).catch(() => {})
-            fetchWithCache(`${API_BASE_URL}/board/replies/feed?limit=10`, { headers }, 'feed-latest-replies', 120000).catch(() => {})
-          }}
-          className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            feedType === 'latest'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Clock className="w-4 h-4 inline mr-1" />
-          最新
-        </button>
-        <button
-          onClick={() => setFeedType('popular')}
-          onMouseEnter={() => {
-            const userId = localStorage.getItem('user_id')
-            const headers: any = {}
-            if (userId) headers['X-User-Id'] = userId
-            fetchWithCache(`${API_BASE_URL}/board/posts/feed?feed_type=popular&limit=10`, { headers }, 'feed-popular', 120000).catch(() => {})
-          }}
-          className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            feedType === 'popular'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Heart className="w-4 h-4 inline mr-1" />
-          人気
-        </button>
-        <button
-          onClick={() => setFeedType('trending')}
-          onMouseEnter={() => {
-            const userId = localStorage.getItem('user_id')
-            const headers: any = {}
-            if (userId) headers['X-User-Id'] = userId
-            fetchWithCache(`${API_BASE_URL}/board/posts/feed?feed_type=trending&limit=10`, { headers }, 'feed-trending', 120000).catch(() => {})
-          }}
-          className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
-            feedType === 'trending'
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Flame className="w-4 h-4 inline mr-1" />
-          話題
-        </button>
-      </div>
+      {/* 外側タブ(最新/人気/話題)は削除。内側タブのみ表示 */}
 
       {/* 最新内タブ（最新投稿 / 最新返信） */}
       {feedType === 'latest' && (
