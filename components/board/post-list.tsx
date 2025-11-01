@@ -100,7 +100,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewAnonymousName, setPreviewAnonymousName] = useState<string | undefined>(undefined)
   
-  const { fetchWithCache, invalidateCache } = useCachedFetch()
+  const { fetchWithCache, getCached, invalidateCache } = useCachedFetch()
   const { fetchMultiple } = useParallelFetch()
 
   const startDMFromPreview = async (args: { user_id?: number; email?: string }) => {
@@ -123,7 +123,14 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
 
   const fetchPosts = async () => {
     try {
-      setLoading(true)
+      const cacheKey = `posts-${boardId}`
+      const cached = getCached(cacheKey)
+      if (cached) {
+        setPosts(cached)
+        setLoading(false)
+      } else {
+        setLoading(true)
+      }
       const userId = localStorage.getItem('user_id')
       const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
       
@@ -138,8 +145,8 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       const data = await fetchWithCache(
         `${API_BASE_URL}/board/posts/${boardId}`,
         { headers },
-        `posts-${boardId}`,
-        30000 // 30秒キャッシュ
+        cacheKey,
+        600000 // 10分キャッシュ
       )
 
       setPosts(data)
@@ -153,7 +160,14 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
 
   const fetchReplies = async (postId: number) => {
     try {
-      setLoadingReplies(postId)
+      const cacheKey = `replies-${postId}`
+      const cached = getCached(cacheKey)
+      if (cached) {
+        setReplies(prev => ({ ...prev, [postId]: cached }))
+        setLoadingReplies(null)
+      } else {
+        setLoadingReplies(postId)
+      }
       const userId = localStorage.getItem('user_id')
       
       const headers: any = {}
@@ -164,8 +178,8 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       const data = await fetchWithCache(
         `${API_BASE_URL}/board/posts/${postId}/replies`,
         { headers },
-        `replies-${postId}`,
-        60000 // 1分キャッシュ
+        cacheKey,
+        600000 // 10分キャッシュ
       )
 
       setReplies(prev => ({ ...prev, [postId]: data }))

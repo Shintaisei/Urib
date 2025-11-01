@@ -96,6 +96,14 @@ export function useCachedFetch() {
     }
   }, [])
   
+  const getCached = useCallback((cacheKey: string) => {
+    try {
+      return apiCache.get(cacheKey)
+    } catch {
+      return null
+    }
+  }, [])
+
   const invalidateCache = useCallback((pattern?: string) => {
     if (pattern) {
       // パターンにマッチするキャッシュを削除
@@ -110,7 +118,7 @@ export function useCachedFetch() {
     }
   }, [])
   
-  return { fetchWithCache, invalidateCache, loading }
+  return { fetchWithCache, getCached, invalidateCache, loading }
 }
 
 // 並列API呼び出し用のフック

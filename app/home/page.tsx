@@ -169,9 +169,7 @@ export default function HomePage() {
                 <PostList boardId={selectedBoardId} />
               </div>
 
-              {/* 下に統計付きの一覧も残す（任意） */}
-              <h3 className="text-xl font-semibold text-foreground mb-4">掲示板カテゴリー一覧</h3>
-              <BoardGrid />
+              {/* 統計付き一覧は非表示（ナビ簡略化） */}
             </div>
           )}
 
