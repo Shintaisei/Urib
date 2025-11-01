@@ -241,19 +241,11 @@ export function MarketBoard() {
     <div className="min-h-screen bg-background">
       {/* ヘッダーセクション */}
       <div className="bg-card border-b border-border">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">マーケット掲示板</h1>
-              <p className="text-muted-foreground">
-                大学内で商品の売買や無料譲渡を行える掲示板です
-              </p>
-            </div>
-          </div>
+        <div className="container mx-auto px-4 py-4">
 
           {/* 統計情報（非表示要件により削除） */}
 
-          {/* 検索とフィルター */}
+          {/* 検索とフィルター（最上部に配置） */}
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -330,11 +322,7 @@ export function MarketBoard() {
 
           {/* 商品一覧 */}
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-foreground">
-                商品一覧 ({filteredItems.length}件)
-              </h2>
-            </div>
+            <div className="mb-2" />
 
             {loading ? (
               <Card className="bg-muted/30">

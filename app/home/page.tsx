@@ -100,7 +100,7 @@ export default function HomePage() {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            書籍売買
+            中古品売買
           </button>
           <button
             onClick={() => setActiveTab('summaries')}
@@ -166,7 +166,6 @@ export default function HomePage() {
 
           {activeTab === 'market' && (
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-6">書籍売買</h2>
               <MarketBoard />
             </div>
           )}
