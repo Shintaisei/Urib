@@ -15,7 +15,7 @@ import { useParallelFetch } from "@/lib/api-cache"
 import { PostList } from "@/components/board/post-list"
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'summaries'>('feed')
+  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'summaries' | 'ranking'>('feed')
   const [initialDataLoaded, setInitialDataLoaded] = useState(false)
   const { fetchMultiple } = useParallelFetch()
   const [selectedBoardId, setSelectedBoardId] = useState<string>('1')
@@ -113,6 +113,16 @@ export default function HomePage() {
             <BookOpen className="w-4 h-4 inline mr-2" />
             サークル授業レビュー
           </button>
+          <button
+            onClick={() => setActiveTab('ranking')}
+            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'ranking'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            アクティブランキング
+          </button>
         </div>
 
         {/* タブコンテンツ */}
@@ -196,7 +206,13 @@ export default function HomePage() {
               {/* コンテンツ */}
               {summaryTab === 'courses' && <CourseSummaries />}
               {summaryTab === 'circles' && <CircleSummaries />}
-              {summaryTab === 'ranking' && <ActiveRanking days={30} />}
+              {/* ランキングは上位タブへ移動 */}
+            </div>
+          )}
+
+          {activeTab === 'ranking' && (
+            <div>
+              <ActiveRanking days={30} />
             </div>
           )}
         </div>
