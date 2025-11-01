@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Crown } from "lucide-react"
 import { LoadingProgress } from "@/components/loading-progress"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/proxy'
 
 interface RankItem {
   rank: number
