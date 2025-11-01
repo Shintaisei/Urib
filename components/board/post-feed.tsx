@@ -238,9 +238,6 @@ export function PostFeed() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-foreground">話題の投稿</h2>
-      </div>
 
       {/* タブ */}
       <div className="flex gap-2 border-b border-border">

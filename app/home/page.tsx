@@ -130,7 +130,6 @@ export default function HomePage() {
 
           {activeTab === 'boards' && (
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-6">掲示板</h2>
               {/* 掲示板タブ */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {[
@@ -172,7 +171,6 @@ export default function HomePage() {
 
           {activeTab === 'summaries' && (
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-6">サークル授業レビュー</h2>
               {/* 内部タブ */}
               <div className="flex gap-2 mb-4">
                 <button
