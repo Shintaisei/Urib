@@ -20,6 +20,7 @@ export function ChatArea({ chatId }: ChatAreaProps) {
   const [loading, setLoading] = useState(false)
   const [partnerInitial, setPartnerInitial] = useState<string>("匿")
   const [myName, setMyName] = useState<string>("あなた")
+  const [myEmail, setMyEmail] = useState<string>("")
 
   const fetchMessages = async () => {
     try {
@@ -42,6 +43,12 @@ export function ChatArea({ chatId }: ChatAreaProps) {
         const name = conv?.partner_name || conv?.partner_email || "相手"
         setPartnerLabel(name)
         setPartnerInitial(name?.charAt(0) || '匿')
+      } catch {}
+      try {
+        const me = typeof window !== 'undefined' ? (localStorage.getItem('anonymous_name') || '') : ''
+        if (me) setMyName(me)
+        const mail = typeof window !== 'undefined' ? ((localStorage.getItem('dev_user_email') || localStorage.getItem('user_email')) || '') : ''
+        if (mail) setMyEmail(mail)
       } catch {}
       await fetchMessages()
     }
@@ -103,7 +110,9 @@ export function ChatArea({ chatId }: ChatAreaProps) {
           </div>
         ) : (
           messages.map((msg) => {
-            const isOwn = !!msg.is_own
+            const isOwn = (msg.is_own !== undefined && msg.is_own !== null)
+              ? !!msg.is_own
+              : (msg.sender_email ? msg.sender_email === myEmail : false)
             const name = isOwn ? myName : partnerLabel
             const initial = isOwn ? (myName?.charAt(0) || '自') : partnerInitial
             return (
