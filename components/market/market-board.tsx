@@ -251,53 +251,7 @@ export function MarketBoard() {
             </div>
           </div>
 
-          {/* 統計情報 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <Card 
-              role="button" 
-              tabIndex={0}
-              onClick={() => setSelectedType("all")}
-              className={`bg-muted/30 cursor-pointer hover:ring-2 hover:ring-primary ${selectedType === "all" ? "ring-2 ring-primary" : ""}`}
-            >
-              <CardContent className="p-4 text-center select-none">
-                <div className="text-2xl font-bold text-foreground">{stats.totalItems}</div>
-                <div className="text-sm text-muted-foreground">総出品数</div>
-              </CardContent>
-            </Card>
-            <Card 
-              role="button" 
-              tabIndex={0}
-              onClick={() => setSelectedType("buy")}
-              className={`bg-blue-50 border-blue-200 cursor-pointer hover:ring-2 hover:ring-blue-300 ${selectedType === "buy" ? "ring-2 ring-blue-400" : ""}`}
-            >
-              <CardContent className="p-4 text-center select-none">
-                <div className="text-2xl font-bold text-blue-600">{stats.buyItems}</div>
-                <div className="text-sm text-blue-600">買いたい</div>
-              </CardContent>
-            </Card>
-            <Card 
-              role="button" 
-              tabIndex={0}
-              onClick={() => setSelectedType("sell")}
-              className={`bg-green-50 border-green-200 cursor-pointer hover:ring-2 hover:ring-green-300 ${selectedType === "sell" ? "ring-2 ring-green-400" : ""}`}
-            >
-              <CardContent className="p-4 text-center select-none">
-                <div className="text-2xl font-bold text-green-600">{stats.sellItems}</div>
-                <div className="text-sm text-green-600">売りたい</div>
-              </CardContent>
-            </Card>
-            <Card 
-              role="button" 
-              tabIndex={0}
-              onClick={() => setSelectedType("free")}
-              className={`bg-purple-50 border-purple-200 cursor-pointer hover:ring-2 hover:ring-purple-300 ${selectedType === "free" ? "ring-2 ring-purple-400" : ""}`}
-            >
-              <CardContent className="p-4 text-center select-none">
-                <div className="text-2xl font-bold text-purple-600">{stats.freeItems}</div>
-                <div className="text-sm text-purple-600">ただであげる</div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* 統計情報（非表示要件により削除） */}
 
           {/* 検索とフィルター */}
           <div className="flex flex-col md:flex-row gap-3">
