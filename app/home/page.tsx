@@ -14,10 +14,11 @@ import { useParallelFetch } from "@/lib/api-cache"
 import { PostList } from "@/components/board/post-list"
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'courses' | 'circles'>('feed')
+  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'summaries'>('feed')
   const [initialDataLoaded, setInitialDataLoaded] = useState(false)
   const { fetchMultiple } = useParallelFetch()
   const [selectedBoardId, setSelectedBoardId] = useState<string>('1')
+  const [summaryTab, setSummaryTab] = useState<'courses' | 'circles'>('courses')
 
   // 初期データの並列読み込み
   useEffect(() => {
@@ -101,26 +102,15 @@ export default function HomePage() {
             書籍売買
           </button>
           <button
-            onClick={() => setActiveTab('courses')}
+            onClick={() => setActiveTab('summaries')}
             className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'courses'
+              activeTab === 'summaries'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             <BookOpen className="w-4 h-4 inline mr-2" />
-            授業まとめ情報
-          </button>
-          <button
-            onClick={() => setActiveTab('circles')}
-            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'circles'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Users className="w-4 h-4 inline mr-2" />
-            サークルまとめ情報
+            まとめ情報
           </button>
         </div>
 
@@ -180,17 +170,31 @@ export default function HomePage() {
             </div>
           )}
 
-          {activeTab === 'courses' && (
+          {activeTab === 'summaries' && (
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-6">授業まとめ情報</h2>
-              <CourseSummaries />
-            </div>
-          )}
+              <h2 className="text-2xl font-bold text-foreground mb-6">まとめ情報</h2>
+              {/* 内部タブ */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setSummaryTab('courses')}
+                  className={`px-3 py-1.5 rounded border text-sm transition-colors ${
+                    summaryTab === 'courses' ? 'bg-muted text-foreground border-border' : 'text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >授業まとめ</button>
+                <button
+                  onClick={() => setSummaryTab('circles')}
+                  className={`px-3 py-1.5 rounded border text-sm transition-colors ${
+                    summaryTab === 'circles' ? 'bg-muted text-foreground border-border' : 'text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >サークルまとめ</button>
+              </div>
 
-          {activeTab === 'circles' && (
-            <div>
-              <h2 className="text-2xl font-bold text-foreground mb-6">サークルまとめ情報</h2>
-              <CircleSummaries />
+              {/* コンテンツ */}
+              {summaryTab === 'courses' ? (
+                <CourseSummaries />
+              ) : (
+                <CircleSummaries />
+              )}
             </div>
           )}
         </div>
