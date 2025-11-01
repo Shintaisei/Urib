@@ -14,6 +14,60 @@ def is_admin_email(email: Optional[str]) -> bool:
         return False
     return ADMIN_EMAIL_PATTERN.match(email or "") is not None
 
+@router.get("/active-users")
+def active_users(days: int = 30, limit: int = 10, db: Session = Depends(database.get_db)):
+    """直近days日で投稿+返信が多いユーザーのランキングを返す（管理者除外）。"""
+    from datetime import timedelta
+    since = models.jst_now() - timedelta(days=days)
+
+    # 投稿数
+    post_counts = db.query(
+        models.User.id.label('uid'),
+        models.User.anonymous_name.label('name'),
+        func.count(models.BoardPost.id).label('posts')
+    ).join(models.BoardPost, models.BoardPost.author_id == models.User.id)
+    post_counts = post_counts.filter(
+        models.BoardPost.created_at >= since,
+        or_(models.User.email == None, not_(models.User.email.like('master%@ac.jp')))
+    ).group_by(models.User.id, models.User.anonymous_name).subquery()
+
+    # 返信数
+    reply_counts = db.query(
+        models.User.id.label('uid'),
+        func.count(models.BoardReply.id).label('replies')
+    ).join(models.BoardReply, models.BoardReply.author_id == models.User.id)
+    reply_counts = reply_counts.filter(
+        models.BoardReply.created_at >= since,
+        or_(models.User.email == None, not_(models.User.email.like('master%@ac.jp')))
+    ).group_by(models.User.id).subquery()
+
+    # 結合して合計
+    q = db.query(
+        models.User.anonymous_name.label('name'),
+        func.coalesce(post_counts.c.posts, 0).label('posts'),
+        func.coalesce(reply_counts.c.replies, 0).label('replies'),
+        (func.coalesce(post_counts.c.posts, 0) + func.coalesce(reply_counts.c.replies, 0)).label('total')
+    ).outerjoin(post_counts, post_counts.c.uid == models.User.id)
+    q = q.outerjoin(reply_counts, reply_counts.c.uid == models.User.id)
+    q = q.filter(or_(models.User.email == None, not_(models.User.email.like('master%@ac.jp'))))
+    q = q.order_by(func.coalesce(post_counts.c.posts, 0) + func.coalesce(reply_counts.c.replies, 0).desc())
+
+    # SQLiteのdesc優先順位を明示
+    q = q.order_by((func.coalesce(post_counts.c.posts, 0) + func.coalesce(reply_counts.c.replies, 0)).desc())
+
+    rows = q.limit(max(1, min(limit, 50))).all()
+    result = []
+    for idx, r in enumerate(rows, start=1):
+        result.append({
+            "rank": idx,
+            "anonymous_name": r.name or "匿名",
+            "posts": int(r.posts or 0),
+            "replies": int(r.replies or 0),
+            "total": int(r.total or 0),
+        })
+
+    return {"days": days, "items": result}
+
 @router.post("/track")
 async def track_page_view(request: Request, db: Session = Depends(database.get_db)):
     """PVを1件記録する（誰でも可）。ヘッダーからuser_id/emailを拾う。"""
