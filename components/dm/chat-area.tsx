@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Send, MoreVertical } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
-import { DMApi, type Message } from "@/lib/dm-api"
+import { DMApi, type Message, type Conversation } from "@/lib/dm-api"
 import { LoadingProgress } from "@/components/loading-progress"
 
 interface ChatAreaProps { chatId: string }
@@ -18,6 +18,8 @@ export function ChatArea({ chatId }: ChatAreaProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [partnerLabel, setPartnerLabel] = useState<string>("相手")
   const [loading, setLoading] = useState(false)
+  const [partnerInitial, setPartnerInitial] = useState<string>("匿")
+  const [myName, setMyName] = useState<string>("あなた")
 
   const fetchMessages = async () => {
     try {
@@ -32,7 +34,18 @@ export function ChatArea({ chatId }: ChatAreaProps) {
   }
 
   useEffect(() => {
-    fetchMessages()
+    const load = async () => {
+      try {
+        // 会話情報から相手名を解決
+        const list: Conversation[] = await DMApi.getConversations()
+        const conv = list.find(c => String(c.id) === String(chatId))
+        const name = conv?.partner_name || conv?.partner_email || "相手"
+        setPartnerLabel(name)
+        setPartnerInitial(name?.charAt(0) || '匿')
+      } catch {}
+      await fetchMessages()
+    }
+    load()
   }, [chatId])
 
   const handleSend = async (e: React.FormEvent) => {
@@ -89,21 +102,36 @@ export function ChatArea({ chatId }: ChatAreaProps) {
             <LoadingProgress isLoading={true} text="メッセージを読み込み中..." />
           </div>
         ) : (
-          messages.map((msg) => (
-          <div key={msg.id} className={cn("flex", msg.is_own ? "justify-start" : "justify-end")}>
-            <div
-              className={cn(
-                "max-w-[70%] rounded-lg px-4 py-2",
-                msg.is_own ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
-              )}
-            >
-              <p className="text-sm">{msg.content}</p>
-              <p className={cn("text-xs mt-1", msg.is_own ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                {/* timestamp could be derived if needed */}
-              </p>
-            </div>
-          </div>
-          ))
+          messages.map((msg) => {
+            const isOwn = !!msg.is_own
+            const name = isOwn ? myName : partnerLabel
+            const initial = isOwn ? (myName?.charAt(0) || '自') : partnerInitial
+            return (
+              <div key={msg.id} className={cn("flex items-end gap-2", isOwn ? "justify-end" : "justify-start")}> 
+                {!isOwn && (
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                    <span className="text-xs font-medium text-primary">{initial}</span>
+                  </div>
+                )}
+                <div className={cn("max-w-[70%]", isOwn ? "items-end" : "items-start")}> 
+                  <div className={cn("text-[11px] mb-1", isOwn ? "text-muted-foreground text-right" : "text-muted-foreground")}>{name}</div>
+                  <div
+                    className={cn(
+                      "rounded-lg px-4 py-2",
+                      isOwn ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
+                    )}
+                  >
+                    <p className="text-sm break-words whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                </div>
+                {isOwn && (
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                    <span className="text-xs font-medium text-primary">{(myName?.charAt(0) || '自')}</span>
+                  </div>
+                )}
+              </div>
+            )
+          })
         )}
       </div>
 
