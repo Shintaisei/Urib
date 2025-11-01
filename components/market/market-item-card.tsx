@@ -176,6 +176,10 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
             <img
               src={item.images[0]}
               alt={item.title}
+              width={800}
+              height={320}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
             />
           ) : (
