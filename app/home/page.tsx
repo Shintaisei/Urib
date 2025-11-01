@@ -11,11 +11,13 @@ import { TrendingUp, LayoutGrid, BookOpen, Users } from "lucide-react"
 import { CourseSummaries } from "@/components/course-summaries"
 import { CircleSummaries } from "@/components/circle-summaries"
 import { useParallelFetch } from "@/lib/api-cache"
+import { PostList } from "@/components/board/post-list"
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'courses' | 'circles'>('feed')
   const [initialDataLoaded, setInitialDataLoaded] = useState(false)
   const { fetchMultiple } = useParallelFetch()
+  const [selectedBoardId, setSelectedBoardId] = useState<string>('1')
 
   // 初期データの並列読み込み
   useEffect(() => {
@@ -137,7 +139,38 @@ export default function HomePage() {
 
           {activeTab === 'boards' && (
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-6">掲示板カテゴリー</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-6">掲示板</h2>
+              {/* 掲示板タブ */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {[
+                  { id: '1', title: '全体' },
+                  { id: '2', title: '授業・履修' },
+                  { id: '3', title: 'サークル・部活' },
+                  { id: '4', title: 'バイト・就活' },
+                  { id: '5', title: '雑談・交流' },
+                  { id: '6', title: '恋愛・相談' },
+                ].map(b => (
+                  <button
+                    key={`board-tab-${b.id}`}
+                    onClick={() => setSelectedBoardId(b.id)}
+                    className={`px-3 py-1.5 rounded border text-sm transition-colors ${
+                      selectedBoardId === b.id
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-background text-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    {b.title}
+                  </button>
+                ))}
+              </div>
+
+              {/* 選択掲示板の投稿一覧（ページ遷移なし） */}
+              <div className="mb-10">
+                <PostList boardId={selectedBoardId} />
+              </div>
+
+              {/* 下に統計付きの一覧も残す（任意） */}
+              <h3 className="text-xl font-semibold text-foreground mb-4">掲示板カテゴリー一覧</h3>
               <BoardGrid />
             </div>
           )}
