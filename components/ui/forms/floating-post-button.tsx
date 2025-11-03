@@ -600,7 +600,7 @@ export function FloatingPostButton() {
                         ))}
                       </div>
                     )}
-                    <p className="text-[11px] text-muted-foreground mt-1">各画像 1.5MB 以内、JPG/PNG/WEBP/GIF</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">各画像 8MB 以内（送信時に自動圧縮）、JPG/PNG/WEBP/GIF</p>
                   </div>
                 </>
               )}
