@@ -184,12 +184,7 @@ export default function HomePage() {
                     summaryTab === 'circles' ? 'bg-muted text-foreground border-border' : 'text-muted-foreground border-border hover:bg-muted'
                   }`}
                 >サークルまとめ</button>
-                <button
-                  onClick={() => setSummaryTab('ranking')}
-                  className={`px-3 py-1.5 rounded border text-sm transition-colors ${
-                    summaryTab === 'ranking' ? 'bg-muted text-foreground border-border' : 'text-muted-foreground border-border hover:bg-muted'
-                  }`}
-                >アクティブランキング</button>
+                
               </div>
 
               {/* コンテンツ */}

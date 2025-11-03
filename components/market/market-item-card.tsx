@@ -19,6 +19,7 @@ import { MarketApi, MarketCommentsApi, type MarketItemComment, deleteItemComment
 import { isAdminEmail } from "@/lib/utils"
 import { Textarea } from "@/components/ui/textarea"
 import { useCachedFetch } from "@/lib/api-cache"
+import { SafeImage } from "@/components/ui/safe-image"
 
 function ExpandableText({ text, maxChars = 120 }: { text: string; maxChars?: number }) {
   const [expanded, setExpanded] = useState(false)
@@ -173,13 +174,11 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
         {/* 商品画像 */}
         <div className="relative h-40 bg-muted/30 rounded-t-lg overflow-hidden">
           {item.images.length > 0 ? (
-            <img
+            <SafeImage
               src={item.images[0]}
               alt={item.title}
               width={800}
               height={320}
-              loading="lazy"
-              decoding="async"
               className="w-full h-full object-cover"
             />
           ) : (

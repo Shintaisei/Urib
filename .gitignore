@@ -1,3 +1,29 @@
+# macOS
+.DS_Store
+
+# Node/Next.js
+node_modules/
+.next/
+out/
+.turbo/
+.vercel/
+.env
+.env.local
+.env.*.local
+
+# Python backend
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/*.db
+
+# Editors
+.idea/
+.vscode/
+
+# Logs
+*.log
 # Python
 venv/
 __pycache__/
