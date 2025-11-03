@@ -190,6 +190,7 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
   const TypeIcon = typeInfo.icon
 
   return (
+    <>
     <Card className="bg-card border-border hover:shadow-md transition-shadow duration-200">
       <CardContent className="p-0">
         {/* 商品画像 */}
@@ -507,5 +508,6 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
         </div>
       </div>
     )}
+    </>
   )
 }
