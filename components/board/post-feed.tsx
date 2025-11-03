@@ -333,21 +333,14 @@ export function PostFeed() {
                             <Heart className={`w-3 h-3 ${post.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
                             {post.like_count}
                           </button>
-                          <div className="flex items-center gap-1">
+                          <button
+                            className="flex items-center gap-1 hover:text-foreground"
+                            onClick={() => toggleReplyForm(post.id)}
+                            aria-label="返信一覧を開く"
+                          >
                             <MessageCircle className="w-3 h-3" />
                             {post.reply_count}
-                          </div>
-                        </div>
-
-                        {/* フィード内 ピンポイント返信 */}
-                        <div className="mt-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleReplyForm(post.id) }}
-                          >
-                            返信
-                          </Button>
+                          </button>
                         </div>
                         {replyOpenByPost[post.id] && (
                           <div className="mt-2">
@@ -442,21 +435,14 @@ export function PostFeed() {
                           <Heart className={`w-3 h-3 ${row.reply.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
                           {row.reply.like_count}
                         </button>
-                        <div className="flex items-center gap-1">
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground"
+                          onClick={() => toggleReplyForm(row.post.id)}
+                          aria-label="返信一覧を開く"
+                        >
                           <MessageCircle className="w-3 h-3" />
                           {row.post.reply_count}
-                        </div>
-                      </div>
-
-                      {/* 元投稿の返信一覧を開く（掲示板と同様の体験） */}
-                      <div className="mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleReplyForm(row.post.id)}
-                        >
-                          返信
-                        </Button>
+                        </button>
                       </div>
                       {replyOpenByPost[row.post.id] && (
                         <div className="mt-2">
@@ -544,21 +530,15 @@ export function PostFeed() {
                           <Heart className={`w-3 h-3 ${post.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
                           {post.like_count}
                         </button>
-                        <div className="flex items-center gap-1">
+                        <button
+                          className="flex items-center gap-1 hover:text-foreground"
+                          onClick={() => toggleReplyForm(post.id)}
+                          aria-label="返信一覧を開く"
+                        >
                           <MessageCircle className="w-3 h-3" />
                           {post.reply_count}
-                        </div>
+                        </button>
                       </div>
-
-                        <div className="mt-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleReplyForm(post.id)}
-                          >
-                            返信
-                          </Button>
-                        </div>
                         {replyOpenByPost[post.id] && (
                           <div className="mt-2">
                             <Textarea
