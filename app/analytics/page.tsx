@@ -119,21 +119,7 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>投稿が多いユーザー Top10（匿名名）</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-1 text-sm">
-                  {data.top_posters.map((u: any, i: number) => (
-                    <li key={i} className="flex justify-between">
-                      <span className="truncate max-w-[70%]" title={u.anonymous_name}>{u.anonymous_name}</span>
-                      <span className="text-muted-foreground">{u.count}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            
           </div>
         )}
       </main>
