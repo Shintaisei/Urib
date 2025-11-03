@@ -125,6 +125,33 @@ export function FloatingPostButton() {
 
   // Check for active tab in home page (DOM-based)
   useEffect(() => {
+    // イベント購読（推奨経路）
+    const onActiveTabChange = (ev: Event) => {
+      const e = ev as CustomEvent
+      const detail = (e && (e as any).detail) || {}
+      const a = detail.activeTab as string | undefined
+      const s = detail.summaryTab as string | undefined
+      if (a === 'market') {
+        setPostType('market')
+        return
+      }
+      if (a === 'summaries') {
+        if (s === 'courses') {
+          setPostType('course')
+          return
+        }
+        if (s === 'circles') {
+          setPostType('circle')
+          return
+        }
+      }
+      if (a === 'boards' || a === 'feed') {
+        setPostType('board')
+        return
+      }
+    }
+    window.addEventListener('uriv:activeTabChange' as any, onActiveTabChange as any)
+
     if (pathname === '/home' || pathname === '/') {
       const checkActiveTab = () => {
         // まずトップレベルのアクティブタブを取得
@@ -165,7 +192,13 @@ export function FloatingPostButton() {
       const observer = new MutationObserver(checkActiveTab)
       observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
       
-      return () => observer.disconnect()
+      return () => {
+        observer.disconnect()
+        window.removeEventListener('uriv:activeTabChange' as any, onActiveTabChange as any)
+      }
+    }
+    return () => {
+      window.removeEventListener('uriv:activeTabChange' as any, onActiveTabChange as any)
     }
   }, [pathname])
 

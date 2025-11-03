@@ -60,6 +60,14 @@ export default function HomePage() {
     loadInitialData()
   }, [fetchMultiple])
 
+  // タブ状態の変更をグローバルに通知（フローティング投稿ボタンが購読）
+  useEffect(() => {
+    try {
+      const detail = { activeTab, summaryTab }
+      window.dispatchEvent(new CustomEvent('uriv:activeTabChange', { detail }))
+    } catch {}
+  }, [activeTab, summaryTab])
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
