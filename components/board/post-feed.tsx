@@ -239,8 +239,7 @@ export function PostFeed() {
       {/* 外側タブ(最新/人気/話題)は削除。内側タブのみ表示 */}
 
       {/* 最新内タブ（最新投稿 / 最新返信） */}
-      (
-        <div className="flex flex-wrap gap-2 mt-2">
+      <div className="flex flex-wrap gap-2 mt-2">
           <button
             onClick={() => setLatestTab('posts')}
             className={`px-3 py-1 text-xs rounded border ${latestTab === 'posts' ? 'bg-muted text-foreground border-border' : 'text-muted-foreground border-border'}`}
@@ -269,7 +268,6 @@ export function PostFeed() {
             className={`px-3 py-1 text-xs rounded border ${latestTab === 'no_comments' ? 'bg-muted text-foreground border-border' : 'text-muted-foreground border-border'}`}
           >コメント一番乗り</button>
         </div>
-      )
 
       {/* 投稿リスト / 最新返信リスト */}
       <div className="space-y-3">
