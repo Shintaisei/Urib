@@ -109,29 +109,55 @@ export function FloatingPostButton() {
   const [circleTags, setCircleTags] = useState("")
   const [circleContent, setCircleContent] = useState("")
 
-  // Determine post type based on current page
+  // Determine post type based on current page (pathname first)
   useEffect(() => {
     if (pathname?.includes('/market')) {
       setPostType('market')
+    } else if (pathname?.startsWith('/board/')) {
+      setPostType('board')
+    } else if (pathname === '/home' || pathname === '/') {
+      // 詳細は下のDOM観察で再判定する
+      setPostType('board')
     } else {
       setPostType('board')
     }
   }, [pathname])
 
-  // Check for active tab in home page
+  // Check for active tab in home page (DOM-based)
   useEffect(() => {
     if (pathname === '/home' || pathname === '/') {
       const checkActiveTab = () => {
-        const activeTabElement = document.querySelector('[class*="border-primary text-primary"]')
-        if (activeTabElement?.textContent?.includes('授業まとめ')) {
-          setPostType('course')
-        } else if (activeTabElement?.textContent?.includes('サークルまとめ')) {
-          setPostType('circle')
-        } else if (activeTabElement?.textContent?.includes('書籍売買')) {
+        // まずトップレベルのアクティブタブを取得
+        const topActive = document.querySelector('button.border-b-2.border-primary, button[class*="border-b-2"][class*="border-primary"]') as HTMLElement | null
+        const topText = topActive?.textContent || ''
+
+        if (topText.includes('中古品売買') || topText.includes('書籍売買')) {
           setPostType('market')
-        } else {
-          setPostType('board')
+          return
         }
+
+        // summaries（サークル授業レビュー）内の内部タブを判定
+        if (topText.includes('サークル授業レビュー')) {
+          const innerActiveCourse = Array.from(document.querySelectorAll('button'))
+            .find(el => el.textContent?.includes('授業まとめ') && el.className.includes('bg-muted') && el.className.includes('text-foreground'))
+          const innerActiveCircle = Array.from(document.querySelectorAll('button'))
+            .find(el => el.textContent?.includes('サークルまとめ') && el.className.includes('bg-muted') && el.className.includes('text-foreground'))
+
+          if (innerActiveCourse) {
+            setPostType('course')
+            return
+          }
+          if (innerActiveCircle) {
+            setPostType('circle')
+            return
+          }
+          // デフォルトは授業まとめに寄せるより安全に掲示板
+          setPostType('board')
+          return
+        }
+
+        // それ以外は掲示板
+        setPostType('board')
       }
       
       checkActiveTab()
