@@ -86,6 +86,7 @@ export function FloatingPostButton() {
   const [description, setDescription] = useState("")
   const [type, setType] = useState("sell")
   const [contactMethod, setContactMethod] = useState("dm")
+  const [marketImages, setMarketImages] = useState<string[]>([])
 
   // Course summary fields
   const [courseName, setCourseName] = useState("")
@@ -108,6 +109,60 @@ export function FloatingPostButton() {
   const [links, setLinks] = useState("")
   const [circleTags, setCircleTags] = useState("")
   const [circleContent, setCircleContent] = useState("")
+
+  // Helpers: market image handling
+  const handleMarketFiles = async (files: FileList | null) => {
+    if (!files) return
+    const allowedExt = [".jpg", ".jpeg", ".png", ".webp", ".gif"]
+    const allowedMime = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    const maxSizeBytes = 1.5 * 1024 * 1024
+    const limit = Math.min(3 - marketImages.length, files.length)
+    const picked: string[] = []
+    const errors: string[] = []
+    for (let i = 0; i < limit; i++) {
+      const f = files[i]
+      const ext = `.${(f.name.split('.').pop() || '').toLowerCase()}`
+      if (!allowedMime.includes(f.type) && !allowedExt.includes(ext)) {
+        errors.push(`${f.name}: 未対応の形式です`)
+        continue
+      }
+      if (f.size > maxSizeBytes) {
+        errors.push(`${f.name}: 1.5MBを超えています`)
+        continue
+      }
+      if (!f.type.startsWith('image/')) {
+        errors.push(`${f.name}: 画像ではありません`)
+        continue
+      }
+      const dataUrl = await compressToDataUrl(f)
+      picked.push(dataUrl)
+    }
+    if (picked.length > 0) setMarketImages(prev => [...prev, ...picked].slice(0, 3))
+    if (errors.length > 0) alert(`一部の画像を追加できませんでした:\n- ${errors.join('\n- ')}`)
+  }
+
+  const compressToDataUrl = async (file: File): Promise<string> => {
+    const imageBitmap = await createImageBitmap(file)
+    const maxDim = 1200
+    let { width, height } = imageBitmap
+    if (width > maxDim || height > maxDim) {
+      const ratio = Math.min(maxDim / width, maxDim / height)
+      width = Math.round(width * ratio)
+      height = Math.round(height * ratio)
+    }
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(imageBitmap, 0, 0, width, height)
+    const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+    const quality = mime === 'image/png' ? undefined : 0.8
+    return canvas.toDataURL(mime, quality as any)
+  }
+
+  const removeMarketImage = (idx: number) => {
+    setMarketImages(prev => prev.filter((_, i) => i !== idx))
+  }
 
   // Determine post type based on current page (pathname first)
   useEffect(() => {
@@ -235,7 +290,7 @@ export function FloatingPostButton() {
           price: type === 'free' ? null : parseInt(price) || null,
           condition: condition,
           contact_method: contactMethod,
-          images: []
+          images: marketImages.slice(0, 3)
         }
       } else if (postType === 'course') {
         if (!courseContent.trim()) throw new Error('内容を入力してください')
@@ -315,6 +370,7 @@ export function FloatingPostButton() {
     setDescription("")
     setType("sell")
     setContactMethod("dm")
+    setMarketImages([])
     setCourseName("")
     setInstructor("")
     setDepartment("")
@@ -479,6 +535,30 @@ export function FloatingPostButton() {
                       onChange={(e) => setDescription(e.target.value)}
                       className="min-h-[100px] text-sm"
                     />
+                  </div>
+
+                  {/* 画像アップロード（最大3枚） */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">商品画像（最大3枚）</label>
+                    <Input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,.gif"
+                      multiple
+                      onChange={(e) => handleMarketFiles(e.target.files)}
+                      className="text-sm"
+                    />
+                    {marketImages.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        {marketImages.map((src, idx) => (
+                          <div key={idx} className="relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={src} alt={`img-${idx}`} className="w-full h-20 object-cover rounded" />
+                            <Button type="button" size="sm" variant="outline" className="absolute top-1 right-1 h-6 px-2 text-xs" onClick={() => removeMarketImage(idx)}>削除</Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-muted-foreground mt-1">各画像 1.5MB 以内、JPG/PNG/WEBP/GIF</p>
                   </div>
                 </>
               )}
