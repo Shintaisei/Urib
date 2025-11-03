@@ -58,7 +58,7 @@ export function PostFeed() {
   const [submittingReply, setSubmittingReply] = useState<number | null>(null)
   const [repliesByPost, setRepliesByPost] = useState<Record<number, any[]>>({})
   const [loadingRepliesPostId, setLoadingRepliesPostId] = useState<number | null>(null)
-  const { fetchWithCache, getCached } = useCachedFetch()
+  const { fetchWithCache, getCached, invalidateCache } = useCachedFetch()
 
   useEffect(() => {
     fetchFeed()
@@ -177,6 +177,8 @@ export function PostFeed() {
       if (!res.ok) return
       const data = await res.json()
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_liked: data.is_liked, like_count: data.like_count } : p))
+      // キャッシュ無効化（最新フィード）
+      invalidateCache('feed-latest')
     } catch {}
   }
 
@@ -194,6 +196,9 @@ export function PostFeed() {
         ...prev,
         [postId]: (prev[postId] || []).map((r: any) => r.id === replyId ? { ...r, is_liked: data.is_liked, like_count: data.like_count } : r)
       }))
+      // キャッシュ無効化（返信一覧/最新返信）
+      invalidateCache(`replies-${postId}`)
+      invalidateCache('feed-latest-replies')
     } catch {}
   }
 
@@ -217,6 +222,11 @@ export function PostFeed() {
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, reply_count: p.reply_count + 1 } : p))
       setReplyContentByPost(prev => ({ ...prev, [postId]: '' }))
       setReplyOpenByPost(prev => ({ ...prev, [postId]: false }))
+      // キャッシュ無効化と最新データ再取得
+      invalidateCache(`replies-${postId}`)
+      invalidateCache('feed-latest')
+      fetchRepliesForPost(postId)
+      fetchFeed()
     } catch (e) {
       // noop
     } finally {
@@ -437,6 +447,59 @@ export function PostFeed() {
                           {row.post.reply_count}
                         </div>
                       </div>
+
+                      {/* 元投稿の返信一覧を開く（掲示板と同様の体験） */}
+                      <div className="mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleReplyForm(row.post.id)}
+                        >
+                          返信
+                        </Button>
+                      </div>
+                      {replyOpenByPost[row.post.id] && (
+                        <div className="mt-2">
+                          {/* 既存の返信一覧 */}
+                          {loadingRepliesPostId === row.post.id ? (
+                            <div className="text-xs text-muted-foreground py-2">返信を読み込み中...</div>
+                          ) : ((repliesByPost[row.post.id] || []).length > 0 ? (
+                            <div className="space-y-2 mb-2">
+                              {(repliesByPost[row.post.id] || []).map((r: any) => (
+                                <div key={`feed-reply-inline-${r.id}`} className="bg-muted/30 rounded p-2">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="text-[11px] text-muted-foreground">{r.author_name} ・ {getTimeDiff(r.created_at)}</div>
+                                    <button className={`text-[11px] ${r.is_liked ? 'text-red-500' : 'text-muted-foreground'} hover:text-red-500`} onClick={() => likeReply(r.id, row.post.id)}>
+                                      <Heart className={`inline w-3 h-3 mr-1 ${r.is_liked ? 'fill-current' : ''}`} />{r.like_count}
+                                    </button>
+                                  </div>
+                                  <div className="text-[13px] text-foreground whitespace-pre-wrap">{r.content}</div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground mb-2">まだ返信がありません</div>
+                          ))}
+
+                          {/* 返信フォーム */}
+                          <Textarea
+                            placeholder="返信を入力..."
+                            value={replyContentByPost[row.post.id] || ''}
+                            onChange={(e) => setReplyContentByPost(prev => ({ ...prev, [row.post.id]: e.target.value }))}
+                            className="min-h-[64px]"
+                            maxLength={500}
+                          />
+                          <div className="mt-2 flex items-center justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => submitReply(row.post.id)}
+                              disabled={submittingReply === row.post.id || !(replyContentByPost[row.post.id] || '').trim()}
+                            >
+                              {submittingReply === row.post.id ? '送信中...' : '返信する'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -471,9 +534,21 @@ export function PostFeed() {
                         <p className="text-sm text-foreground line-clamp-2 mb-2">
                           {post.content}
                         </p>
-                        <div className="text-[10px] inline-flex items-center bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
+                      <div className="text-[10px] inline-flex items-center bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
                           コメント一番乗り募集中
                         </div>
+
+                      {/* アクション（いいね/返信数） */}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                        <button className="flex items-center gap-1 hover:text-foreground" onClick={() => likePost(post.id)}>
+                          <Heart className={`w-3 h-3 ${post.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
+                          {post.like_count}
+                        </button>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="w-3 h-3" />
+                          {post.reply_count}
+                        </div>
+                      </div>
 
                         <div className="mt-2">
                           <Button
