@@ -22,9 +22,10 @@ async def run_migrations():
 
         engine = database.engine
 
-        def exec_tx(conn, sql: str, ok_msg: str, warn_phrases=("already exists", "duplicate column name")):
+        def exec_tx(sql: str, ok_msg: str, warn_phrases=("already exists", "duplicate column name")):
             try:
-                with conn.begin():
+                # 各DDLを独立接続＋トランザクションで実行
+                with engine.begin() as conn:
                     conn.execute(text(sql))
                 print(ok_msg)
                 return True
@@ -36,85 +37,85 @@ async def run_migrations():
                 print(f"❌ 実行エラー: {e}")
                 return False
 
-        def column_exists(conn, table: str, column: str) -> bool:
+        def column_exists(table: str, column: str) -> bool:
             try:
-                res = conn.execute(text(
-                    """
-                    SELECT 1 FROM information_schema.columns
-                    WHERE table_name=:t AND column_name=:c
-                    """
-                ), {"t": table, "c": column}).fetchone()
-                return res is not None
+                with engine.connect() as conn:
+                    res = conn.execute(text(
+                        """
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name=:t AND column_name=:c
+                        """
+                    ), {"t": table, "c": column}).fetchone()
+                    return res is not None
             except Exception:
                 # SQLite等、information_schemaがない環境のためのフォールバック（エラー時はFalse→ALTER試行）
                 return False
 
-        with engine.connect() as conn:
-            print("🔄 データベースマイグレーション開始...")
+        print("🔄 データベースマイグレーション開始...")
 
-            # columns
-            for col in ("grade_level", "grade_score", "difficulty_level"):
-                if not column_exists(conn, 'course_summaries', col):
-                    exec_tx(conn, f"ALTER TABLE course_summaries ADD COLUMN {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
-                else:
-                    print(f"⚠️ {col}フィールドは既に存在します")
+        # columns
+        for col in ("grade_level", "grade_score", "difficulty_level"):
+            if not column_exists('course_summaries', col):
+                exec_tx(f"ALTER TABLE course_summaries ADD COLUMN {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
+            else:
+                print(f"⚠️ {col}フィールドは既に存在します")
 
-            # indexes
-            exec_tx(conn, "CREATE INDEX IF NOT EXISTS idx_course_summaries_grade_level ON course_summaries(grade_level)", "✅ idx_course_summaries_grade_levelインデックスを追加しました", warn_phrases=("already exists",))
-            exec_tx(conn, "CREATE INDEX IF NOT EXISTS idx_course_summaries_grade_score ON course_summaries(grade_score)", "✅ idx_course_summaries_grade_scoreインデックスを追加しました", warn_phrases=("already exists",))
-            exec_tx(conn, "CREATE INDEX IF NOT EXISTS idx_course_summaries_difficulty_level ON course_summaries(difficulty_level)", "✅ idx_course_summaries_difficulty_levelインデックスを追加しました", warn_phrases=("already exists",))
+        # indexes
+        exec_tx("CREATE INDEX IF NOT EXISTS idx_course_summaries_grade_level ON course_summaries(grade_level)", "✅ idx_course_summaries_grade_levelインデックスを追加しました", warn_phrases=("already exists",))
+        exec_tx("CREATE INDEX IF NOT EXISTS idx_course_summaries_grade_score ON course_summaries(grade_score)", "✅ idx_course_summaries_grade_scoreインデックスを追加しました", warn_phrases=("already exists",))
+        exec_tx("CREATE INDEX IF NOT EXISTS idx_course_summaries_difficulty_level ON course_summaries(difficulty_level)", "✅ idx_course_summaries_difficulty_levelインデックスを追加しました", warn_phrases=("already exists",))
 
-            # likes table
-            exec_tx(conn, (
-                """
-                CREATE TABLE IF NOT EXISTS course_summary_likes (
-                    id SERIAL PRIMARY KEY,
-                    summary_id INTEGER NOT NULL,
-                    user_id INTEGER NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    UNIQUE(summary_id, user_id)
-                )
-                """
-            ), "✅ CourseSummaryLikeテーブルを作成（または既存）")
+        # likes table
+        exec_tx((
+            """
+            CREATE TABLE IF NOT EXISTS course_summary_likes (
+                id SERIAL PRIMARY KEY,
+                summary_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                UNIQUE(summary_id, user_id)
+            )
+            """
+        ), "✅ CourseSummaryLikeテーブルを作成（または既存）")
 
-            # circle tables
-            exec_tx(conn, (
-                """
-                CREATE TABLE IF NOT EXISTS circle_summaries (
-                    id SERIAL PRIMARY KEY,
-                    title VARCHAR(255) NOT NULL,
-                    circle_name VARCHAR(255),
-                    category VARCHAR(100),
-                    activity_days VARCHAR(100),
-                    activity_place VARCHAR(255),
-                    cost VARCHAR(100),
-                    links VARCHAR(500),
-                    tags VARCHAR(500),
-                    content TEXT NOT NULL,
-                    author_id INTEGER NOT NULL,
-                    author_name VARCHAR(100) NOT NULL,
-                    like_count INTEGER DEFAULT 0,
-                    comment_count INTEGER DEFAULT 0,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )
-                """
-            ), "✅ CircleSummaryテーブルを作成（または既存）")
+        # circle tables
+        exec_tx((
+            """
+            CREATE TABLE IF NOT EXISTS circle_summaries (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                circle_name VARCHAR(255),
+                category VARCHAR(100),
+                activity_days VARCHAR(100),
+                activity_place VARCHAR(255),
+                cost VARCHAR(100),
+                links VARCHAR(500),
+                tags VARCHAR(500),
+                content TEXT NOT NULL,
+                author_id INTEGER NOT NULL,
+                author_name VARCHAR(100) NOT NULL,
+                like_count INTEGER DEFAULT 0,
+                comment_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+            """
+        ), "✅ CircleSummaryテーブルを作成（または既存）")
 
-            exec_tx(conn, (
-                """
-                CREATE TABLE IF NOT EXISTS circle_summary_comments (
-                    id SERIAL PRIMARY KEY,
-                    summary_id INTEGER NOT NULL,
-                    author_id INTEGER NOT NULL,
-                    author_name VARCHAR(100) NOT NULL,
-                    content TEXT NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )
-                """
-            ), "✅ CircleSummaryCommentテーブルを作成（または既存）")
+        exec_tx((
+            """
+            CREATE TABLE IF NOT EXISTS circle_summary_comments (
+                id SERIAL PRIMARY KEY,
+                summary_id INTEGER NOT NULL,
+                author_id INTEGER NOT NULL,
+                author_name VARCHAR(100) NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            )
+            """
+        ), "✅ CircleSummaryCommentテーブルを作成（または既存）")
 
-            print("✅ マイグレーション完了")
+        print("✅ マイグレーション完了")
     except Exception as e:
         print(f"❌ マイグレーション実行エラー: {e}")
 
