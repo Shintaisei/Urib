@@ -58,6 +58,7 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
   const [comments, setComments] = useState<MarketItemComment[]>([])
   const [commentsOpen, setCommentsOpen] = useState(false)
   const commentsLoadedRef = useRef(false)
+  const [imageIdx, setImageIdx] = useState(0)
   const [commentInput, setCommentInput] = useState("")
   const [posting, setPosting] = useState(false)
   const { invalidateCache } = useCachedFetch()
@@ -155,6 +156,18 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commentsOpen])
 
+  // 画像枚数の変化に追従
+  useEffect(() => {
+    if (!item.images || item.images.length === 0) {
+      setImageIdx(0)
+      return
+    }
+    if (imageIdx >= item.images.length) {
+      setImageIdx(0)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.images?.length])
+
   const handlePostComment = async () => {
     const content = commentInput.trim()
     if (!content || posting) return
@@ -180,13 +193,51 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
         {/* 商品画像 */}
         <div className="relative h-40 bg-muted/30 rounded-t-lg overflow-hidden">
           {item.images.length > 0 ? (
-            <SafeImage
-              src={item.images[0]}
-              alt={item.title}
-              width={800}
-              height={320}
-              className="w-full h-full object-contain bg-background"
-            />
+            <>
+              <SafeImage
+                src={item.images[imageIdx]}
+                alt={item.title}
+                width={800}
+                height={320}
+                className="w-full h-full object-contain bg-background"
+              />
+              {item.images.length > 1 && (
+                <>
+                  {/* 前後ナビゲーション */}
+                  <button
+                    type="button"
+                    aria-label="prev"
+                    className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-7 h-7 flex items-center justify-center"
+                    onClick={(e) => { e.stopPropagation(); setImageIdx((idx) => (idx === 0 ? item.images.length - 1 : idx - 1)) }}
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="next"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-7 h-7 flex items-center justify-center"
+                    onClick={(e) => { e.stopPropagation(); setImageIdx((idx) => (idx + 1) % item.images.length) }}
+                  >
+                    ›
+                  </button>
+                  {/* サムネイル */}
+                  <div className="absolute bottom-1 left-1 right-1 flex gap-1 justify-center">
+                    {item.images.map((src, i) => (
+                      <button
+                        key={`thumb-${i}`]
+                        type="button"
+                        aria-label={`image-${i+1}`}
+                        className={`w-7 h-7 rounded overflow-hidden border ${i === imageIdx ? 'border-primary' : 'border-transparent'} bg-background/80`}
+                        onClick={(e) => { e.stopPropagation(); setImageIdx(i) }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt="thumb" className="w-full h-full object-contain" />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
               <div className="text-center">
