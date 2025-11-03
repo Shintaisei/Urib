@@ -59,6 +59,8 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
   const [commentsOpen, setCommentsOpen] = useState(false)
   const commentsLoadedRef = useRef(false)
   const [imageIdx, setImageIdx] = useState(0)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const touchStartXRef = useRef<number | null>(null)
   const [commentInput, setCommentInput] = useState("")
   const [posting, setPosting] = useState(false)
   const { invalidateCache } = useCachedFetch()
@@ -191,7 +193,25 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
     <Card className="bg-card border-border hover:shadow-md transition-shadow duration-200">
       <CardContent className="p-0">
         {/* 商品画像 */}
-        <div className="relative h-40 bg-muted/30 rounded-t-lg overflow-hidden">
+        <div
+          className="relative h-40 bg-muted/30 rounded-t-lg overflow-hidden"
+          onTouchStart={(e) => { touchStartXRef.current = e.changedTouches[0]?.clientX ?? null }}
+          onTouchEnd={(e) => {
+            const sx = touchStartXRef.current
+            const ex = e.changedTouches[0]?.clientX
+            touchStartXRef.current = null
+            if (sx == null || ex == null) return
+            const dx = ex - sx
+            if (Math.abs(dx) < 30) return
+            if (dx < 0) {
+              // next
+              setImageIdx((idx) => (item.images && item.images.length > 0 ? (idx + 1) % item.images.length : 0))
+            } else {
+              // prev
+              setImageIdx((idx) => (item.images && item.images.length > 0 ? (idx === 0 ? item.images.length - 1 : idx - 1) : 0))
+            }
+          }}
+        >
           {item.images.length > 0 ? (
             <>
               <SafeImage
@@ -199,7 +219,8 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
                 alt={item.title}
                 width={800}
                 height={320}
-                className="w-full h-full object-contain bg-background"
+                className="w-full h-full object-contain bg-background cursor-zoom-in"
+                onClick={() => setLightboxOpen(true)}
               />
               {item.images.length > 1 && (
                 <>
@@ -207,7 +228,7 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
                   <button
                     type="button"
                     aria-label="prev"
-                    className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-7 h-7 flex items-center justify-center"
+                    className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-7 h-7 flex items-center justify-center z-10"
                     onClick={(e) => { e.stopPropagation(); setImageIdx((idx) => (idx === 0 ? item.images.length - 1 : idx - 1)) }}
                   >
                     ‹
@@ -215,16 +236,16 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
                   <button
                     type="button"
                     aria-label="next"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-7 h-7 flex items-center justify-center"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/40 text-white rounded-full w-7 h-7 flex items-center justify-center z-10"
                     onClick={(e) => { e.stopPropagation(); setImageIdx((idx) => (idx + 1) % item.images.length) }}
                   >
                     ›
                   </button>
                   {/* サムネイル */}
-                  <div className="absolute bottom-1 left-1 right-1 flex gap-1 justify-center">
+                  <div className="absolute bottom-1 left-1 right-1 flex gap-1 justify-center z-10">
                     {item.images.map((src, i) => (
                       <button
-                        key={`thumb-${i}`]
+                        key={`thumb-${i}`}
                         type="button"
                         aria-label={`image-${i+1}`}
                         className={`w-7 h-7 rounded overflow-hidden border ${i === imageIdx ? 'border-primary' : 'border-transparent'} bg-background/80`}
@@ -450,5 +471,41 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
         </div>
       </CardContent>
     </Card>
+
+    {/* 画像ライトボックス */}
+    {lightboxOpen && item.images.length > 0 && (
+      <div
+        className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4"
+        onClick={() => setLightboxOpen(false)}
+      >
+        <div className="relative max-w-5xl w-full max-h-[90vh]">
+          <SafeImage
+            src={item.images[imageIdx]}
+            alt={item.title}
+            className="w-full max-h-[80vh] object-contain"
+          />
+          {item.images.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="prev"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center"
+                onClick={(e) => { e.stopPropagation(); setImageIdx((idx) => (idx === 0 ? item.images.length - 1 : idx - 1)) }}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                aria-label="next"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center"
+                onClick={(e) => { e.stopPropagation(); setImageIdx((idx) => (idx + 1) % item.images.length) }}
+              >
+                ›
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    )}
   )
 }
