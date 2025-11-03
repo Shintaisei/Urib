@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Heart, MessageCircle } from "lucide-react"
-import Link from "next/link"
+// import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCachedFetch } from "@/lib/api-cache"
 import { LoadingProgress } from "@/components/loading-progress"
@@ -142,16 +142,7 @@ export function PostFeed() {
     }
   }
 
-  // 表示中のリストの遷移先をプリフェッチして体感速度を改善
-  useEffect(() => {
-    try {
-      if (latestTab === 'posts' || latestTab === 'no_comments') {
-        posts.slice(0, 8).forEach((p) => router.prefetch(`/board/${p.board_id}?post_id=${p.id}`))
-      } else if (latestTab === 'replies') {
-        latestReplies.slice(0, 8).forEach((row: any) => router.prefetch(`/board/${row.post.board_id}?post_id=${row.post.id}`))
-      }
-    } catch {}
-  }, [router, latestTab, posts, latestReplies])
+  // ナビゲーションは行わないためプリフェッチは無効化
 
   const getTimeDiff = (createdAt: string): string => {
     const now = new Date()
@@ -406,52 +397,50 @@ export function PostFeed() {
               </div>
             )}
             {latestReplies.map((row: any) => (
-              <Link key={`reply-${row.reply.id}`} href={`/board/${row.post.board_id}?post_id=${row.post.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${BOARD_COLORS[row.post.board_id] || BOARD_COLORS["1"]}`}
-                          >
-                            {BOARD_NAMES[row.post.board_id] || `掲示板${row.post.board_id}`}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {getTimeDiff(row.reply.created_at)}
-                          </span>
+              <Card key={`reply-${row.reply.id}`} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${BOARD_COLORS[row.post.board_id] || BOARD_COLORS["1"]}`}
+                        >
+                          {BOARD_NAMES[row.post.board_id] || `掲示板${row.post.board_id}`}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {getTimeDiff(row.reply.created_at)}
+                        </span>
+                      </div>
+
+                      <div className="mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">返信</span>
+                          {row.reply.author_department && row.reply.author_year && (
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                              {row.reply.author_department} {row.reply.author_year}
+                            </span>
+                          )}
                         </div>
+                        <div className="text-sm text-foreground line-clamp-2">{row.reply.content}</div>
+                      </div>
 
-                        <div className="mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">返信</span>
-                            {row.reply.author_department && row.reply.author_year && (
-                              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                                {row.reply.author_department} {row.reply.author_year}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm text-foreground line-clamp-2">{row.reply.content}</div>
-                        </div>
+                      <div className="text-xs text-muted-foreground mb-2">元投稿: {row.post.content.slice(0, 80)}</div>
 
-                        <div className="text-xs text-muted-foreground mb-2">元投稿: {row.post.content.slice(0, 80)}</div>
-
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Heart className={`w-3 h-3 ${row.reply.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
-                            {row.reply.like_count}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MessageCircle className="w-3 h-3" />
-                            {row.post.reply_count}
-                          </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <button className="flex items-center gap-1 hover:text-foreground" onClick={() => likeReply(row.reply.id, row.post.id)}>
+                          <Heart className={`w-3 h-3 ${row.reply.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
+                          {row.reply.like_count}
+                        </button>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="w-3 h-3" />
+                          {row.post.reply_count}
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </>
         )}
@@ -464,8 +453,7 @@ export function PostFeed() {
               </div>
             )}
             {posts.map((post) => (
-              <Link key={post.id} href={`/board/${post.board_id}?post_id=${post.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card key={post.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
@@ -491,13 +479,13 @@ export function PostFeed() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleReplyForm(post.id) }}
+                            onClick={() => toggleReplyForm(post.id)}
                           >
                             返信
                           </Button>
                         </div>
                         {replyOpenByPost[post.id] && (
-                          <div className="mt-2" onClick={(e) => { e.preventDefault(); e.stopPropagation() }}>
+                          <div className="mt-2">
                             <Textarea
                               placeholder="返信を入力..."
                               value={replyContentByPost[post.id] || ''}
@@ -520,7 +508,6 @@ export function PostFeed() {
                     </div>
                   </CardContent>
                 </Card>
-              </Link>
             ))}
           </>
         )}
