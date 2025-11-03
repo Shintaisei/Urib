@@ -122,6 +122,11 @@ class BoardPostResponse(BaseModel):
     is_liked: bool = False
     has_replied: Optional[bool] = False
     new_replies_since_my_last_reply: Optional[int] = 0
+    can_edit: Optional[bool] = False
+
+class BoardPostUpdate(BaseModel):
+    content: Optional[str] = None
+    hashtags: Optional[str] = None
 
 class BoardReplyCreate(BaseModel):
     content: str

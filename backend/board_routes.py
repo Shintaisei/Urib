@@ -169,7 +169,7 @@ def get_feed_posts(
                     models.BoardPostLike.user_id == current_user.id
                 )
             ).first() is not None
-        
+        can_edit = bool(current_user and post.author_id == current_user.id)
         result.append({
             "id": post.id,
             "board_id": post.board_id,
@@ -181,7 +181,8 @@ def get_feed_posts(
             "like_count": post.like_count,
             "reply_count": post.reply_count,
             "created_at": ensure_jst_aware(post.created_at).isoformat(),
-            "is_liked": is_liked
+            "is_liked": is_liked,
+            "can_edit": can_edit,
         })
     
     return {"posts": result}
@@ -465,10 +466,58 @@ def get_board_posts(
             created_at=ensure_jst_aware(post.created_at).isoformat(),
             is_liked=is_liked,
             has_replied=has_replied,
-            new_replies_since_my_last_reply=int(new_replies_count)
+            new_replies_since_my_last_reply=int(new_replies_count),
+            can_edit=bool(current_user and post.author_id == (current_user.id if current_user else -1))
         ))
     
     return result
+
+@router.put("/posts/{post_id}", response_model=schemas.BoardPostResponse)
+def update_board_post(
+    post_id: int,
+    post_data: schemas.BoardPostUpdate,
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """投稿の内容/ハッシュタグを編集（投稿者本人のみ）"""
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    current_user = get_user_by_id(db, current_user_id)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+
+    post = db.query(models.BoardPost).filter(models.BoardPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="投稿が見つかりません")
+    if post.author_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="この投稿を編集する権限がありません")
+
+    # 更新
+    if post_data.content is not None:
+        post.content = post_data.content.strip()
+    if post_data.hashtags is not None:
+        post.hashtags = (post_data.hashtags or '').strip()
+
+    db.commit()
+    db.refresh(post)
+
+    return schemas.BoardPostResponse(
+        id=post.id,
+        board_id=post.board_id,
+        content=post.content,
+        hashtags=post.hashtags,
+        author_name=post.author_name,
+        author_year=post.author.year if post.author else None,
+        author_department=post.author.department if post.author else None,
+        like_count=post.like_count,
+        reply_count=post.reply_count,
+        created_at=ensure_jst_aware(post.created_at).isoformat(),
+        is_liked=False,
+        has_replied=False,
+        new_replies_since_my_last_reply=0,
+        can_edit=True,
+    )
 
 @router.post("/posts/{post_id}/replies/view")
 def mark_replies_viewed(post_id: int, request: Request, db: Session = Depends(database.get_db)):

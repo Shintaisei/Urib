@@ -43,6 +43,7 @@ interface FeedPost {
   reply_count: number
   created_at: string
   is_liked: boolean
+  can_edit?: boolean
 }
 
 type LatestTab = 'posts' | 'replies' | 'no_comments'
@@ -58,6 +59,9 @@ export function PostFeed() {
   const [submittingReply, setSubmittingReply] = useState<number | null>(null)
   const [repliesByPost, setRepliesByPost] = useState<Record<number, any[]>>({})
   const [loadingRepliesPostId, setLoadingRepliesPostId] = useState<number | null>(null)
+  const [editingPostId, setEditingPostId] = useState<number | null>(null)
+  const [editingContentByPost, setEditingContentByPost] = useState<Record<number, string>>({})
+  const [savingEdit, setSavingEdit] = useState<number | null>(null)
   const { fetchWithCache, getCached, invalidateCache } = useCachedFetch()
 
   useEffect(() => {
@@ -202,6 +206,42 @@ export function PostFeed() {
     } catch {}
   }
 
+  const startEdit = (post: FeedPost) => {
+    setEditingPostId(post.id)
+    setEditingContentByPost(prev => ({ ...prev, [post.id]: post.content }))
+  }
+
+  const cancelEdit = () => {
+    setEditingPostId(null)
+  }
+
+  const saveEdit = async (postId: number) => {
+    const content = (editingContentByPost[postId] || '').trim()
+    if (!content) return
+    try {
+      setSavingEdit(postId)
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const res = await fetch(`${API_BASE_URL}/board/posts/${postId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': userId,
+        },
+        body: JSON.stringify({ content })
+      })
+      if (!res.ok) throw new Error('投稿の更新に失敗しました')
+      const data = await res.json()
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, content: data.content } : p))
+      setEditingPostId(null)
+      invalidateCache('feed-latest')
+    } catch (e) {
+      // noop
+    } finally {
+      setSavingEdit(null)
+    }
+  }
+
   const submitReply = async (postId: number) => {
     const content = (replyContentByPost[postId] || '').trim()
     if (!content) return
@@ -300,6 +340,14 @@ export function PostFeed() {
                           <span className="text-xs text-muted-foreground">
                             {getTimeDiff(post.created_at)}
                           </span>
+                          {post.can_edit && (
+                            <button
+                              className="text-[11px] text-muted-foreground underline ml-2 hover:text-foreground"
+                              onClick={() => startEdit(post)}
+                            >
+                              編集
+                            </button>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2 mb-2">
@@ -311,9 +359,26 @@ export function PostFeed() {
                           )}
                         </div>
 
-                        <p className="text-sm text-foreground line-clamp-2 mb-2">
-                          {post.content}
-                        </p>
+                        {editingPostId === post.id ? (
+                          <div className="mb-2">
+                            <Textarea
+                              value={editingContentByPost[post.id] || ''}
+                              onChange={(e) => setEditingContentByPost(prev => ({ ...prev, [post.id]: e.target.value }))}
+                              className="min-h-[80px]"
+                              maxLength={1000}
+                            />
+                            <div className="mt-2 flex items-center gap-2 justify-end">
+                              <Button size="sm" variant="outline" onClick={cancelEdit} disabled={savingEdit === post.id}>取消</Button>
+                              <Button size="sm" onClick={() => saveEdit(post.id)} disabled={savingEdit === post.id || !(editingContentByPost[post.id] || '').trim()}>
+                                {savingEdit === post.id ? '保存中...' : '保存'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-foreground line-clamp-2 mb-2">
+                            {post.content}
+                          </p>
+                        )}
 
                         {post.hashtags && (
                           <div className="flex flex-wrap gap-1 mb-2">
@@ -516,10 +581,35 @@ export function PostFeed() {
                           <span className="text-xs text-muted-foreground">
                             {getTimeDiff(post.created_at)}
                           </span>
+                          {post.can_edit && (
+                            <button
+                              className="text-[11px] text-muted-foreground underline ml-2 hover:text-foreground"
+                              onClick={() => startEdit(post)}
+                            >
+                              編集
+                            </button>
+                          )}
                         </div>
-                        <p className="text-sm text-foreground line-clamp-2 mb-2">
-                          {post.content}
-                        </p>
+                        {editingPostId === post.id ? (
+                          <div className="mb-2">
+                            <Textarea
+                              value={editingContentByPost[post.id] || ''}
+                              onChange={(e) => setEditingContentByPost(prev => ({ ...prev, [post.id]: e.target.value }))}
+                              className="min-h-[80px]"
+                              maxLength={1000}
+                            />
+                            <div className="mt-2 flex items-center gap-2 justify-end">
+                              <Button size="sm" variant="outline" onClick={cancelEdit} disabled={savingEdit === post.id}>取消</Button>
+                              <Button size="sm" onClick={() => saveEdit(post.id)} disabled={savingEdit === post.id || !(editingContentByPost[post.id] || '').trim()}>
+                                {savingEdit === post.id ? '保存中...' : '保存'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-foreground line-clamp-2 mb-2">
+                            {post.content}
+                          </p>
+                        )}
                       <div className="text-[10px] inline-flex items-center bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
                           コメント一番乗り募集中
                         </div>
