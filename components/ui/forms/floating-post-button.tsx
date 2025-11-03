@@ -118,7 +118,7 @@ export function FloatingPostButton() {
     if (!files) return
     const allowedExt = [".jpg", ".jpeg", ".png", ".webp", ".gif"]
     const allowedMime = ["image/jpeg", "image/png", "image/webp", "image/gif"]
-    const maxSizeBytes = 1.5 * 1024 * 1024
+    const maxSizeBytes = 8 * 1024 * 1024 // 8MB/枚（入力ファイル許容量）
     const limit = Math.min(3 - marketImages.length, files.length)
     const picked: string[] = []
     const errors: string[] = []
@@ -159,7 +159,7 @@ export function FloatingPostButton() {
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(imageBitmap, 0, 0, width, height)
     const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
-    const quality = mime === 'image/png' ? undefined : 0.8
+    const quality = mime === 'image/png' ? undefined : 0.75
     return canvas.toDataURL(mime, quality as any)
   }
 

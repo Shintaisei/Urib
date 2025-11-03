@@ -50,7 +50,7 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
       "image/webp",
       "image/gif",
     ]
-    const maxSizeBytes = 1.5 * 1024 * 1024 // 1.5MB/枚（DataURL長対策）
+    const maxSizeBytes = 8 * 1024 * 1024 // 8MB/枚（入力ファイル許容量）
     const limit = Math.min(3 - formData.images.length, files.length)
     const errors: string[] = []
     for (let i = 0; i < limit; i++) {
@@ -95,7 +95,7 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(imageBitmap, 0, 0, width, height)
     const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
-    const quality = mime === 'image/png' ? undefined : 0.8
+    const quality = mime === 'image/png' ? undefined : 0.75
     return canvas.toDataURL(mime, quality)
   }
 
@@ -279,7 +279,7 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
               <Label>商品画像</Label>
               <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center space-y-3">
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <div>最大3枚までアップロードできます（各5MBまで）</div>
+                  <div>最大3枚までアップロードできます（各8MBまで）</div>
                   <div>対応形式: JPG/JPEG, PNG, WEBP, GIF</div>
                 </div>
                 <Input type="file" accept=".jpg,.jpeg,.png,.webp,.gif" multiple onChange={(e) => handleFiles(e.target.files)} />

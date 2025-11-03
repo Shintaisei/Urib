@@ -249,8 +249,8 @@ def create_market_item(
             if ext is None:
                 ext = ""
         if ext in allowed_ext:
-            # セキュリティ: data URL長の制限（約2MB相当）
-            if url.startswith("data:") and len(url) > 3_000_000:
+            # セキュリティ: data URL長の制限（約4MB相当）
+            if url.startswith("data:") and len(url) > 6_000_000:
                 continue
             validated.append(url)
     images = validated[:3]
