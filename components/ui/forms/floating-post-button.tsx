@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
+import { useCachedFetch } from "@/lib/api-cache"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { X, Plus } from "lucide-react"
 
@@ -70,6 +71,8 @@ type PostType = 'board' | 'market' | 'course' | 'circle'
 
 export function FloatingPostButton() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { invalidateCache } = useCachedFetch()
   const [isOpen, setIsOpen] = useState(false)
   const [postType, setPostType] = useState<PostType>('board')
   const [submitting, setSubmitting] = useState(false)
@@ -339,6 +342,7 @@ export function FloatingPostButton() {
         const d = await res.json().catch(() => ({}))
         throw new Error(d?.detail || '投稿に失敗しました')
       }
+      const created = await res.json().catch(() => ({}))
       
       // 成功時はフォームをリセットして閉じる
       resetForm()
@@ -352,7 +356,34 @@ export function FloatingPostButton() {
         'circle': 'サークルまとめ'
       }[postType] || '投稿'
       
-      alert(`${postTypeText}が完了しました！新しい投稿を確認するには手動でページを更新してください。`)
+      // 軽量なキャッシュ無効化と遷移
+      try {
+        if (postType === 'board') {
+          invalidateCache('latest-feed')
+          invalidateCache('board-stats')
+          const pid = created?.id
+          const bid = body && (body as any).board_id
+          if (pid && bid) {
+            router.push(`/board/${bid}?post_id=${pid}`)
+          }
+        } else if (postType === 'market') {
+          invalidateCache('market-items')
+          const mid = created?.id || created?.item_id || created?.itemId
+          if (mid) {
+            router.push(`/market#market-${mid}`)
+          } else {
+            router.push('/market')
+          }
+        } else if (postType === 'course') {
+          const sid = created?.id
+          router.push(sid ? `/home#course-${sid}` : '/home')
+        } else if (postType === 'circle') {
+          const sid = created?.id
+          router.push(sid ? `/home#circle-${sid}` : '/home')
+        }
+      } catch {}
+      
+      alert(`${postTypeText}が完了しました！`)
     } catch (e: any) {
       alert(e?.message || '投稿に失敗しました')
     } finally {

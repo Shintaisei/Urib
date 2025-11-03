@@ -68,6 +68,32 @@ export default function HomePage() {
     } catch {}
   }, [activeTab, summaryTab])
 
+  // URLハッシュに応じてタブを自動選択し、対象要素へスクロール
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = typeof window !== 'undefined' ? window.location.hash : ''
+      if (!hash) return
+      if (hash.startsWith('#course-')) {
+        setActiveTab('summaries')
+        setSummaryTab('courses')
+        setTimeout(() => {
+          const el = document.getElementById(hash.substring(1))
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 300)
+      } else if (hash.startsWith('#circle-')) {
+        setActiveTab('summaries')
+        setSummaryTab('circles')
+        setTimeout(() => {
+          const el = document.getElementById(hash.substring(1))
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 300)
+      }
+    }
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
