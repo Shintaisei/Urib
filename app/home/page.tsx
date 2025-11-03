@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+export const dynamic = 'force-dynamic'
 import { Header } from "@/components/header"
 import { BoardGrid } from "@/components/board/board-grid"
 import { UniversityInfo } from "@/components/university-info"
