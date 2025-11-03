@@ -571,19 +571,30 @@ export function FloatingPostButton() {
                   {/* 画像アップロード（最大3枚） */}
                   <div>
                     <label className="text-sm font-medium mb-2 block">商品画像（最大3枚）</label>
-                    <Input
-                      type="file"
-                      accept=".jpg,.jpeg,.png,.webp,.gif"
-                      multiple
-                      onChange={(e) => handleMarketFiles(e.target.files)}
-                      className="text-sm"
-                    />
+                    <div
+                      className="border-2 border-dashed rounded-md p-4 text-center text-xs text-muted-foreground hover:bg-muted/30"
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+                      onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleMarketFiles(e.dataTransfer.files) }}
+                      onClick={() => {
+                        try { (document.getElementById('market-image-input') as HTMLInputElement)?.click() } catch {}
+                      }}
+                    >
+                      クリックまたは画像をドラッグ＆ドロップして追加
+                      <Input
+                        id="market-image-input"
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp,.gif"
+                        multiple
+                        onChange={(e) => handleMarketFiles(e.target.files)}
+                        className="text-sm hidden"
+                      />
+                    </div>
                     {marketImages.length > 0 && (
                       <div className="grid grid-cols-3 gap-2 mt-2">
                         {marketImages.map((src, idx) => (
                           <div key={idx} className="relative">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={src} alt={`img-${idx}`} className="w-full h-20 object-cover rounded" />
+                            <img src={src} alt={`img-${idx}`} className="w-full h-20 object-contain bg-background rounded" />
                             <Button type="button" size="sm" variant="outline" className="absolute top-1 right-1 h-6 px-2 text-xs" onClick={() => removeMarketImage(idx)}>削除</Button>
                           </div>
                         ))}

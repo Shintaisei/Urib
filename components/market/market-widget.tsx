@@ -41,7 +41,7 @@ export function MarketWidget() {
               <div className="flex items-center gap-3 p-2 rounded hover:bg-muted/30 cursor-pointer">
                 <div className="w-12 h-12 rounded bg-muted overflow-hidden">
                   {it.images[0] ? (
-                    <SafeImage src={it.images[0]} alt={it.title} className="w-full h-full object-cover" />
+                    <SafeImage src={it.images[0]} alt={it.title} className="w-full h-full object-contain bg-background" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No image</div>
                   )}

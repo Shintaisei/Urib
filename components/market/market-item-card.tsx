@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -56,6 +56,8 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
   const [isLiking, setIsLiking] = useState(false)
   const [isToggling, setIsToggling] = useState(false)
   const [comments, setComments] = useState<MarketItemComment[]>([])
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const commentsLoadedRef = useRef(false)
   const [commentInput, setCommentInput] = useState("")
   const [posting, setPosting] = useState(false)
   const { invalidateCache } = useCachedFetch()
@@ -139,15 +141,19 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
     try {
       const list = await MarketCommentsApi.getItemComments(item.id)
       setComments(list)
+      commentsLoadedRef.current = true
     } catch (e) {
       console.error('コメント取得エラー:', e)
     }
   }
 
+  // コメントを開いたときに初回のみ取得
   useEffect(() => {
-    fetchComments()
+    if (commentsOpen && !commentsLoadedRef.current) {
+      fetchComments()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [commentsOpen])
 
   const handlePostComment = async () => {
     const content = commentInput.trim()
@@ -179,7 +185,7 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
               alt={item.title}
               width={800}
               height={320}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-background"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -336,50 +342,59 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
             </div>
           )}
 
-          {/* コメント（チャット） */}
+          {/* コメント（トグル表示） */}
           <div className="mt-3 space-y-2.5">
-            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-              {comments.length === 0 ? (
-                <p className="text-[12px] text-muted-foreground">まだコメントはありません</p>
-              ) : (
-                comments.map((c) => (
-                  <div key={c.id} className="bg-muted/30 rounded p-1.5">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <div className="text-[11px] text-muted-foreground">{c.author_name} ・ {new Date(c.created_at).toLocaleString('ja-JP')}</div>
-                      {(isAdmin || (myUserId && c.author_id === myUserId)) && (
-                        <button
-                          className="text-[11px] text-destructive hover:underline"
-                          onClick={async () => {
-                            if (!confirm('このコメントを削除しますか？')) return
-                            try {
-                              await deleteItemComment(item.id, c.id)
-                              setComments(prev => prev.filter(x => x.id !== c.id))
-                            } catch (e:any) {
-                              alert(e.message || '削除に失敗しました')
-                            }
-                          }}
-                        >削除</button>
-                      )}
-                    </div>
-                    <div className="text-[13px] text-foreground whitespace-pre-wrap">{c.content}</div>
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setCommentsOpen(!commentsOpen)}>
+                {commentsOpen ? 'コメントを閉じる' : 'コメントを見る'}
+              </Button>
+            </div>
+            {commentsOpen && (
+              <>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {comments.length === 0 ? (
+                    <p className="text-[12px] text-muted-foreground">まだコメントはありません</p>
+                  ) : (
+                    comments.map((c) => (
+                      <div key={c.id} className="bg-muted/30 rounded p-1.5">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <div className="text-[11px] text-muted-foreground">{c.author_name} ・ {new Date(c.created_at).toLocaleString('ja-JP')}</div>
+                          {(isAdmin || (myUserId && c.author_id === myUserId)) && (
+                            <button
+                              className="text-[11px] text-destructive hover:underline"
+                              onClick={async () => {
+                                if (!confirm('このコメントを削除しますか？')) return
+                                try {
+                                  await deleteItemComment(item.id, c.id)
+                                  setComments(prev => prev.filter(x => x.id !== c.id))
+                                } catch (e:any) {
+                                  alert(e.message || '削除に失敗しました')
+                                }
+                              }}
+                            >削除</button>
+                          )}
+                        </div>
+                        <div className="text-[13px] text-foreground whitespace-pre-wrap">{c.content}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Textarea
+                    placeholder="コメントを入力..."
+                    value={commentInput}
+                    onChange={(e) => setCommentInput(e.target.value)}
+                    className="min-h-[56px] text-[14px]"
+                    maxLength={300}
+                  />
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={handlePostComment} disabled={!commentInput.trim() || posting}>
+                      {posting ? '送信中...' : '送信'}
+                    </Button>
                   </div>
-                ))
-              )}
-            </div>
-            <div className="space-y-2">
-              <Textarea
-                placeholder="コメントを入力..."
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                className="min-h-[56px] text-[14px]"
-                maxLength={300}
-              />
-              <div className="flex justify-end">
-                <Button size="sm" onClick={handlePostComment} disabled={!commentInput.trim() || posting}>
-                  {posting ? '送信中...' : '送信'}
-                </Button>
-              </div>
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </CardContent>
