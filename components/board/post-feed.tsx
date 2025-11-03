@@ -541,6 +541,28 @@ export function PostFeed() {
                       </div>
                         {replyOpenByPost[post.id] && (
                           <div className="mt-2">
+                            {/* 既存の返信一覧 */}
+                            {loadingRepliesPostId === post.id ? (
+                              <div className="text-xs text-muted-foreground py-2">返信を読み込み中...</div>
+                            ) : (repliesByPost[post.id]?.length > 0 ? (
+                              <div className="space-y-2 mb-2">
+                                {repliesByPost[post.id].map((r: any) => (
+                                  <div key={`feed-nc-reply-${r.id}`} className="bg-muted/30 rounded p-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="text-[11px] text-muted-foreground">{r.author_name} ・ {getTimeDiff(r.created_at)}</div>
+                                      <button className={`text-[11px] ${r.is_liked ? 'text-red-500' : 'text-muted-foreground'} hover:text-red-500`} onClick={() => likeReply(r.id, post.id)}>
+                                        <Heart className={`inline w-3 h-3 mr-1 ${r.is_liked ? 'fill-current' : ''}`} />{r.like_count}
+                                      </button>
+                                    </div>
+                                    <div className="text-[13px] text-foreground whitespace-pre-wrap">{r.content}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-xs text-muted-foreground mb-2">まだ返信がありません</div>
+                            ))}
+
+                            {/* 返信フォーム */}
                             <Textarea
                               placeholder="返信を入力..."
                               value={replyContentByPost[post.id] || ''}
