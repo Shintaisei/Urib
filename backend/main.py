@@ -21,6 +21,7 @@ async def run_migrations():
         from sqlalchemy.exc import SQLAlchemyError
 
         engine = database.engine
+        dialect = engine.dialect.name
 
         def exec_tx(sql: str, ok_msg: str, warn_phrases=("already exists", "duplicate column name")):
             try:
@@ -40,13 +41,18 @@ async def run_migrations():
         def column_exists(table: str, column: str) -> bool:
             try:
                 with engine.connect() as conn:
-                    res = conn.execute(text(
-                        """
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name=:t AND column_name=:c
-                        """
-                    ), {"t": table, "c": column}).fetchone()
-                    return res is not None
+                    if dialect == 'postgresql':
+                        res = conn.execute(text(
+                            """
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name=:t AND column_name=:c
+                            """
+                        ), {"t": table, "c": column}).fetchone()
+                        return res is not None
+                    else:
+                        # SQLite など
+                        res = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
+                        return any(r[1] == column for r in res)
             except Exception:
                 # SQLite等、information_schemaがない環境のためのフォールバック（エラー時はFalse→ALTER試行）
                 return False
@@ -56,7 +62,10 @@ async def run_migrations():
         # columns
         for col in ("grade_level", "grade_score", "difficulty_level"):
             if not column_exists('course_summaries', col):
-                exec_tx(f"ALTER TABLE course_summaries ADD COLUMN {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
+                if dialect == 'postgresql':
+                    exec_tx(f"ALTER TABLE course_summaries ADD COLUMN IF NOT EXISTS {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
+                else:
+                    exec_tx(f"ALTER TABLE course_summaries ADD COLUMN {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
             else:
                 print(f"⚠️ {col}フィールドは既に存在します")
 
@@ -66,54 +75,108 @@ async def run_migrations():
         exec_tx("CREATE INDEX IF NOT EXISTS idx_course_summaries_difficulty_level ON course_summaries(difficulty_level)", "✅ idx_course_summaries_difficulty_levelインデックスを追加しました", warn_phrases=("already exists",))
 
         # likes table
-        exec_tx((
-            """
-            CREATE TABLE IF NOT EXISTS course_summary_likes (
-                id SERIAL PRIMARY KEY,
-                summary_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                UNIQUE(summary_id, user_id)
+        if dialect == 'postgresql':
+            likes_sql = (
+                """
+                CREATE TABLE IF NOT EXISTS course_summary_likes (
+                    id SERIAL PRIMARY KEY,
+                    summary_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    UNIQUE(summary_id, user_id)
+                )
+                """
             )
-            """
-        ), "✅ CourseSummaryLikeテーブルを作成（または既存）")
+        else:
+            likes_sql = (
+                """
+                CREATE TABLE IF NOT EXISTS course_summary_likes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    summary_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(summary_id, user_id)
+                )
+                """
+            )
+        exec_tx(likes_sql, "✅ CourseSummaryLikeテーブルを作成（または既存）")
 
         # circle tables
-        exec_tx((
-            """
-            CREATE TABLE IF NOT EXISTS circle_summaries (
-                id SERIAL PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                circle_name VARCHAR(255),
-                category VARCHAR(100),
-                activity_days VARCHAR(100),
-                activity_place VARCHAR(255),
-                cost VARCHAR(100),
-                links VARCHAR(500),
-                tags VARCHAR(500),
-                content TEXT NOT NULL,
-                author_id INTEGER NOT NULL,
-                author_name VARCHAR(100) NOT NULL,
-                like_count INTEGER DEFAULT 0,
-                comment_count INTEGER DEFAULT 0,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        if dialect == 'postgresql':
+            circle_summaries_sql = (
+                """
+                CREATE TABLE IF NOT EXISTS circle_summaries (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    circle_name VARCHAR(255),
+                    category VARCHAR(100),
+                    activity_days VARCHAR(100),
+                    activity_place VARCHAR(255),
+                    cost VARCHAR(100),
+                    links VARCHAR(500),
+                    tags VARCHAR(500),
+                    content TEXT NOT NULL,
+                    author_id INTEGER NOT NULL,
+                    author_name VARCHAR(100) NOT NULL,
+                    like_count INTEGER DEFAULT 0,
+                    comment_count INTEGER DEFAULT 0,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                )
+                """
             )
-            """
-        ), "✅ CircleSummaryテーブルを作成（または既存）")
+        else:
+            circle_summaries_sql = (
+                """
+                CREATE TABLE IF NOT EXISTS circle_summaries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title VARCHAR(255) NOT NULL,
+                    circle_name VARCHAR(255),
+                    category VARCHAR(100),
+                    activity_days VARCHAR(100),
+                    activity_place VARCHAR(255),
+                    cost VARCHAR(100),
+                    links VARCHAR(500),
+                    tags VARCHAR(500),
+                    content TEXT NOT NULL,
+                    author_id INTEGER NOT NULL,
+                    author_name VARCHAR(100) NOT NULL,
+                    like_count INTEGER DEFAULT 0,
+                    comment_count INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        exec_tx(circle_summaries_sql, "✅ CircleSummaryテーブルを作成（または既存）")
 
-        exec_tx((
-            """
-            CREATE TABLE IF NOT EXISTS circle_summary_comments (
-                id SERIAL PRIMARY KEY,
-                summary_id INTEGER NOT NULL,
-                author_id INTEGER NOT NULL,
-                author_name VARCHAR(100) NOT NULL,
-                content TEXT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        if dialect == 'postgresql':
+            circle_comments_sql = (
+                """
+                CREATE TABLE IF NOT EXISTS circle_summary_comments (
+                    id SERIAL PRIMARY KEY,
+                    summary_id INTEGER NOT NULL,
+                    author_id INTEGER NOT NULL,
+                    author_name VARCHAR(100) NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                )
+                """
             )
-            """
-        ), "✅ CircleSummaryCommentテーブルを作成（または既存）")
+        else:
+            circle_comments_sql = (
+                """
+                CREATE TABLE IF NOT EXISTS circle_summary_comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    summary_id INTEGER NOT NULL,
+                    author_id INTEGER NOT NULL,
+                    author_name VARCHAR(100) NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+        exec_tx(circle_comments_sql, "✅ CircleSummaryCommentテーブルを作成（または既存）")
 
         print("✅ マイグレーション完了")
     except Exception as e:
