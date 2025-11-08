@@ -67,3 +67,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* モバイル時に全体を少し縮小して「PCと同じ密度」に近づける */
+/* Tailwindはremベースなので、htmlのfont-sizeを下げると余白/文字/コンポーネント全体が縮小します */
+@media (max-width: 480px) {
+  html {
+    font-size: 14px; /* 16px -> 14px (~87.5%) */
+  }
+}
+@media (max-width: 380px) {
+  html {
+    font-size: 13px; /* さらに小さい端末で少しだけ縮小 */
+  }
+}
