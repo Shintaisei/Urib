@@ -285,15 +285,19 @@ export function FloatingPostButton() {
         if (!title.trim() || !description.trim()) {
           throw new Error('タイトルと説明は必須です')
         }
-        if (type !== 'free' && (!price.trim() || parseInt(price) <= 0)) {
-          throw new Error('価格を正しく入力してください')
+        if (type === 'sell') {
+          const p = price.trim() === '' ? NaN : parseInt(price, 10)
+          if (Number.isNaN(p) || p < 0) {
+            throw new Error('価格は0円以上で入力してください')
+          }
         }
         endpoint = `${API_BASE_URL}/market/items${cacheBuster}`
         body = {
           title: title.trim(),
           description: description.trim(),
           type: type,
-          price: type === 'free' ? null : parseInt(price) || null,
+          // 売りたい: 0円以上を必須、買いたい: 任意（未入力はnull）
+          price: type === 'sell' ? (parseInt(price) || 0) : (price.trim() ? (parseInt(price) || null) : null),
           condition: condition,
           contact_method: contactMethod,
           images: marketImages.slice(0, 3)
@@ -575,7 +579,6 @@ export function FloatingPostButton() {
                         <SelectContent>
                           <SelectItem value="sell">売ります</SelectItem>
                           <SelectItem value="buy">買います</SelectItem>
-                          <SelectItem value="free">譲ります</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -587,7 +590,7 @@ export function FloatingPostButton() {
                         value={price}
                         onChange={(e) => setPrice(e.target.value)}
                         className="text-sm"
-                        disabled={type === 'free'}
+                        min={0}
                       />
                     </div>
                   </div>

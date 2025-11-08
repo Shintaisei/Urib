@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { X, Upload, DollarSign, Gift, ShoppingCart } from "lucide-react"
+import { X, Upload, DollarSign, ShoppingCart } from "lucide-react"
 import { MarketItemType, MarketItemCreate } from "@/types"
 
 interface MarketCreateModalProps {
@@ -117,9 +117,12 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
       alert("商品説明を入力してください")
       return
     }
-    if (formData.type !== "free" && !formData.price) {
-      alert("価格を入力してください")
-      return
+    if (formData.type === "sell") {
+      const p = formData.price.trim() === '' ? NaN : Number(formData.price)
+      if (Number.isNaN(p) || p < 0) {
+        alert("価格は0円以上で入力してください")
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -129,7 +132,8 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
         title: formData.title.trim(),
         description: formData.description.trim(),
         type: formData.type,
-        price: formData.type === "free" ? 0 : Number(formData.price),
+        // 売りたい: 数値(0以上)必須 / 買いたい: 任意（未入力はnull）
+        price: formData.type === "sell" ? Number(formData.price) : (formData.price ? Number(formData.price) : null as any),
         condition: formData.condition,
         images: formData.images,
         contact_method: 'dm'
@@ -174,7 +178,7 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
             {/* 商品タイプ */}
             <div className="space-y-2">
               <Label>出品タイプ</Label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   variant={formData.type === "sell" ? "default" : "outline"}
@@ -194,16 +198,6 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
                 >
                   <ShoppingCart className="w-4 h-4 mr-1" />
                   買いたい
-                </Button>
-                <Button
-                  type="button"
-                  variant={formData.type === "free" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => updateFormData("type", "free")}
-                  className="text-purple-600 border-purple-600 hover:bg-purple-50"
-                >
-                  <Gift className="w-4 h-4 mr-1" />
-                  ただであげる
                 </Button>
               </div>
             </div>
@@ -233,26 +227,25 @@ export function MarketCreateModal({ onClose, onSubmit }: MarketCreateModalProps)
               />
             </div>
 
-            {/* 価格（売りたい・買いたいの場合のみ） */}
-            {formData.type !== "free" && (
-              <div className="space-y-2">
-                <Label htmlFor="price">価格 *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                    ¥
-                  </span>
-                  <Input
-                    id="price"
-                    type="number"
-                    placeholder="0"
-                    value={formData.price}
-                    onChange={(e) => updateFormData("price", e.target.value)}
-                    className="pl-8"
-                    required
-                  />
-                </div>
+            {/* 価格（売りたいは必須0円以上 / 買いたいは任意） */}
+            <div className="space-y-2">
+              <Label htmlFor="price">{formData.type === "sell" ? "価格（必須・0円以上）" : "希望価格（任意）"}</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                  ¥
+                </span>
+                <Input
+                  id="price"
+                  type="number"
+                  placeholder={formData.type === "sell" ? "0" : "任意"}
+                  value={formData.price}
+                  onChange={(e) => updateFormData("price", e.target.value)}
+                  className="pl-8"
+                  min={0}
+                  required={formData.type === "sell"}
+                />
               </div>
-            )}
+            </div>
 
             {/* 商品状態 */}
             <div className="space-y-2">

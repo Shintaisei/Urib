@@ -11,7 +11,6 @@ import {
   Plus, 
   ShoppingCart, 
   DollarSign, 
-  Gift,
   Eye,
   Heart,
   MessageCircle,
@@ -293,15 +292,7 @@ export function MarketBoard() {
               <DollarSign className="w-4 h-4 mr-1" />
               売りたい
             </Button>
-            <Button
-              variant={selectedType === "free" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedType("free")}
-              className="text-purple-600 border-purple-600 hover:bg-purple-50"
-            >
-              <Gift className="w-4 h-4 mr-1" />
-              ただであげる
-            </Button>
+            {/* 無料は「売りたい」で価格0円として扱うため、ボタンは削除 */}
           </div>
         </div>
       </div>
