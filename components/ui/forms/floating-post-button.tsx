@@ -141,6 +141,40 @@ export function FloatingPostButton() {
   const [circleContent, setCircleContent] = useState("")
   const [circleTagSuggestions, setCircleTagSuggestions] = useState<string[]>([])
 
+  // ---- 前回入力の保存/復元（ローカル） ----
+  const getDraftKey = (t: PostType) => `uriv:lastDraft:${t}`
+  const saveDraft = (t: PostType, data: any) => {
+    try {
+      const payload = { data, savedAt: Date.now() }
+      localStorage.setItem(getDraftKey(t), JSON.stringify(payload))
+    } catch {}
+  }
+  const loadDraft = (t: PostType): { data: any, savedAt: number } | null => {
+    try {
+      const raw = localStorage.getItem(getDraftKey(t))
+      if (!raw) return null
+      const parsed = JSON.parse(raw)
+      return parsed && parsed.data ? parsed : null
+    } catch {
+      return null
+    }
+  }
+  const clearDraft = (t: PostType) => {
+    try { localStorage.removeItem(getDraftKey(t)) } catch {}
+  }
+  const formatSavedAt = (ts?: number) => {
+    if (!ts) return ""
+    try {
+      const d = new Date(ts)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const dd = String(d.getDate()).padStart(2, '0')
+      const hh = String(d.getHours()).padStart(2, '0')
+      const mm = String(d.getMinutes()).padStart(2, '0')
+      return `${y}/${m}/${dd} ${hh}:${mm}`
+    } catch { return "" }
+  }
+
   // Helpers: market image handling
   const handleMarketFiles = async (files: FileList | null) => {
     if (!files) return
@@ -378,6 +412,49 @@ export function FloatingPostButton() {
       const created = await res.json().catch(() => ({}))
       
       // 成功時はフォームをリセットして閉じる
+      // 前回入力として保存（画像やPDFなど大容量は除外）
+      try {
+        if (postType === 'board') {
+          saveDraft('board', {
+            board_id: (body as any).board_id,
+            content: (body as any).content,
+            hashtags: (body as any).hashtags || ''
+          })
+        } else if (postType === 'market') {
+          saveDraft('market', {
+            title: (body as any).title,
+            description: (body as any).description,
+            type: (body as any).type,
+            price: (body as any).price,
+            condition: (body as any).condition,
+            contact_method: (body as any).contact_method
+          })
+        } else if (postType === 'course') {
+          saveDraft('course', {
+            course_name: (body as any).course_name,
+            instructor: (body as any).instructor,
+            department: (body as any).department,
+            year_semester: (body as any).year_semester,
+            tags: (body as any).tags,
+            content: (body as any).content,
+            grade_level: (body as any).grade_level,
+            grade_score: (body as any).grade_score,
+            difficulty_level: (body as any).difficulty_level
+          })
+        } else if (postType === 'circle') {
+          saveDraft('circle', {
+            circle_name: (body as any).circle_name,
+            category: (body as any).category,
+            activity_days: (body as any).activity_days,
+            activity_place: (body as any).activity_place,
+            cost: (body as any).cost,
+            links: (body as any).links,
+            tags: (body as any).tags,
+            content: (body as any).content
+          })
+        }
+      } catch {}
+
       resetForm()
       setIsOpen(false)
       
@@ -543,6 +620,27 @@ export function FloatingPostButton() {
             <CardContent className="space-y-4">
               {postType === 'board' && (
                 <>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div>
+                      {(() => {
+                        const d = typeof window !== 'undefined' ? loadDraft('board') : null
+                        return d?.savedAt ? `前回保存: ${formatSavedAt(d.savedAt)}` : ''
+                      })()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const d = loadDraft('board')
+                          if (!d) return alert('前回の入力はありません')
+                          const v = d.data || {}
+                          setBoardId(v.board_id || '1')
+                          setContent(v.content || '')
+                          setHashtags(v.hashtags || '')
+                        }}>前回の入力を呼び出す</Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs"
+                        onClick={() => { clearDraft('board'); alert('前回の入力をクリアしました') }}>クリア</Button>
+                    </div>
+                  </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">掲示板</label>
                     <Select value={boardId} onValueChange={setBoardId}>
@@ -598,6 +696,30 @@ export function FloatingPostButton() {
 
               {postType === 'market' && (
                 <>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div>
+                      {(() => {
+                        const d = typeof window !== 'undefined' ? loadDraft('market') : null
+                        return d?.savedAt ? `前回保存: ${formatSavedAt(d.savedAt)}` : ''
+                      })()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const d = loadDraft('market')
+                          if (!d) return alert('前回の入力はありません')
+                          const v = d.data || {}
+                          setTitle(v.title || '')
+                          setType(v.type || 'sell')
+                          setPrice(v.price ?? '')
+                          setCondition(v.condition || 'good')
+                          setContactMethod(v.contact_method || 'dm')
+                          setDescription(v.description || '')
+                        }}>前回の入力を呼び出す</Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs"
+                        onClick={() => { clearDraft('market'); alert('前回の入力をクリアしました') }}>クリア</Button>
+                    </div>
+                  </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">タイトル</label>
                     <Input
@@ -711,6 +833,34 @@ export function FloatingPostButton() {
 
               {postType === 'course' && (
                 <>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div>
+                      {(() => {
+                        const d = typeof window !== 'undefined' ? loadDraft('course') : null
+                        return d?.savedAt ? `前回保存: ${formatSavedAt(d.savedAt)}` : ''
+                      })()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const d = loadDraft('course')
+                          if (!d) return alert('前回の入力はありません')
+                          const v = d.data || {}
+                          setCourseName(v.course_name || '')
+                          setInstructor(v.instructor || '')
+                          setDepartment(v.department || '')
+                          setYearSemester(v.year_semester || '')
+                          setCourseTags(v.tags || '')
+                          setCourseContent(v.content || '')
+                          setGradeLevel(v.grade_level || '')
+                          setGradeScore(v.grade_score || '')
+                          setDifficultyLevel(v.difficulty_level || '')
+                          // PDFはサイズ増大回避のため復元しない
+                        }}>前回の入力を呼び出す</Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs"
+                        onClick={() => { clearDraft('course'); alert('前回の入力をクリアしました') }}>クリア</Button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Input
                       placeholder="授業名（例: 線形代数）"
@@ -923,6 +1073,32 @@ export function FloatingPostButton() {
 
               {postType === 'circle' && (
                 <>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                    <div>
+                      {(() => {
+                        const d = typeof window !== 'undefined' ? loadDraft('circle') : null
+                        return d?.savedAt ? `前回保存: ${formatSavedAt(d.savedAt)}` : ''
+                      })()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const d = loadDraft('circle')
+                          if (!d) return alert('前回の入力はありません')
+                          const v = d.data || {}
+                          setCircleName(v.circle_name || '')
+                          setCategory(v.category || '')
+                          setActivityDays(v.activity_days || '')
+                          setActivityPlace(v.activity_place || '')
+                          setCost(v.cost || '')
+                          setLinks(v.links || '')
+                          setCircleTags(v.tags || '')
+                          setCircleContent(v.content || '')
+                        }}>前回の入力を呼び出す</Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs"
+                        onClick={() => { clearDraft('circle'); alert('前回の入力をクリアしました') }}>クリア</Button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Input
                       placeholder="サークル名"
