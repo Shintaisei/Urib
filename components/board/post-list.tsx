@@ -8,6 +8,15 @@ import { LoadingProgress } from "@/components/loading-progress"
 import { useCachedFetch } from "@/lib/api-cache"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// 掲示板名マップ（表示用）
+const BOARD_NAMES: { [key: string]: string } = {
+  "1": "全体",
+  "2": "授業",
+  "3": "部活",
+  "4": "就活",
+  "5": "雑談",
+  "6": "相談"
+}
 
 function ExpandableText({ text, maxChars = 140 }: { text: string; maxChars?: number }) {
   const [expanded, setExpanded] = useState(false)
@@ -294,6 +303,32 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   return (
     <div className="space-y-1">
       <h2 className="text-lg font-semibold text-foreground">掲示板の投稿</h2>
+
+      {/* 24時間以内の投稿（ハイライト） */}
+      {(() => {
+        const now = new Date().getTime()
+        const recent = posts.filter(p => {
+          const t = new Date(p.created_at).getTime()
+          return (now - t) <= 24 * 60 * 60 * 1000
+        })
+        if (recent.length === 0) return null
+        return (
+          <div className="mb-2 border border-border rounded p-2 bg-muted/20">
+            <div className="text-xs font-semibold text-foreground mb-1">24時間以内の投稿</div>
+            <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+              {recent.map(r => (
+                <div key={`recent-${r.id}`} className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">
+                    {BOARD_NAMES[r.board_id] || `掲示板${r.board_id}`}
+                  </span>
+                  <span className="text-[12px] text-foreground truncate flex-1">{r.content}</span>
+                  <span className="text-[10px] text-muted-foreground">{getTimeDiff(r.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       <div className="divide-y divide-border border border-border rounded">
         {posts.map((post) => {
