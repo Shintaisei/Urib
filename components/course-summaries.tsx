@@ -12,7 +12,8 @@ import { LoadingProgress } from "@/components/loading-progress"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const DEPARTMENT_OPTIONS = [
-  { value: "総合理系", label: "総合理系（1年生向け）" },
+  { value: "1年生文系", label: "1年生文系" },
+  { value: "1年生理系", label: "1年生理系" },
   { value: "工学部", label: "工学部" },
   { value: "工学部 機械工学科", label: "工学部 機械工学科" },
   { value: "工学部 電気電子工学科", label: "工学部 電気電子工学科" },

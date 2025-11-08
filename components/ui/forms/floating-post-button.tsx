@@ -22,7 +22,8 @@ const BOARD_OPTIONS = [
 ]
 
 const DEPARTMENT_OPTIONS = [
-  { value: "総合理系", label: "総合理系（1年生向け）" },
+  { value: "1年生文系", label: "1年生文系" },
+  { value: "1年生理系", label: "1年生理系" },
   { value: "工学部", label: "工学部" },
   { value: "工学部 機械工学科", label: "工学部 機械工学科" },
   { value: "工学部 電気電子工学科", label: "工学部 電気電子工学科" },
@@ -366,11 +367,13 @@ export function FloatingPostButton() {
       // 軽量なキャッシュ無効化と遷移（遷移後にrefreshで最新化）
       try {
         if (postType === 'board') {
-          invalidateCache('latest-feed')
+          // フィード/掲示板キャッシュを無効化
+          invalidateCache('feed-latest')
           invalidateCache('board-stats')
           const pid = created?.id
           const bid = body && (body as any).board_id
           if (pid && bid) {
+            invalidateCache(`posts-${bid}`)
             router.push(`/board/${bid}?post_id=${pid}`)
             setTimeout(() => {
               try { router.refresh() } catch {}
