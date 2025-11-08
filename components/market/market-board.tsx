@@ -419,47 +419,49 @@ export function MarketBoard() {
                           すべて見る
                         </Button>
                       </div>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
+                      <div className="grid grid-flow-col grid-rows-3 auto-cols-[10rem] gap-2 overflow-x-auto pb-1 pr-2">
                         {items.filter(i => i.is_available && i.type === 'buy').map(item => (
                           <button
                             key={`thumb-buy-${item.id}`}
                             type="button"
-                            className="relative w-40 h-28 flex-shrink-0 border border-border rounded overflow-hidden hover:shadow-sm transition"
+                            className="w-40 h-auto flex-shrink-0 border border-border rounded overflow-hidden hover:shadow-sm transition text-left"
                             onClick={() => setDetailItemId(item.id)}
                           >
-                            {item.images && item.images.length > 0 ? (
-                              <SafeImage src={item.images[0]} alt={item.title} className="w-full h-full object-contain bg-background" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">画像なし</div>
-                            )}
-                            {/* ラベル: タイプ・ステータス・価格 */}
-                            <div className="absolute top-1 left-1">
-                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-600 text-white">買いたい</span>
-                            </div>
-                            <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
-                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
-                              {item.price !== undefined && item.price !== null && (
-                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
+                            <div className="relative aspect-[4/3] bg-muted/30">
+                              {item.images && item.images.length > 0 ? (
+                                <SafeImage src={item.images[0]} alt={item.title} className="w-full h-full object-contain bg-background" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">画像なし</div>
                               )}
+                              {/* ラベル: タイプ・ステータス・価格 */}
+                              <div className="absolute top-1 left-1">
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-600 text-white">買いたい</span>
+                              </div>
+                              <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
+                                {item.price !== undefined && item.price !== null && (
+                                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
+                                )}
+                              </div>
                             </div>
-                            {/* タイトル（下部帯） */}
-                            <div className="absolute inset-x-0 bottom-0 bg-black/50 text-white text-[11px] px-2 py-0.5 truncate">
-                              {item.title}
-                            </div>
-                            {/* いいね/コメント（左下）、いいね操作可 */}
-                            <div className="absolute left-1 bottom-1 flex items-center gap-2 text-[10px] text-white drop-shadow">
-                              <button
-                                type="button"
-                                className={`inline-flex items-center gap-0.5 ${item.is_liked ? 'text-red-400' : 'text-white'}`}
-                                onClick={(e) => { e.stopPropagation(); handleLike(item.id) }}
-                              >
-                                <Heart className={`w-3 h-3 ${item.is_liked ? 'fill-current' : ''}`} />
-                                {item.like_count}
-                              </button>
-                              <span className="inline-flex items-center gap-0.5">
-                                <MessageCircle className="w-3 h-3" />
-                                {item.comment_count ?? 0}
-                              </span>
+                            {/* タイトルとカウント（画像の下） */}
+                            <div className="px-2 py-1">
+                              <div className="text-[11px] font-medium text-foreground truncate">{item.title}</div>
+                              <div className="mt-0.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+                                <button
+                                  type="button"
+                                  className={`inline-flex items-center gap-0.5 ${item.is_liked ? 'text-red-500' : ''}`}
+                                  onClick={(e) => { e.stopPropagation(); handleLike(item.id) }}
+                                  aria-label="いいね"
+                                >
+                                  <Heart className={`w-3 h-3 ${item.is_liked ? 'fill-current' : ''}`} />
+                                  {item.like_count}
+                                </button>
+                                <span className="inline-flex items-center gap-0.5">
+                                  <MessageCircle className="w-3 h-3" />
+                                  {item.comment_count ?? 0}
+                                </span>
+                              </div>
                             </div>
                           </button>
                         ))}
@@ -488,45 +490,47 @@ export function MarketBoard() {
                           すべて見る
                         </Button>
                       </div>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
+                      <div className="grid grid-flow-col grid-rows-3 auto-cols-[10rem] gap-2 overflow-x-auto pb-1 pr-2">
                         {items.filter(i => i.is_available && i.type === 'sell').map(item => (
                           <button
                             key={`thumb-sell-${item.id}`}
                             type="button"
-                            className="relative w-40 h-28 flex-shrink-0 border border-border rounded overflow-hidden hover:shadow-sm transition"
+                            className="w-40 h-auto flex-shrink-0 border border-border rounded overflow-hidden hover:shadow-sm transition text-left"
                             onClick={() => setDetailItemId(item.id)}
                           >
-                            {item.images && item.images.length > 0 ? (
-                              <SafeImage src={item.images[0]} alt={item.title} className="w-full h-full object-contain bg-background" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">画像なし</div>
-                            )}
-                            {/* ラベル: タイプ・ステータス・価格 */}
-                            <div className="absolute top-1 left-1">
-                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-600 text-white">売りたい</span>
+                            <div className="relative aspect-[4/3] bg-muted/30">
+                              {item.images && item.images.length > 0 ? (
+                                <SafeImage src={item.images[0]} alt={item.title} className="w-full h-full object-contain bg-background" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">画像なし</div>
+                              )}
+                              {/* ラベル: タイプ・ステータス・価格 */}
+                              <div className="absolute top-1 left-1">
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-600 text-white">売りたい</span>
+                              </div>
+                              <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
+                              </div>
                             </div>
-                            <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
-                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
-                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
-                            </div>
-                            {/* タイトル（下部帯） */}
-                            <div className="absolute inset-x-0 bottom-0 bg-black/50 text-white text-[11px] px-2 py-0.5 truncate">
-                              {item.title}
-                            </div>
-                            {/* いいね/コメント（左下）、いいね操作可 */}
-                            <div className="absolute left-1 bottom-1 flex items-center gap-2 text-[10px] text-white drop-shadow">
-                              <button
-                                type="button"
-                                className={`inline-flex items-center gap-0.5 ${item.is_liked ? 'text-red-400' : 'text-white'}`}
-                                onClick={(e) => { e.stopPropagation(); handleLike(item.id) }}
-                              >
-                                <Heart className={`w-3 h-3 ${item.is_liked ? 'fill-current' : ''}`} />
-                                {item.like_count}
-                              </button>
-                              <span className="inline-flex items-center gap-0.5">
-                                <MessageCircle className="w-3 h-3" />
-                                {item.comment_count ?? 0}
-                              </span>
+                            {/* タイトルとカウント（画像の下） */}
+                            <div className="px-2 py-1">
+                              <div className="text-[11px] font-medium text-foreground truncate">{item.title}</div>
+                              <div className="mt-0.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+                                <button
+                                  type="button"
+                                  className={`inline-flex items-center gap-0.5 ${item.is_liked ? 'text-red-500' : ''}`}
+                                  onClick={(e) => { e.stopPropagation(); handleLike(item.id) }}
+                                  aria-label="いいね"
+                                >
+                                  <Heart className={`w-3 h-3 ${item.is_liked ? 'fill-current' : ''}`} />
+                                  {item.like_count}
+                                </button>
+                                <span className="inline-flex items-center gap-0.5">
+                                  <MessageCircle className="w-3 h-3" />
+                                  {item.comment_count ?? 0}
+                                </span>
+                              </div>
                             </div>
                           </button>
                         ))}
