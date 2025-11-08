@@ -505,6 +505,18 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                   </div>
                   <div className="text-right space-y-1 flex-shrink-0">
                     <div className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString('ja-JP')}</div>
+                    {s.reference_pdf && (
+                      <div className="text-right">
+                        <a
+                          href={s.reference_pdf}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center h-6 px-2 rounded text-xs bg-primary/10 text-primary hover:bg-primary/20"
+                        >
+                          添付資料あり
+                        </a>
+                      </div>
+                    )}
                     {isAdmin && (
                       <div className="text-right">
                         <Button size="sm" variant="ghost" className="h-6 px-2 text-destructive text-xs" onClick={() => adminDeleteSummary(s.id)}>
