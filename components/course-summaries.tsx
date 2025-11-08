@@ -93,6 +93,8 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [error, setError] = useState("")
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editContent, setEditContent] = useState<string>("")
+  const [editPdfName, setEditPdfName] = useState<string>("")
+  const [editPdfDataUrl, setEditPdfDataUrl] = useState<string>("")
 
   // filters
   const [q, setQ] = useState("")
@@ -303,16 +305,35 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
       const res = await fetch(`${API_BASE_URL}/courses/summaries/${summaryId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
-        body: JSON.stringify({ content: editContent })
+        body: JSON.stringify({ content: editContent, reference_pdf: editPdfDataUrl || undefined })
       })
       if (!res.ok) throw new Error('更新に失敗しました')
       const updated = await res.json()
-      setList(prev => prev.map(s => s.id === summaryId ? { ...s, content: updated.content } : s))
+      setList(prev => prev.map(s => s.id === summaryId ? { ...s, content: updated.content, reference_pdf: updated.reference_pdf } : s))
       setEditingId(null)
       setEditContent("")
+      setEditPdfName("")
+      setEditPdfDataUrl("")
     } catch (e:any) {
       alert(e?.message || '更新に失敗しました')
     }
+  }
+  const handleEditPdf = async (file: File | null) => {
+    if (!file) return
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      alert('PDFファイルのみアップロードできます')
+      return
+    }
+    const maxBytes = 4 * 1024 * 1024
+    if (file.size > maxBytes) {
+      alert('PDFは最大4MBまでです')
+      return
+    }
+    const buf = await file.arrayBuffer()
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+    const dataUrl = `data:application/pdf;base64,${base64}`
+    setEditPdfName(file.name)
+    setEditPdfDataUrl(dataUrl)
   }
   const adminDeleteComment = async (summaryId: number, commentId: number) => {
     if (!isAdmin) return
@@ -494,6 +515,16 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                   {editingId === s.id ? (
                     <div className="space-y-2">
                       <Textarea value={editContent} onChange={(e)=>setEditContent(e.target.value)} className="min-h-[100px]" />
+                      <div className="space-y-1">
+                        <div className="text-[11px] text-muted-foreground">参考資料（PDF, 任意）</div>
+                        <div className="text-[11px] text-muted-foreground">過去問などの配布禁止物は投稿しないでください。使用したノート等の共有のみ。</div>
+                        <div className="flex items-center gap-2">
+                          <Input type="file" accept=".pdf,application/pdf" className="text-sm" onChange={(e)=>handleEditPdf(e.target.files?.[0] || null)} />
+                          {(editPdfName || s.reference_pdf) && (
+                            <span className="text-xs text-foreground truncate">{editPdfName || '添付済みPDF'}</span>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex justify-end gap-2">
                         <Button size="sm" variant="outline" onClick={()=>{ setEditingId(null); setEditContent("") }}>取消</Button>
                         <Button size="sm" onClick={()=>saveEdit(s.id)}>保存</Button>
