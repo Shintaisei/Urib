@@ -298,6 +298,25 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       <div className="divide-y divide-border border border-border rounded">
         {posts.map((post) => {
           const isHighlighted = highlightPostId && parseInt(highlightPostId) === post.id
+          // 簡易キーワード抽出（投稿一覧表示用）
+          const extractKeywords = (text: string): string[] => {
+            const cleaned = (text || '')
+              .replace(/https?:\/\/\S+/g, ' ')
+              .replace(/[@＠]\S+/g, ' ')
+            const tokens: string[] = []
+            const katakana = cleaned.match(/[ァ-ヴー]{2,}/g) || []
+            const kanji = cleaned.match(/[一-龥々〆ヵヶ]{2,}/g) || []
+            const latin = cleaned.match(/[A-Za-z0-9][A-Za-z0-9_-]{2,}/g) || []
+            tokens.push(...katakana, ...kanji, ...latin)
+            const freq = new Map<string, number>()
+            for (const t of tokens) {
+              const key = t.trim()
+              if (!key) continue
+              freq.set(key, (freq.get(key) || 0) + 1)
+            }
+            return Array.from(freq.entries()).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k])=>k)
+          }
+          const keywordChips = extractKeywords(post.content)
           return (
             <div
               key={`board-post-${post.id}`}
@@ -319,6 +338,15 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               <div className="mt-1 text-[13px] text-foreground truncate">
                 {post.content}
               </div>
+              {keywordChips.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {keywordChips.map(tag => (
+                    <span key={`kw-${post.id}-${tag}`} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-muted text-foreground">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="mt-1 flex items-center gap-4 text-[12px] text-muted-foreground">
                 <div className="inline-flex items-center gap-1">

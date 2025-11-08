@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { X } from "lucide-react"
-import { MarketFilter } from "@/types"
+import type { MarketFilter } from "@/lib/market-api"
 
 interface MarketFilterPanelProps {
   filter: MarketFilter
@@ -96,8 +96,8 @@ export function MarketFilterPanel({ filter, onFilterChange, onClose }: MarketFil
                 id="minPrice"
                 type="number"
                 placeholder="0"
-                value={localFilter.minPrice || ""}
-                onChange={(e) => updateFilter("minPrice", e.target.value ? Number(e.target.value) : undefined)}
+                value={localFilter.min_price ?? ""}
+                onChange={(e) => updateFilter("min_price", e.target.value ? Number(e.target.value) : undefined)}
               />
             </div>
             <div>
@@ -108,8 +108,8 @@ export function MarketFilterPanel({ filter, onFilterChange, onClose }: MarketFil
                 id="maxPrice"
                 type="number"
                 placeholder="100000"
-                value={localFilter.maxPrice || ""}
-                onChange={(e) => updateFilter("maxPrice", e.target.value ? Number(e.target.value) : undefined)}
+                value={localFilter.max_price ?? ""}
+                onChange={(e) => updateFilter("max_price", e.target.value ? Number(e.target.value) : undefined)}
               />
             </div>
           </div>
@@ -176,15 +176,15 @@ export function MarketFilterPanel({ filter, onFilterChange, onClose }: MarketFil
         </div>
 
         {/* 現在のフィルター表示 */}
-        {(localFilter.minPrice !== undefined || localFilter.maxPrice !== undefined || localFilter.condition || localFilter.university) && (
+        {(localFilter.min_price !== undefined || localFilter.max_price !== undefined || localFilter.condition || localFilter.university) && (
           <div className="pt-4 border-t">
             <Label className="text-xs text-muted-foreground mb-2 block">
               現在のフィルター
             </Label>
             <div className="space-y-1">
-              {(localFilter.minPrice !== undefined || localFilter.maxPrice !== undefined) && (
+              {(localFilter.min_price !== undefined || localFilter.max_price !== undefined) && (
                 <div className="text-xs text-muted-foreground">
-                  価格: {localFilter.minPrice || 0}円 ～ {localFilter.maxPrice || "∞"}円
+                  価格: {localFilter.min_price ?? 0}円 ～ {localFilter.max_price ?? "∞"}円
                 </div>
               )}
               {localFilter.condition && (
