@@ -55,6 +55,10 @@ interface MarketItemCardProps {
 export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: MarketItemCardProps) {
   const [isLiking, setIsLiking] = useState(false)
   const [isToggling, setIsToggling] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(item.title)
+  const [editPrice, setEditPrice] = useState(item.price ?? 0)
+  const [editDescription, setEditDescription] = useState(item.description)
   const [comments, setComments] = useState<MarketItemComment[]>([])
   const [commentsOpen, setCommentsOpen] = useState(false)
   const commentsLoadedRef = useRef(false)
@@ -316,38 +320,85 @@ export function MarketItemCard({ item, onLike, onDeleted, onStatusChanged }: Mar
         <div className="p-3">
           {/* タイトルとカテゴリ */}
           <div className="mb-1.5">
-            <h3 className="font-semibold text-foreground line-clamp-2 mb-1 text-[15px]">
-              {item.title}
-            </h3>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{item.category}</span>
-              <span>•</span>
-              <span>{getConditionText(item.condition)}</span>
-            </div>
+            {editing ? (
+              <div className="space-y-2">
+                <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full px-2 py-1 text-sm border rounded" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">価格</span>
+                  <input type="number" min={0} value={editPrice} onChange={(e) => setEditPrice(parseInt(e.target.value || '0', 10))} className="w-32 px-2 py-1 text-sm border rounded" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <h3 className="font-semibold text-foreground line-clamp-2 mb-1 text-[15px]">
+                  {item.title}
+                </h3>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>{item.category}</span>
+                  <span>•</span>
+                  <span>{getConditionText(item.condition)}</span>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* 管理者: 出品削除ボタン */}
-          {isAdmin && (
+          {/* 管理者: 出品削除ボタン / 作者: 編集ボタン */}
+          {(isAdmin || item.can_edit) && (
             <div className="flex justify-end mb-2">
-              <Button
-                size="sm"
-                variant="destructive"
-                className="h-7 px-2 text-xs"
-                onClick={async () => {
-                  if (!confirm('この出品を削除しますか？')) return
-                  try {
-                    await adminDeleteItem(item.id)
-                    if (onDeleted) onDeleted(item.id)
-                  } catch (e: any) {
-                    alert(e.message || '削除に失敗しました')
-                  }
-                }}
-              >削除（管理者）</Button>
+              {item.can_edit && (
+                <>
+                  {!editing ? (
+                    <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" onClick={() => { setEditing(true); setEditTitle(item.title); setEditPrice(item.price ?? 0); setEditDescription(item.description) }}>
+                      編集
+                    </Button>
+                  ) : (
+                    <>
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-xs mr-2" onClick={() => setEditing(false)}>
+                        取消
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={async () => {
+                          try {
+                            const updated = await MarketApi.updateItem(item.id, { title: editTitle.trim(), price: editPrice, description: editDescription.trim() })
+                            setEditing(false)
+                          } catch (e:any) {
+                            alert(e.message || '更新に失敗しました')
+                          }
+                        }}
+                      >
+                        保存
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-7 px-2 text-xs"
+                  onClick={async () => {
+                    if (!confirm('この出品を削除しますか？')) return
+                    try {
+                      await adminDeleteItem(item.id)
+                      if (onDeleted) onDeleted(item.id)
+                    } catch (e: any) {
+                      alert(e.message || '削除に失敗しました')
+                    }
+                  }}
+                >削除（管理者）</Button>
+              )}
             </div>
           )}
 
           {/* 説明 */}
-          <ExpandableText text={item.description} maxChars={140} />
+          {editing ? (
+            <textarea value={editDescription} onChange={(e)=>setEditDescription(e.target.value)} className="w-full border rounded text-sm p-2 min-h-[80px]" />
+          ) : (
+            <ExpandableText text={item.description} maxChars={140} />
+          )}
 
           {/* 投稿者情報 */}
           <div className="flex items-center gap-2 mb-2.5">

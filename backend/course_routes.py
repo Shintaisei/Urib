@@ -113,6 +113,7 @@ def list_summaries(
                         except Exception as like_error:
                             print(f"⚠️ いいね状態確認エラー: {like_error}")
                             is_liked = None
+                    can_edit = bool(current_user_id and r.author_id == current_user_id)
                     
                     summary_response = schemas.CourseSummaryResponse(
                         id=r.id,
@@ -131,6 +132,7 @@ def list_summaries(
                         difficulty_level=getattr(r, 'difficulty_level', None),
                         created_at=ensure_jst_aware(r.created_at).isoformat(),
                         is_liked=is_liked,
+                        can_edit=can_edit,
                     )
                     result.append(summary_response)
                 except Exception as row_error:
@@ -192,6 +194,56 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
         difficulty_level=row.difficulty_level,
         created_at=ensure_jst_aware(row.created_at).isoformat(),
         is_liked=False,  # 新規作成時はいいねなし
+        can_edit=True,
+    )
+
+@router.put("/summaries/{summary_id}", response_model=schemas.CourseSummaryResponse)
+def update_summary(summary_id: int, payload: schemas.CourseSummaryCreate, request: Request, db: Session = Depends(get_db)):
+    """授業まとめの編集（作者のみ）"""
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    row = db.query(models.CourseSummary).filter(models.CourseSummary.id == summary_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="まとめが見つかりません")
+    if row.author_id != current_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="編集権限がありません")
+    # 更新（与えられた項目のみ）
+    row.title = payload.title or row.title
+    row.course_name = payload.course_name if payload.course_name is not None else row.course_name
+    row.instructor = payload.instructor if payload.instructor is not None else row.instructor
+    row.department = payload.department if payload.department is not None else row.department
+    row.year_semester = payload.year_semester if payload.year_semester is not None else row.year_semester
+    row.tags = payload.tags if payload.tags is not None else row.tags
+    row.content = payload.content or row.content
+    # 新しいフィールド
+    if hasattr(row, 'grade_level'):
+        row.grade_level = payload.grade_level if payload.grade_level is not None else row.grade_level
+    if hasattr(row, 'grade_score'):
+        row.grade_score = payload.grade_score if payload.grade_score is not None else row.grade_score
+    if hasattr(row, 'difficulty_level'):
+        row.difficulty_level = payload.difficulty_level if payload.difficulty_level is not None else row.difficulty_level
+    row.updated_at = models.jst_now()
+    db.commit()
+    db.refresh(row)
+    return schemas.CourseSummaryResponse(
+        id=row.id,
+        title=row.title,
+        course_name=row.course_name,
+        instructor=row.instructor,
+        department=row.department,
+        year_semester=row.year_semester,
+        tags=row.tags,
+        content=row.content,
+        author_name=row.author_name,
+        like_count=row.like_count,
+        comment_count=row.comment_count,
+        grade_level=getattr(row, 'grade_level', None),
+        grade_score=getattr(row, 'grade_score', None),
+        difficulty_level=getattr(row, 'difficulty_level', None),
+        created_at=ensure_jst_aware(row.created_at).isoformat(),
+        is_liked=None,
+        can_edit=True,
     )
 
 @router.get("/summaries/{summary_id}/comments", response_model=List[schemas.CourseSummaryCommentResponse])

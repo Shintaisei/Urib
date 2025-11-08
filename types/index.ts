@@ -87,6 +87,7 @@ export interface MarketItem {
   like_count: number
   is_liked: boolean
   comment_count?: number
+  can_edit?: boolean
 }
 
 export interface MarketItemCreate {

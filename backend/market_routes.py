@@ -127,6 +127,9 @@ def get_market_items(
     
     # レスポンス形式に変換
     result = []
+    # 現在ユーザーの取得（can_edit 判定用）
+    current_user_email = get_current_user_email(request)
+    current_user = get_user_by_email(db, current_user_email) if current_user_email else None
     for item in items:
         # 画像をJSONから配列に変換
         images = []
@@ -140,6 +143,7 @@ def get_market_items(
             comment_count = db.query(models.MarketItemComment.id).filter(models.MarketItemComment.item_id == item.id).count()
         except Exception:
             comment_count = 0
+        can_edit = bool(current_user and item.author_id == current_user.id)
         
         result.append(schemas.MarketItemResponse(
             id=str(item.id),
@@ -159,7 +163,8 @@ def get_market_items(
             view_count=item.view_count,
             like_count=item.like_count,
             is_liked=False,  # TODO: 現在のユーザーのいいね状態を確認
-            comment_count=int(comment_count)
+            comment_count=int(comment_count),
+            can_edit=can_edit
         ))
     
     return result
@@ -195,6 +200,10 @@ def get_market_item(
         comment_count = db.query(models.MarketItemComment.id).filter(models.MarketItemComment.item_id == item.id).count()
     except Exception:
         comment_count = 0
+    # can_edit
+    current_user_email = get_current_user_email(request)
+    current_user = get_user_by_email(db, current_user_email) if current_user_email else None
+    can_edit = bool(current_user and item.author_id == current_user.id)
     
     return schemas.MarketItemResponse(
         id=str(item.id),
@@ -214,7 +223,8 @@ def get_market_item(
         view_count=item.view_count,
         like_count=item.like_count,
         is_liked=False,  # TODO: 現在のユーザーのいいね状態を確認
-        comment_count=int(comment_count)
+        comment_count=int(comment_count),
+        can_edit=can_edit
     )
 
 @router.post("/items", response_model=schemas.MarketItemResponse)

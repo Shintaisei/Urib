@@ -73,6 +73,7 @@ class MarketItemResponse(BaseModel):
     like_count: int
     is_liked: Optional[bool] = False
     comment_count: Optional[int] = 0
+    can_edit: Optional[bool] = False
 
 class MarketStats(BaseModel):
     total_items: int
@@ -207,6 +208,7 @@ class CourseSummaryResponse(BaseModel):
     difficulty_level: Optional[str] = None
     created_at: str
     is_liked: Optional[bool] = None  # 現在のユーザーがいいねしているか
+    can_edit: Optional[bool] = False
 
 class CourseSummaryCommentCreate(BaseModel):
     content: str
@@ -248,6 +250,7 @@ class CircleSummaryResponse(BaseModel):
     like_count: int
     comment_count: int
     created_at: str
+    can_edit: Optional[bool] = False
 
 class CircleSummaryCommentCreate(BaseModel):
     content: str

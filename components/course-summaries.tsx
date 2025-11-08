@@ -75,6 +75,7 @@ type Summary = {
   difficulty_level?: string
   created_at: string
   is_liked?: boolean
+  can_edit?: boolean
 }
 
 type Comment = {
@@ -89,6 +90,8 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [list, setList] = useState<Summary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editContent, setEditContent] = useState<string>("")
 
   // filters
   const [q, setQ] = useState("")
@@ -292,6 +295,24 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
     }
   }
 
+  const saveEdit = async (summaryId: number) => {
+    try {
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const res = await fetch(`${API_BASE_URL}/courses/summaries/${summaryId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+        body: JSON.stringify({ content: editContent })
+      })
+      if (!res.ok) throw new Error('更新に失敗しました')
+      const updated = await res.json()
+      setList(prev => prev.map(s => s.id === summaryId ? { ...s, content: updated.content } : s))
+      setEditingId(null)
+      setEditContent("")
+    } catch (e:any) {
+      alert(e?.message || '更新に失敗しました')
+    }
+  }
   const adminDeleteComment = async (summaryId: number, commentId: number) => {
     if (!isAdmin) return
     if (!confirm('このコメントを削除しますか？')) return
@@ -468,7 +489,19 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                     )}
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-foreground whitespace-pre-wrap break-words">{s.content}</div>
+                <div className="mt-2 text-sm text-foreground whitespace-pre-wrap break-words">
+                  {editingId === s.id ? (
+                    <div className="space-y-2">
+                      <Textarea value={editContent} onChange={(e)=>setEditContent(e.target.value)} className="min-h-[100px]" />
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={()=>{ setEditingId(null); setEditContent("") }}>取消</Button>
+                        <Button size="sm" onClick={()=>saveEdit(s.id)}>保存</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    s.content
+                  )}
+                </div>
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                   <div className="flex items-center gap-3">
                     <div>投稿者: {s.author_name}</div>
@@ -485,6 +518,11 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                   <button className="text-primary hover:underline" onClick={() => toggleComments(s.id)}>
                     コメントを{openComments[s.id] ? '閉じる' : '見る'} ({s.comment_count})
                   </button>
+                  {s.can_edit && editingId !== s.id && (
+                    <button className="text-blue-600 hover:underline" onClick={()=>{ setEditingId(s.id); setEditContent(s.content) }}>
+                      編集
+                    </button>
+                  )}
                 </div>
                 {openComments[s.id] && (
                   <div className="mt-2 border-t pt-2 space-y-2">

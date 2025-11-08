@@ -15,7 +15,7 @@ def get_db():
         db.close()
 
 @router.get("/summaries", response_model=List[schemas.CircleSummaryResponse])
-def list_summaries(category: str = "", q: str = "", limit: int = 50, db: Session = Depends(get_db)):
+def list_summaries(category: str = "", q: str = "", limit: int = 50, request: Request = None, db: Session = Depends(get_db)):
     try:
         # データベース接続確認
         print(f"🔍 CircleSummary データベース接続確認: {db}")
@@ -54,6 +54,9 @@ def list_summaries(category: str = "", q: str = "", limit: int = 50, db: Session
             result = []
             for r in rows:
                 try:
+                    # can_edit 判定
+                    current_user_id = get_current_user_id(request) if request else None
+                    can_edit = bool(current_user_id and r.author_id == current_user_id)
                     summary_response = schemas.CircleSummaryResponse(
                         id=r.id,
                         title=r.title,
@@ -69,6 +72,7 @@ def list_summaries(category: str = "", q: str = "", limit: int = 50, db: Session
                         like_count=r.like_count,
                         comment_count=r.comment_count,
                         created_at=ensure_jst_aware(r.created_at).isoformat(),
+                        can_edit=can_edit,
                     )
                     result.append(summary_response)
                 except Exception as row_error:
@@ -128,6 +132,49 @@ def create_summary(payload: schemas.CircleSummaryCreate, request: Request, db: S
         like_count=row.like_count,
         comment_count=row.comment_count,
         created_at=ensure_jst_aware(row.created_at).isoformat(),
+        can_edit=True,
+    )
+
+@router.put("/summaries/{summary_id}", response_model=schemas.CircleSummaryResponse)
+def update_circle_summary(summary_id: int, payload: schemas.CircleSummaryCreate, request: Request, db: Session = Depends(get_db)):
+    """サークルまとめの編集（作者のみ）"""
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    row = db.query(models.CircleSummary).filter(models.CircleSummary.id == summary_id).first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="まとめが見つかりません")
+    if row.author_id != current_user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="編集権限がありません")
+    # 更新
+    row.title = payload.title or row.title
+    row.circle_name = payload.circle_name if payload.circle_name is not None else row.circle_name
+    row.category = payload.category if payload.category is not None else row.category
+    row.activity_days = payload.activity_days if payload.activity_days is not None else row.activity_days
+    row.activity_place = payload.activity_place if payload.activity_place is not None else row.activity_place
+    row.cost = payload.cost if payload.cost is not None else row.cost
+    row.links = payload.links if payload.links is not None else row.links
+    row.tags = payload.tags if payload.tags is not None else row.tags
+    row.content = payload.content or row.content
+    row.updated_at = models.jst_now()
+    db.commit()
+    db.refresh(row)
+    return schemas.CircleSummaryResponse(
+        id=row.id,
+        title=row.title,
+        circle_name=row.circle_name,
+        category=row.category,
+        activity_days=row.activity_days,
+        activity_place=row.activity_place,
+        cost=row.cost,
+        links=row.links,
+        tags=row.tags,
+        content=row.content,
+        author_name=row.author_name,
+        like_count=row.like_count,
+        comment_count=row.comment_count,
+        created_at=ensure_jst_aware(row.created_at).isoformat(),
+        can_edit=True,
     )
 
 @router.get("/summaries/{summary_id}/comments", response_model=List[schemas.CircleSummaryCommentResponse])
