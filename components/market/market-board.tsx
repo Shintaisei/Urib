@@ -20,6 +20,8 @@ import { LoadingProgress } from "@/components/loading-progress"
 import { MarketItem, MarketItemType, type MarketItemCreate } from "@/types"
 import type { MarketFilter } from "@/lib/market-api"
 import { MarketItemCard } from "./market-item-card"
+import { MarketDetailModal } from "./market-detail-modal"
+import { SafeImage } from "@/components/ui/safe-image"
 import { MarketFilterPanel } from "./market-filter-panel"
 import { MarketCreateModal } from "./market-create-modal"
 import { MarketApi, setDevUserEmail } from "@/lib/market-api"
@@ -118,6 +120,7 @@ export function MarketBoard() {
   const [filter, setFilter] = useState<MarketFilter>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [detailItemId, setDetailItemId] = useState<string | null>(null)
 
   // 初期データの読み込み
   useEffect(() => {
@@ -348,24 +351,58 @@ export function MarketBoard() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 xl:gap-3">
-                {filteredItems.map((item) => (
-                  <div key={`market-item-${item.id}`} id={`market-${item.id}`}>
-                    <MarketItemCard
-                      item={item}
-                      onLike={handleLike}
-                      onDeleted={(itemId) => {
-                        setItems(prev => prev.filter(i => i.id !== itemId))
-                        invalidateCache('market-items')
-                      }}
-                      onStatusChanged={(itemId, isAvailable) => {
-                        setItems(prev => prev.map(i => i.id === itemId ? { ...i, is_available: isAvailable } : i))
-                        invalidateCache('market-items')
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
+              <>
+                {/* サムネイルグリッド（画像 + 説明1行） */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 xl:gap-3">
+                  {filteredItems.map((item) => (
+                    <button
+                      key={`market-thumb-${item.id}`}
+                      id={`market-${item.id}`}
+                      type="button"
+                      className="text-left group border border-border rounded overflow-hidden hover:shadow-sm transition"
+                      onClick={() => setDetailItemId(item.id)}
+                    >
+                      <div className="relative aspect-[4/3] bg-muted/30">
+                        {item.images && item.images.length > 0 ? (
+                          <SafeImage
+                            src={item.images[0]}
+                            alt={item.title}
+                            className="w-full h-full object-contain bg-background"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">画像なし</div>
+                        )}
+                      </div>
+                      <div className="px-2 py-1">
+                        <div className="text-[12px] text-foreground line-clamp-1">{item.description || item.title}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* 詳細モーダル */}
+                {detailItemId && (
+                  <MarketDetailModal
+                    itemId={detailItemId}
+                    onClose={() => setDetailItemId(null)}
+                    onLike={async (id) => {
+                      await handleLike(id)
+                      // 一覧のlike数も同期
+                      const fresh = await MarketApi.getItem(id)
+                      setItems(prev => prev.map(i => i.id === id ? { ...i, is_liked: fresh.is_liked, like_count: fresh.like_count } : i))
+                    }}
+                    onDeleted={(id) => {
+                      setItems(prev => prev.filter(i => i.id !== id))
+                      invalidateCache('market-items')
+                      setDetailItemId(null)
+                    }}
+                    onStatusChanged={(id, isAvailable) => {
+                      setItems(prev => prev.map(i => i.id === id ? { ...i, is_available: isAvailable } : i))
+                      invalidateCache('market-items')
+                    }}
+                  />
+                )}
+              </>
             )}
           </div>
         </div>
