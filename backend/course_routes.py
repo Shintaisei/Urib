@@ -168,6 +168,7 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
         year_semester=payload.year_semester,
         tags=payload.tags,
         content=payload.content,
+        reference_pdf=payload.reference_pdf,
         grade_level=payload.grade_level,
         grade_score=payload.grade_score,
         difficulty_level=payload.difficulty_level,
@@ -186,6 +187,7 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
         year_semester=row.year_semester,
         tags=row.tags,
         content=row.content,
+        reference_pdf=row.reference_pdf,
         author_name=row.author_name,
         like_count=row.like_count,
         comment_count=row.comment_count,
@@ -216,6 +218,8 @@ def update_summary(summary_id: int, payload: schemas.CourseSummaryCreate, reques
     row.year_semester = payload.year_semester if payload.year_semester is not None else row.year_semester
     row.tags = payload.tags if payload.tags is not None else row.tags
     row.content = payload.content or row.content
+    if hasattr(row, 'reference_pdf'):
+        row.reference_pdf = payload.reference_pdf if payload.reference_pdf is not None else row.reference_pdf
     # 新しいフィールド
     if hasattr(row, 'grade_level'):
         row.grade_level = payload.grade_level if payload.grade_level is not None else row.grade_level
@@ -235,6 +239,7 @@ def update_summary(summary_id: int, payload: schemas.CourseSummaryCreate, reques
         year_semester=row.year_semester,
         tags=row.tags,
         content=row.content,
+        reference_pdf=getattr(row, 'reference_pdf', None),
         author_name=row.author_name,
         like_count=row.like_count,
         comment_count=row.comment_count,

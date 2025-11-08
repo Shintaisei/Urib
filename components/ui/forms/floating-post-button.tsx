@@ -109,6 +109,26 @@ export function FloatingPostButton() {
   const insertCourseTemplate = (text: string) => {
     setCourseContent(text)
   }
+  // Course reference PDF
+  const [coursePdfName, setCoursePdfName] = useState<string>("")
+  const [coursePdfDataUrl, setCoursePdfDataUrl] = useState<string>("")
+  const handleCoursePdf = async (file: File | null) => {
+    if (!file) return
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      alert('PDFファイルのみアップロードできます')
+      return
+    }
+    const maxBytes = 4 * 1024 * 1024 // 4MB
+    if (file.size > maxBytes) {
+      alert('PDFは最大4MBまでです')
+      return
+    }
+    const buf = await file.arrayBuffer()
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+    const dataUrl = `data:application/pdf;base64,${base64}`
+    setCoursePdfName(file.name)
+    setCoursePdfDataUrl(dataUrl)
+  }
 
   // Circle summary fields
   const [circleName, setCircleName] = useState("")
@@ -320,7 +340,8 @@ export function FloatingPostButton() {
           content: courseContent.trim(),
           grade_level: gradeLevel.trim() || null,
           grade_score: gradeScore.trim() || null,
-          difficulty_level: difficultyLevel.trim() || null
+          difficulty_level: difficultyLevel.trim() || null,
+          reference_pdf: coursePdfDataUrl || null
         }
       } else if (postType === 'circle') {
         if (!circleContent.trim()) throw new Error('内容を入力してください')
@@ -476,6 +497,8 @@ export function FloatingPostButton() {
     setGradeLevel("")
     setGradeScore("")
     setDifficultyLevel("")
+    setCoursePdfName("")
+    setCoursePdfDataUrl("")
     setCircleName("")
     setCategory("")
     setActivityDays("")
@@ -500,7 +523,7 @@ export function FloatingPostButton() {
       {/* モーダル */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <Card className="w-full max-w-2xl lg:max-w-3xl max-h-[90vh] overflow-y-auto">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle className="text-lg">
                 {postType === 'board' && '新規投稿'}
@@ -781,6 +804,30 @@ export function FloatingPostButton() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  
+                  {/* 参考資料（PDF） */}
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium mb-1 block">参考資料（PDF, 任意）</label>
+                    <div className="text-[11px] text-muted-foreground">
+                      過去問などの配布禁止物は投稿しないでください。使用したノート等の共有のみ。
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        className="text-sm"
+                        onChange={(e) => handleCoursePdf(e.target.files?.[0] || null)}
+                      />
+                      {coursePdfName && (
+                        <span className="text-xs text-foreground truncate">{coursePdfName}</span>
+                      )}
+                    </div>
+                    {coursePdfDataUrl && (
+                      <div className="text-[11px] text-muted-foreground">
+                        添付済み: {coursePdfName || 'PDF'}（最大4MB）
+                      </div>
+                    )}
                   </div>
                   
                   {/* テンプレートを使う */}

@@ -349,6 +349,8 @@ class CourseSummary(Base):
     grade_level = Column(String(20), nullable=True, index=True)  # 学年: 1年, 2年, 3年, 4年, 修士, 博士
     grade_score = Column(String(20), nullable=True, index=True)  # 成績: A+, A, A-, B+, B, B-, C+, C, D, D-, F
     difficulty_level = Column(String(20), nullable=True, index=True)  # 取りやすさ: ど仏, 仏, 普通, 鬼, ど鬼
+    # 参考資料（PDFなど）をDataURL等で保持（小さめ推奨）
+    reference_pdf = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=jst_now, index=True)
     updated_at = Column(DateTime(timezone=True), default=jst_now, onupdate=jst_now, index=True)
 

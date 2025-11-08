@@ -189,6 +189,8 @@ class CourseSummaryCreate(BaseModel):
     grade_level: Optional[str] = None  # 学年: 1年, 2年, 3年, 4年, 修士, 博士
     grade_score: Optional[str] = None  # 成績: A+, A, A-, B+, B, B-, C+, C, D, D-, F
     difficulty_level: Optional[str] = None  # 取りやすさ: ど仏, 仏, 普通, 鬼, ど鬼
+    # 参考資料（PDFはDataURL想定。サイズは数MB以内）
+    reference_pdf: Optional[str] = None
 
 class CourseSummaryResponse(BaseModel):
     id: int
@@ -199,6 +201,7 @@ class CourseSummaryResponse(BaseModel):
     year_semester: Optional[str] = None
     tags: Optional[str] = None
     content: str
+    reference_pdf: Optional[str] = None
     author_name: str
     like_count: int
     comment_count: int
