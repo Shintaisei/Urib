@@ -67,6 +67,7 @@ type Summary = {
   year_semester?: string
   tags?: string
   content: string
+  reference_pdf?: string
   author_name: string
   like_count: number
   comment_count: number
@@ -434,7 +435,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
             </Select>
           </div>
           <div className="flex justify-end">
-            <Button variant="outline" onClick={fetchList}>絞り込み</Button>
+            <Button variant="outline" onClick={() => fetchList()}>絞り込み</Button>
           </div>
 
           <LoadingProgress isLoading={loading} text="授業まとめを読み込み中..." />
@@ -502,6 +503,23 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                     s.content
                   )}
                 </div>
+                {/* 参考資料（PDF）ダウンロード */}
+                {s.reference_pdf && (
+                  <div className="mt-2">
+                    <a
+                      href={s.reference_pdf}
+                      download={`reference_${s.id}.pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-2 py-1 rounded bg-muted hover:bg-muted/80 text-xs text-foreground"
+                    >
+                      参考資料（PDF）を開く / ダウンロード
+                    </a>
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      過去問などの配布禁止物は投稿しないでください。
+                    </div>
+                  </div>
+                )}
                 <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                   <div className="flex items-center gap-3">
                     <div>投稿者: {s.author_name}</div>

@@ -124,6 +124,7 @@ def list_summaries(
                         year_semester=r.year_semester,
                         tags=r.tags,
                         content=r.content,
+                        reference_pdf=getattr(r, 'reference_pdf', None),
                         author_name=r.author_name,
                         like_count=r.like_count,
                         comment_count=r.comment_count,
