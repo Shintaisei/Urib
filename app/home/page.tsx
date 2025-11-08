@@ -22,6 +22,7 @@ export default function HomePage() {
   const [overviewPosts, setOverviewPosts] = useState<any[]>([])
   const [overviewCourses, setOverviewCourses] = useState<any[]>([])
   const [overviewCircles, setOverviewCircles] = useState<any[]>([])
+  const [overviewMarket, setOverviewMarket] = useState<any[]>([])
   const [loadingOverview, setLoadingOverview] = useState<boolean>(true)
 
   // 初期データの並列読み込み
@@ -72,21 +73,25 @@ export default function HomePage() {
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
         const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
         const headers: HeadersInit = userId ? { 'X-User-Id': String(userId) } : {}
-        const [pRes, cRes, sRes] = await Promise.all([
+        const [pRes, cRes, sRes, mRes] = await Promise.all([
           fetch(`${API_BASE_URL}/board/posts/feed?feed_type=latest&limit=6`, { headers, cache: 'no-store' }),
           fetch(`${API_BASE_URL}/courses/summaries?limit=5`, { cache: 'no-store' }),
           fetch(`${API_BASE_URL}/circles/summaries?limit=5`, { cache: 'no-store' }),
+          fetch(`${API_BASE_URL}/market/items?limit=8`, { headers, cache: 'no-store' }),
         ])
         const pJson = await pRes.json().catch(() => ({ posts: [] }))
         const cJson = await cRes.json().catch(() => ([]))
         const sJson = await sRes.json().catch(() => ([]))
+        const mJson = await mRes.json().catch(() => ([]))
         setOverviewPosts(Array.isArray(pJson?.posts) ? pJson.posts : [])
         setOverviewCourses(Array.isArray(cJson) ? cJson : [])
         setOverviewCircles(Array.isArray(sJson) ? sJson : [])
+        setOverviewMarket(Array.isArray(mJson) ? mJson : [])
       } catch (e) {
         setOverviewPosts([])
         setOverviewCourses([])
         setOverviewCircles([])
+        setOverviewMarket([])
       } finally {
         setLoadingOverview(false)
       }
@@ -282,10 +287,10 @@ export default function HomePage() {
                     ))}
                   </div>
 
-                  {/* 授業まとめ 新着 */}
+                  {/* 授業・サークルまとめ 新着（統合） */}
                   <div className="border rounded-lg p-4 bg-card/80">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold">授業まとめ 新着</div>
+                      <div className="font-semibold">授業・サークルまとめ 新着</div>
                       <button
                         onClick={() => { setActiveTab('summaries'); setSummaryTab('courses') }}
                         className="text-xs text-primary hover:underline"
@@ -293,39 +298,57 @@ export default function HomePage() {
                     </div>
                     {loadingOverview ? (
                       <div className="text-sm text-muted-foreground py-4">読み込み中...</div>
-                    ) : (overviewCourses.length === 0 ? (
+                    ) : ((overviewCourses.length + overviewCircles.length) === 0 ? (
                       <div className="text-sm text-muted-foreground py-4">まだまとめがありません</div>
                     ) : (
-                      <ul className="space-y-2">
-                        {overviewCourses.slice(0, 5).map((s: any) => (
-                          <li key={`ov-course-${s.id}`} className="text-sm">
-                            <div className="truncate font-medium text-foreground">{s.title}</div>
-                            <div className="text-xs text-muted-foreground truncate">{s.course_name || s.department || ''}</div>
-                          </li>
-                        ))}
-                      </ul>
+                      (() => {
+                        // 混合リスト（最新順に近い感じで単純に先頭から閾値まで）
+                        const combined = [
+                          ...overviewCourses.map((s: any) => ({ ...s, _type: 'course' })),
+                          ...overviewCircles.map((s: any) => ({ ...s, _type: 'circle' })),
+                        ].slice(0, 8)
+                        return (
+                          <ul className="space-y-2">
+                            {combined.map((s: any, idx: number) => (
+                              <li key={`ov-sum-${s._type}-${s.id}-${idx}`} className="text-sm">
+                                <div className="truncate font-medium text-foreground">
+                                  {s.title}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {s._type === 'course' ? (s.course_name || s.department || '') : (s.circle_name || s.category || '')}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )
+                      })()
                     ))}
                   </div>
 
-                  {/* サークルまとめ 新着 */}
+                  {/* 中古品売買 新着 */}
                   <div className="border rounded-lg p-4 bg-card/80">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold">サークルまとめ 新着</div>
+                      <div className="font-semibold">中古品売買 新着</div>
                       <button
-                        onClick={() => { setActiveTab('summaries'); setSummaryTab('circles') }}
+                        onClick={() => setActiveTab('market')}
                         className="text-xs text-primary hover:underline"
                       >もっと見る</button>
                     </div>
                     {loadingOverview ? (
                       <div className="text-sm text-muted-foreground py-4">読み込み中...</div>
-                    ) : (overviewCircles.length === 0 ? (
-                      <div className="text-sm text-muted-foreground py-4">まだまとめがありません</div>
+                    ) : (overviewMarket.length === 0 ? (
+                      <div className="text-sm text-muted-foreground py-4">まだ出品がありません</div>
                     ) : (
                       <ul className="space-y-2">
-                        {overviewCircles.slice(0, 5).map((s: any) => (
-                          <li key={`ov-circle-${s.id}`} className="text-sm">
-                            <div className="truncate font-medium text-foreground">{s.title}</div>
-                            <div className="text-xs text-muted-foreground truncate">{s.circle_name || s.category || ''}</div>
+                        {overviewMarket.slice(0, 6).map((m: any) => (
+                          <li key={`ov-market-${m.id}`} className="text-sm">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="truncate font-medium text-foreground">{m.title}</div>
+                                <div className="text-xs text-muted-foreground truncate">{m.price === 0 ? '無料' : (m.price != null ? `¥${m.price}` : '')}</div>
+                              </div>
+                              <div className="flex-shrink-0 text-xs text-muted-foreground">{m.type === 'sell' ? '売' : '買'}</div>
+                            </div>
                           </li>
                         ))}
                       </ul>
