@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -114,6 +114,7 @@ export function MarketBoard() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const { invalidateCache } = useCachedFetch()
+  const pathname = usePathname()
   const [items, setItems] = useState<MarketItem[]>([])
   const [filteredItems, setFilteredItems] = useState<MarketItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -405,7 +406,15 @@ export function MarketBoard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => router.push('/market?view=full&type=buy')}
+                          type="button"
+                          onClick={() => {
+                            const url = '/market?view=full&type=buy'
+                            if (pathname === '/market') {
+                              router.replace(url)
+                            } else {
+                              router.push(url)
+                            }
+                          }}
                         >
                           すべて見る
                         </Button>
@@ -447,7 +456,15 @@ export function MarketBoard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => router.push('/market?view=full&type=sell')}
+                          type="button"
+                          onClick={() => {
+                            const url = '/market?view=full&type=sell'
+                            if (pathname === '/market') {
+                              router.replace(url)
+                            } else {
+                              router.push(url)
+                            }
+                          }}
                         >
                           すべて見る
                         </Button>
