@@ -779,6 +779,106 @@ export function FloatingPostButton() {
                     </div>
                   </div>
                   
+                  {/* テンプレートを使う */}
+                  <div>
+                    <div className="text-[11px] text-muted-foreground mb-1">テンプレートを使う（数字が大きいほど詳しい）</div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const t = [
+                            "【授業の概要】",
+                            "（1〜2行で要点）",
+                            "",
+                            "【評価方法】",
+                            "出席： / 小テスト： / 課題： / 期末試験：",
+                            "",
+                            "【取りやすさ】",
+                            "ど仏 / 仏 / 普通 / 鬼 / ど鬼",
+                            "",
+                            "【おすすめ・注意】",
+                            "一言メモ"
+                          ].join("\\n")
+                          setCourseContent(prev => prev ? prev : t)
+                        }}
+                      >① かんたん</Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const t = [
+                            "【基本情報】",
+                            "授業名： / 教員名： / 学期： / 学部・コース：",
+                            "",
+                            "【授業の流れ・教材】",
+                            "毎回の進め方や扱うテーマ、使用教材・配布資料など",
+                            "",
+                            "【課題・試験】",
+                            "課題の頻度・量、締切、試験の形式（持ち込み可/不可 等）",
+                            "",
+                            "【成績配分（目安）】",
+                            "出席 % / 小テスト % / 課題 % / 期末 %",
+                            "",
+                            "【コツ・履修のヒント】",
+                            "理解のコツ、よく出る範囲、勉強時間の目安",
+                            "",
+                            "【対象/履修者層】",
+                            "想定学年、履修者の傾向（理系/文系/必修/選択 など）",
+                          ].join("\\n")
+                          setCourseContent(prev => prev ? prev : t)
+                        }}
+                      >② ふつう</Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => {
+                          const t = [
+                            "【概要】",
+                            "授業のねらい・全体像",
+                            "",
+                            "【到達目標】",
+                            "この授業でできるようになること",
+                            "",
+                            "【進行（週ごとメモ可）】",
+                            "第1回： / 第2回： / 第3回： ...",
+                            "",
+                            "【教材・参考書】",
+                            "教科書/配布資料/参考文献/サイトなど",
+                            "",
+                            "【成績内訳（実績）】",
+                            "出席 % / 小テスト % / 課題 % / 期末 %",
+                            "",
+                            "【課題・試験の具体】",
+                            "課題例・求められるボリューム、試験の出題傾向",
+                            "",
+                            "【大変だった点・時間】",
+                            "毎週の学習時間目安、詰まりやすい箇所",
+                            "",
+                            "【難易度/取りやすさ】",
+                            "ど仏/仏/普通/鬼/ど鬼（理由も）",
+                            "",
+                            "【前提・おすすめ準備】",
+                            "履修前にあると楽な知識・科目・資料など",
+                            "",
+                            "【その他】",
+                            "オンライン/対面、出席確認方法、小テスト頻度 など",
+                            "",
+                            "【キーワード】",
+                            "関連用語を列挙（例：ベクトル空間, 固有値, ...）"
+                          ].join("\\n")
+                          setCourseContent(prev => prev ? prev : t)
+                        }}
+                      >③ しっかり</Button>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-sm font-medium mb-2 block">内容</label>
                     <Textarea
@@ -861,7 +961,7 @@ export function FloatingPostButton() {
                   onClick={handleSubmit}
                   disabled={submitting || (
                     postType === 'board' && !content.trim() ||
-                    postType === 'market' && (!title.trim() || !description.trim() || (type !== 'free' && (!price.trim() || parseInt(price) <= 0))) ||
+                    postType === 'market' && (!title.trim() || !description.trim() || (type === 'sell' && (price.trim() === '' || isNaN(parseInt(price)) || parseInt(price) < 0))) ||
                     postType === 'course' && !courseContent.trim() ||
                     postType === 'circle' && !circleContent.trim()
                   )}
