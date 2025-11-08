@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -109,6 +110,8 @@ const mockMarketItems: MarketItem[] = [
 ]
 
 export function MarketBoard() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { user } = useAuth()
   const { invalidateCache } = useCachedFetch()
   const [items, setItems] = useState<MarketItem[]>([])
@@ -121,6 +124,8 @@ export function MarketBoard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [detailItemId, setDetailItemId] = useState<string | null>(null)
+  const viewMode = (searchParams?.get('view') === 'full') ? 'full' : 'thumb'
+  const typeParam = searchParams?.get('type') as ('buy' | 'sell' | null)
 
   // 初期データの読み込み
   useEffect(() => {
@@ -181,6 +186,21 @@ export function MarketBoard() {
 
     setFilteredItems(filtered)
   }, [items, searchQuery, selectedType, filter])
+
+  // クエリからビュー/タイプ初期化
+  useEffect(() => {
+    if (viewMode === 'full') {
+      if (typeParam === 'buy' || typeParam === 'sell') {
+        setSelectedType(typeParam)
+      } else {
+        setSelectedType('all')
+      }
+    } else {
+      // サムネイル表示ではタイプは全体を保持
+      setSelectedType('all')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, typeParam])
 
   // アイテムのいいね機能
   const handleLike = async (itemId: string) => {
@@ -268,35 +288,36 @@ export function MarketBoard() {
             </Button>
           </div>
 
-          {/* タイプフィルター */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            <Button
-              variant={selectedType === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedType("all")}
-            >
-              すべて
-            </Button>
-            <Button
-              variant={selectedType === "buy" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedType("buy")}
-              className="text-blue-600 border-blue-600 hover:bg-blue-50"
-            >
-              <ShoppingCart className="w-4 h-4 mr-1" />
-              買いたい
-            </Button>
-            <Button
-              variant={selectedType === "sell" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedType("sell")}
-              className="text-green-600 border-green-600 hover:bg-green-50"
-            >
-              <DollarSign className="w-4 h-4 mr-1" />
-              売りたい
-            </Button>
-            {/* 無料は「売りたい」で価格0円として扱うため、ボタンは削除 */}
-          </div>
+          {/* タイプフィルター（フル表示では活かす／サムネイルでは非表示） */}
+          {viewMode === 'full' && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Button
+                variant={selectedType === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedType("all")}
+              >
+                すべて
+              </Button>
+              <Button
+                variant={selectedType === "buy" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedType("buy")}
+                className="text-blue-600 border-blue-600 hover:bg-blue-50"
+              >
+                <ShoppingCart className="w-4 h-4 mr-1" />
+                買いたい
+              </Button>
+              <Button
+                variant={selectedType === "sell" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedType("sell")}
+                className="text-green-600 border-green-600 hover:bg-green-50"
+              >
+                <DollarSign className="w-4 h-4 mr-1" />
+                売りたい
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -352,42 +373,120 @@ export function MarketBoard() {
               </Card>
             ) : (
               <>
-                {/* サムネイルグリッド（画像 + 説明1行） */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 xl:gap-3">
-                  {filteredItems.map((item) => (
-                    <button
-                      key={`market-thumb-${item.id}`}
-                      id={`market-${item.id}`}
-                      type="button"
-                      className="text-left group border border-border rounded overflow-hidden hover:shadow-sm transition"
-                      onClick={() => setDetailItemId(item.id)}
-                    >
-                      <div className="relative aspect-[4/3] bg-muted/30">
-                        {item.images && item.images.length > 0 ? (
-                          <SafeImage
-                            src={item.images[0]}
-                            alt={item.title}
-                            className="w-full h-full object-contain bg-background"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">画像なし</div>
-                        )}
+                {viewMode === 'full' ? (
+                  // フル表示: 以前のカードグリッド（タイプでフィルタ可）
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 xl:gap-3">
+                    {filteredItems.map((item) => (
+                      <div key={`market-item-${item.id}`} id={`market-${item.id}`}>
+                        <MarketItemCard
+                          item={item}
+                          onLike={handleLike}
+                          onDeleted={(itemId) => {
+                            setItems(prev => prev.filter(i => i.id !== itemId))
+                            invalidateCache('market-items')
+                          }}
+                          onStatusChanged={(itemId, isAvailable) => {
+                            setItems(prev => prev.map(i => i.id === itemId ? { ...i, is_available: isAvailable } : i))
+                            invalidateCache('market-items')
+                          }}
+                        />
                       </div>
-                      <div className="px-2 py-1">
-                        <div className="text-[12px] text-foreground line-clamp-1">{item.description || item.title}</div>
+                    ))}
+                  </div>
+                ) : (
+                  // サムネイル表示: 買いたい / 売りたい の二段
+                  <div className="space-y-6">
+                    {/* 買いたいセクション */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-blue-700">買いたい</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => router.push('/market?view=full&type=buy')}
+                        >
+                          すべて見る
+                        </Button>
                       </div>
-                    </button>
-                  ))}
-                </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {items.filter(i => i.is_available && i.type === 'buy').map(item => (
+                          <button
+                            key={`thumb-buy-${item.id}`}
+                            type="button"
+                            className="relative w-40 h-28 flex-shrink-0 border border-border rounded overflow-hidden hover:shadow-sm transition"
+                            onClick={() => setDetailItemId(item.id)}
+                          >
+                            {item.images && item.images.length > 0 ? (
+                              <SafeImage src={item.images[0]} alt={item.title} className="w-full h-full object-contain bg-background" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">画像なし</div>
+                            )}
+                            {/* ラベル: タイプ・ステータス・価格 */}
+                            <div className="absolute top-1 left-1">
+                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-600 text-white">買いたい</span>
+                            </div>
+                            <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
+                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
+                              {item.price !== undefined && item.price !== null && (
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                {/* 詳細モーダル */}
+                    {/* 売りたいセクション */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-green-700">売りたい</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => router.push('/market?view=full&type=sell')}
+                        >
+                          すべて見る
+                        </Button>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {items.filter(i => i.is_available && i.type === 'sell').map(item => (
+                          <button
+                            key={`thumb-sell-${item.id}`}
+                            type="button"
+                            className="relative w-40 h-28 flex-shrink-0 border border-border rounded overflow-hidden hover:shadow-sm transition"
+                            onClick={() => setDetailItemId(item.id)}
+                          >
+                            {item.images && item.images.length > 0 ? (
+                              <SafeImage src={item.images[0]} alt={item.title} className="w-full h-full object-contain bg-background" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">画像なし</div>
+                            )}
+                            {/* ラベル: タイプ・ステータス・価格 */}
+                            <div className="absolute top-1 left-1">
+                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-600 text-white">売りたい</span>
+                            </div>
+                            <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
+                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
+                              <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 詳細モーダル（共通） */}
                 {detailItemId && (
                   <MarketDetailModal
                     itemId={detailItemId}
                     onClose={() => setDetailItemId(null)}
                     onLike={async (id) => {
                       await handleLike(id)
-                      // 一覧のlike数も同期
                       const fresh = await MarketApi.getItem(id)
                       setItems(prev => prev.map(i => i.id === id ? { ...i, is_liked: fresh.is_liked, like_count: fresh.like_count } : i))
                     }}
