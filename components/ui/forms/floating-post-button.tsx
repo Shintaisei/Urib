@@ -81,6 +81,7 @@ export function FloatingPostButton() {
   const [content, setContent] = useState("")
   const [hashtags, setHashtags] = useState("")
   const [boardId, setBoardId] = useState("1")
+  const [boardTagSuggestions, setBoardTagSuggestions] = useState<string[]>([])
 
   // Market item fields
   const [title, setTitle] = useState("")
@@ -98,6 +99,7 @@ export function FloatingPostButton() {
   const [yearSemester, setYearSemester] = useState("")
   const [courseTags, setCourseTags] = useState("")
   const [courseContent, setCourseContent] = useState("")
+  const [courseTagSuggestions, setCourseTagSuggestions] = useState<string[]>([])
   // 新しい評価フィールド
   const [gradeLevel, setGradeLevel] = useState("")
   const [gradeScore, setGradeScore] = useState("")
@@ -112,6 +114,7 @@ export function FloatingPostButton() {
   const [links, setLinks] = useState("")
   const [circleTags, setCircleTags] = useState("")
   const [circleContent, setCircleContent] = useState("")
+  const [circleTagSuggestions, setCircleTagSuggestions] = useState<string[]>([])
 
   // Helpers: market image handling
   const handleMarketFiles = async (files: FileList | null) => {
@@ -391,6 +394,49 @@ export function FloatingPostButton() {
     }
   }
 
+  // ---- Auto hashtag suggestions (軽量キーワード抽出) ----
+  const STOPWORDS_JA = new Set([
+    "これ","それ","あれ","ここ","そこ","あそこ","そして","しかし","でも","また","ため","こと","もの","よう","とき","ところ","ので","のでしょう","です","ます","でした","でしたら","する","した","して","なる","ある","いる","やる","られる","れる","ない","的","にて","により","について","など","とか","から","まで","より","なら","が","を","に","へ","で","と","や","の","も","は","ね","よ","ぞ","わ","かな","ですか","ますか"
+  ])
+  const extractKeywords = (text: string): string[] => {
+    if (!text) return []
+    const cleaned = text
+      .replace(/https?:\/\/\S+/g, ' ') // URL除去
+      .replace(/[@＠]\S+/g, ' ') // メンション除去
+    const tokens: string[] = []
+    // カタカナ2文字以上
+    const katakana = cleaned.match(/[ァ-ヴー]{2,}/g) || []
+    // 漢字2文字以上（々含む）
+    const kanji = cleaned.match(/[一-龥々〆ヵヶ]{2,}/g) || []
+    // 英数字3文字以上
+    const latin = cleaned.match(/[A-Za-z0-9][A-Za-z0-9_-]{2,}/g) || []
+    tokens.push(...katakana, ...kanji, ...latin)
+    const freq = new Map<string, number>()
+    for (const t of tokens) {
+      const key = t.trim()
+      if (!key) continue
+      if (STOPWORDS_JA.has(key)) continue
+      freq.set(key, (freq.get(key) || 0) + 1)
+    }
+    const sorted = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]).map(([k]) => k)
+    // 先頭5件程度
+    return sorted.slice(0, 5)
+  }
+  useEffect(() => {
+    setBoardTagSuggestions(extractKeywords(content))
+  }, [content])
+  useEffect(() => {
+    setCourseTagSuggestions(extractKeywords(courseContent))
+  }, [courseContent])
+  useEffect(() => {
+    setCircleTagSuggestions(extractKeywords(circleContent))
+  }, [circleContent])
+  const appendTagToInput = (current: string, tag: string): string => {
+    const parts = (current || '').split(/\s+/).filter(Boolean)
+    if (parts.includes(tag)) return current
+    return (parts.concat([tag])).join(' ')
+  }
+
   const resetForm = () => {
     setContent("")
     setHashtags("")
@@ -487,6 +533,23 @@ export function FloatingPostButton() {
                       onChange={(e) => setHashtags(e.target.value)}
                       className="text-sm"
                     />
+                    {boardTagSuggestions.length > 0 && (
+                      <div className="mt-2">
+                        <div className="text-[11px] text-muted-foreground mb-1">おすすめタグ</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {boardTagSuggestions.map(tag => (
+                            <button
+                              key={`sug-board-${tag}`}
+                              type="button"
+                              className="px-2 py-0.5 rounded text-[11px] bg-muted hover:bg-primary/10 text-foreground"
+                              onClick={() => setHashtags(prev => appendTagToInput(prev, tag))}
+                            >
+                              #{tag}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
