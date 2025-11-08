@@ -107,11 +107,6 @@ export function FloatingPostButton() {
   const [difficultyLevel, setDifficultyLevel] = useState("")
   // Template helpers
   const insertCourseTemplate = (text: string) => {
-    const exists = (courseContent || '').trim().length > 0
-    if (exists) {
-      const ok = confirm('現在の内容をテンプレートで置き換えますか？')
-      if (!ok) return
-    }
     setCourseContent(text)
   }
 
