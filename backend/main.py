@@ -60,12 +60,18 @@ async def run_migrations():
         print("🔄 データベースマイグレーション開始...")
 
         # columns
-        for col in ("grade_level", "grade_score", "difficulty_level"):
+        for col in ("grade_level", "grade_score", "difficulty_level", "reference_pdf"):
             if not column_exists('course_summaries', col):
                 if dialect == 'postgresql':
-                    exec_tx(f"ALTER TABLE course_summaries ADD COLUMN IF NOT EXISTS {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
+                    if col == "reference_pdf":
+                        exec_tx(f"ALTER TABLE course_summaries ADD COLUMN IF NOT EXISTS {col} TEXT", f"✅ {col}フィールドを追加しました")
+                    else:
+                        exec_tx(f"ALTER TABLE course_summaries ADD COLUMN IF NOT EXISTS {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
                 else:
-                    exec_tx(f"ALTER TABLE course_summaries ADD COLUMN {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
+                    if col == "reference_pdf":
+                        exec_tx(f"ALTER TABLE course_summaries ADD COLUMN {col} TEXT", f"✅ {col}フィールドを追加しました")
+                    else:
+                        exec_tx(f"ALTER TABLE course_summaries ADD COLUMN {col} VARCHAR(20)", f"✅ {col}フィールドを追加しました")
             else:
                 print(f"⚠️ {col}フィールドは既に存在します")
 

@@ -61,6 +61,16 @@ def add_new_fields():
             else:
                 print("⚠️ difficulty_levelフィールドは既に存在します")
 
+            # reference_pdf
+            try:
+                # PostgreSQLのinformation_schema前提で確認。失敗時もALTER試行へフォールバック
+                if not column_exists(conn, 'course_summaries', 'reference_pdf'):
+                    exec_tx(conn, "ALTER TABLE course_summaries ADD COLUMN reference_pdf TEXT", "✅ reference_pdfフィールドを追加しました")
+                else:
+                    print("⚠️ reference_pdfフィールドは既に存在します")
+            except Exception:
+                exec_tx(conn, "ALTER TABLE course_summaries ADD COLUMN reference_pdf TEXT", "✅ reference_pdfフィールドを追加しました")
+
             # indexes (IF NOT EXISTSは冪等)
             exec_tx(conn, "CREATE INDEX IF NOT EXISTS idx_course_summaries_grade_level ON course_summaries(grade_level)", "✅ grade_levelインデックスを追加しました", warn_match=("already exists",))
             exec_tx(conn, "CREATE INDEX IF NOT EXISTS idx_course_summaries_grade_score ON course_summaries(grade_score)", "✅ grade_scoreインデックスを追加しました", warn_match=("already exists",))
