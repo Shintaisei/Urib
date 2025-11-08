@@ -397,32 +397,17 @@ export function MarketBoard() {
                 ) : (
                   // サムネイル表示: 買いたい / 売りたい の二段
                   <div className="space-y-6">
-                    {/* 買いたいセクション */}
+                    {/* 売りたいセクション */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-blue-700">買いたい</span>
+                          <span className="text-sm font-semibold text-green-700">売りたい</span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          type="button"
-                          onClick={() => {
-                            const url = '/market?view=full&type=buy'
-                            if (pathname === '/market') {
-                              router.replace(url)
-                            } else {
-                              router.push(url)
-                            }
-                          }}
-                        >
-                          すべて見る
-                        </Button>
                       </div>
-                      <div className="grid grid-flow-col grid-rows-3 auto-cols-[10rem] gap-2 overflow-x-auto pb-1 pr-2">
-                        {items.filter(i => i.is_available && i.type === 'buy').map(item => (
+                      <div className="grid grid-flow-col grid-rows-5 auto-cols-[10rem] gap-2 overflow-x-auto pb-1 pr-2">
+                        {items.filter(i => i.is_available && i.type === 'sell').map(item => (
                           <button
-                            key={`thumb-buy-${item.id}`}
+                            key={`thumb-sell-${item.id}`}
                             type="button"
                             className="w-40 h-auto flex-shrink-0 border border-border rounded overflow-hidden hover:shadow-sm transition text-left"
                             onClick={() => setDetailItemId(item.id)}
@@ -435,13 +420,11 @@ export function MarketBoard() {
                               )}
                               {/* ラベル: タイプ・ステータス・価格 */}
                               <div className="absolute top-1 left-1">
-                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-600 text-white">買いたい</span>
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-600 text-white">売りたい</span>
                               </div>
                               <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
                                 <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
-                                {item.price !== undefined && item.price !== null && (
-                                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
-                                )}
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
                               </div>
                             </div>
                             {/* タイトルとカウント（画像の下） */}
@@ -468,32 +451,17 @@ export function MarketBoard() {
                       </div>
                     </div>
 
-                    {/* 売りたいセクション */}
+                    {/* 買いたいセクション */}
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-green-700">売りたい</span>
+                          <span className="text-sm font-semibold text-blue-700">買いたい</span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          type="button"
-                          onClick={() => {
-                            const url = '/market?view=full&type=sell'
-                            if (pathname === '/market') {
-                              router.replace(url)
-                            } else {
-                              router.push(url)
-                            }
-                          }}
-                        >
-                          すべて見る
-                        </Button>
                       </div>
-                      <div className="grid grid-flow-col grid-rows-3 auto-cols-[10rem] gap-2 overflow-x-auto pb-1 pr-2">
-                        {items.filter(i => i.is_available && i.type === 'sell').map(item => (
+                      <div className="grid grid-flow-col grid-rows-5 auto-cols-[10rem] gap-2 overflow-x-auto pb-1 pr-2">
+                        {items.filter(i => i.is_available && i.type === 'buy').map(item => (
                           <button
-                            key={`thumb-sell-${item.id}`}
+                            key={`thumb-buy-${item.id}`}
                             type="button"
                             className="w-40 h-auto flex-shrink-0 border border-border rounded overflow-hidden hover:shadow-sm transition text-left"
                             onClick={() => setDetailItemId(item.id)}
@@ -506,11 +474,13 @@ export function MarketBoard() {
                               )}
                               {/* ラベル: タイプ・ステータス・価格 */}
                               <div className="absolute top-1 left-1">
-                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-600 text-white">売りたい</span>
+                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-600 text-white">買いたい</span>
                               </div>
                               <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
                                 <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
-                                <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
+                                {item.price !== undefined && item.price !== null && (
+                                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
+                                )}
                               </div>
                             </div>
                             {/* タイトルとカウント（画像の下） */}
