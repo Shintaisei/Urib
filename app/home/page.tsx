@@ -15,11 +15,15 @@ import { useParallelFetch } from "@/lib/api-cache"
 import { PostList } from "@/components/board/post-list"
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<'feed' | 'boards' | 'market' | 'summaries'>('feed')
+  const [activeTab, setActiveTab] = useState<'overview' | 'feed' | 'boards' | 'market' | 'summaries'>('overview')
   const [initialDataLoaded, setInitialDataLoaded] = useState(false)
   const { fetchMultiple } = useParallelFetch()
   const [selectedBoardId, setSelectedBoardId] = useState<string>('1')
   const [summaryTab, setSummaryTab] = useState<'courses' | 'circles'>('courses')
+  const [overviewPosts, setOverviewPosts] = useState<any[]>([])
+  const [overviewCourses, setOverviewCourses] = useState<any[]>([])
+  const [overviewCircles, setOverviewCircles] = useState<any[]>([])
+  const [loadingOverview, setLoadingOverview] = useState<boolean>(true)
 
   // 初期データの並列読み込み
   useEffect(() => {
@@ -60,6 +64,36 @@ export default function HomePage() {
 
     loadInitialData()
   }, [fetchMultiple])
+
+  // 概要用の新着データを取得（軽量・コンパクト表示用）
+  useEffect(() => {
+    const fetchOverview = async () => {
+      try {
+        setLoadingOverview(true)
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+        const headers: HeadersInit = userId ? { 'X-User-Id': String(userId) } : {}
+        const [pRes, cRes, sRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/board/posts/feed?feed_type=latest&limit=6`, { headers, cache: 'no-store' }),
+          fetch(`${API_BASE_URL}/courses/summaries?limit=5`, { cache: 'no-store' }),
+          fetch(`${API_BASE_URL}/circles/summaries?limit=5`, { cache: 'no-store' }),
+        ])
+        const pJson = await pRes.json().catch(() => ({ posts: [] }))
+        const cJson = await cRes.json().catch(() => ([]))
+        const sJson = await sRes.json().catch(() => ([]))
+        setOverviewPosts(Array.isArray(pJson?.posts) ? pJson.posts : [])
+        setOverviewCourses(Array.isArray(cJson) ? cJson : [])
+        setOverviewCircles(Array.isArray(sJson) ? sJson : [])
+      } catch (e) {
+        setOverviewPosts([])
+        setOverviewCourses([])
+        setOverviewCircles([])
+      } finally {
+        setLoadingOverview(false)
+      }
+    }
+    fetchOverview()
+  }, [])
 
   // タブ状態の変更をグローバルに通知（フローティング投稿ボタンが購読）
   useEffect(() => {
@@ -104,6 +138,17 @@ export default function HomePage() {
 
         {/* タブナビゲーション */}
         <div className="mt-8 flex gap-2 border-b border-border">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'overview'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LayoutGrid className="w-4 h-4 inline mr-2" />
+            ホーム
+          </button>
           <button
             onClick={() => setActiveTab('feed')}
             className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
@@ -151,6 +196,147 @@ export default function HomePage() {
 
         {/* タブコンテンツ */}
         <div className="mt-6">
+          {activeTab === 'overview' && (
+            <div className="space-y-8">
+              {/* 機能紹介（メリハリのあるカード） */}
+              <section>
+                <h2 className="text-xl font-bold text-foreground mb-3">URIVでできること</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="border rounded-lg p-4 bg-card/80 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="w-5 h-5 text-primary" />
+                      <div className="font-semibold">掲示板</div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">匿名で相談・交流。学内の最新トピックをチェック。</p>
+                    <button
+                      onClick={() => setActiveTab('boards')}
+                      className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
+                    >掲示板を見る</button>
+                  </div>
+                  <div className="border rounded-lg p-4 bg-card/80 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 mb-2">
+                      <LayoutGrid className="w-5 h-5 text-primary" />
+                      <div className="font-semibold">中古品売買</div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">教科書・生活用品の売買を安全に。</p>
+                    <button
+                      onClick={() => setActiveTab('market')}
+                      className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
+                    >中古品を見る</button>
+                  </div>
+                  <div className="border rounded-lg p-4 bg-card/80 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BookOpen className="w-5 h-5 text-primary" />
+                      <div className="font-semibold">授業まとめ</div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">先輩の知見で履修を賢く。</p>
+                    <button
+                      onClick={() => { setActiveTab('summaries'); setSummaryTab('courses') }}
+                      className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
+                    >授業まとめを見る</button>
+                  </div>
+                  <div className="border rounded-lg p-4 bg-card/80 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-5 h-5 text-primary" />
+                      <div className="font-semibold">サークルまとめ</div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">活動内容や雰囲気をまとめてチェック。</p>
+                    <button
+                      onClick={() => { setActiveTab('summaries'); setSummaryTab('circles') }}
+                      className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
+                    >サークルまとめを見る</button>
+                  </div>
+                </div>
+              </section>
+
+              {/* 新着ダイジェスト（コンパクト表示） */}
+              <section>
+                <h3 className="text-lg font-semibold text-foreground mb-3">新着ダイジェスト</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* 最新投稿（コンパクト） */}
+                  <div className="border rounded-lg p-4 bg-card/80">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold">掲示板 最新投稿</div>
+                      <button
+                        onClick={() => setActiveTab('feed')}
+                        className="text-xs text-primary hover:underline"
+                      >もっと見る</button>
+                    </div>
+                    {loadingOverview ? (
+                      <div className="text-sm text-muted-foreground py-4">読み込み中...</div>
+                    ) : (overviewPosts.length === 0 ? (
+                      <div className="text-sm text-muted-foreground py-4">まだ投稿がありません</div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {overviewPosts.slice(0, 6).map((p: any) => (
+                          <li key={`ov-post-${p.id}`} className="text-sm">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-medium text-foreground truncate">{p.author_name}</div>
+                                <div className="text-muted-foreground truncate">{(p.content || '').slice(0, 60)}{(p.content || '').length > 60 ? '…' : ''}</div>
+                              </div>
+                              <div className="flex-shrink-0 text-xs text-muted-foreground">{p.reply_count}件</div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
+                  </div>
+
+                  {/* 授業まとめ 新着 */}
+                  <div className="border rounded-lg p-4 bg-card/80">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold">授業まとめ 新着</div>
+                      <button
+                        onClick={() => { setActiveTab('summaries'); setSummaryTab('courses') }}
+                        className="text-xs text-primary hover:underline"
+                      >もっと見る</button>
+                    </div>
+                    {loadingOverview ? (
+                      <div className="text-sm text-muted-foreground py-4">読み込み中...</div>
+                    ) : (overviewCourses.length === 0 ? (
+                      <div className="text-sm text-muted-foreground py-4">まだまとめがありません</div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {overviewCourses.slice(0, 5).map((s: any) => (
+                          <li key={`ov-course-${s.id}`} className="text-sm">
+                            <div className="truncate font-medium text-foreground">{s.title}</div>
+                            <div className="text-xs text-muted-foreground truncate">{s.course_name || s.department || ''}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
+                  </div>
+
+                  {/* サークルまとめ 新着 */}
+                  <div className="border rounded-lg p-4 bg-card/80">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold">サークルまとめ 新着</div>
+                      <button
+                        onClick={() => { setActiveTab('summaries'); setSummaryTab('circles') }}
+                        className="text-xs text-primary hover:underline"
+                      >もっと見る</button>
+                    </div>
+                    {loadingOverview ? (
+                      <div className="text-sm text-muted-foreground py-4">読み込み中...</div>
+                    ) : (overviewCircles.length === 0 ? (
+                      <div className="text-sm text-muted-foreground py-4">まだまとめがありません</div>
+                    ) : (
+                      <ul className="space-y-2">
+                        {overviewCircles.slice(0, 5).map((s: any) => (
+                          <li key={`ov-circle-${s.id}`} className="text-sm">
+                            <div className="truncate font-medium text-foreground">{s.title}</div>
+                            <div className="text-xs text-muted-foreground truncate">{s.circle_name || s.category || ''}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+
           {activeTab === 'feed' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
