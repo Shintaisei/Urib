@@ -72,6 +72,7 @@ class MarketItemResponse(BaseModel):
     view_count: int
     like_count: int
     is_liked: Optional[bool] = False
+    comment_count: Optional[int] = 0
 
 class MarketStats(BaseModel):
     total_items: int

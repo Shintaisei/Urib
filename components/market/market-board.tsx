@@ -442,6 +442,25 @@ export function MarketBoard() {
                                 <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
                               )}
                             </div>
+                            {/* タイトル（下部帯） */}
+                            <div className="absolute inset-x-0 bottom-0 bg-black/50 text-white text-[11px] px-2 py-0.5 truncate">
+                              {item.title}
+                            </div>
+                            {/* いいね/コメント（左下）、いいね操作可 */}
+                            <div className="absolute left-1 bottom-1 flex items-center gap-2 text-[10px] text-white drop-shadow">
+                              <button
+                                type="button"
+                                className={`inline-flex items-center gap-0.5 ${item.is_liked ? 'text-red-400' : 'text-white'}`}
+                                onClick={(e) => { e.stopPropagation(); handleLike(item.id) }}
+                              >
+                                <Heart className={`w-3 h-3 ${item.is_liked ? 'fill-current' : ''}`} />
+                                {item.like_count}
+                              </button>
+                              <span className="inline-flex items-center gap-0.5">
+                                <MessageCircle className="w-3 h-3" />
+                                {item.comment_count ?? 0}
+                              </span>
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -489,6 +508,25 @@ export function MarketBoard() {
                             <div className="absolute top-1 right-1 flex flex-col items-end gap-1">
                               <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-600 text-white">{item.is_available ? '出品中' : '終了'}</span>
                               <span className="px-1.5 py-0.5 text-[10px] rounded bg-black/70 text-white">{item.price === 0 ? '無料' : `¥${item.price}`}</span>
+                            </div>
+                            {/* タイトル（下部帯） */}
+                            <div className="absolute inset-x-0 bottom-0 bg-black/50 text-white text-[11px] px-2 py-0.5 truncate">
+                              {item.title}
+                            </div>
+                            {/* いいね/コメント（左下）、いいね操作可 */}
+                            <div className="absolute left-1 bottom-1 flex items-center gap-2 text-[10px] text-white drop-shadow">
+                              <button
+                                type="button"
+                                className={`inline-flex items-center gap-0.5 ${item.is_liked ? 'text-red-400' : 'text-white'}`}
+                                onClick={(e) => { e.stopPropagation(); handleLike(item.id) }}
+                              >
+                                <Heart className={`w-3 h-3 ${item.is_liked ? 'fill-current' : ''}`} />
+                                {item.like_count}
+                              </button>
+                              <span className="inline-flex items-center gap-0.5">
+                                <MessageCircle className="w-3 h-3" />
+                                {item.comment_count ?? 0}
+                              </span>
                             </div>
                           </button>
                         ))}

@@ -135,6 +135,11 @@ def get_market_items(
                 images = json.loads(item.images)
             except:
                 images = []
+        # コメント数を集計
+        try:
+            comment_count = db.query(models.MarketItemComment.id).filter(models.MarketItemComment.item_id == item.id).count()
+        except Exception:
+            comment_count = 0
         
         result.append(schemas.MarketItemResponse(
             id=str(item.id),
@@ -153,7 +158,8 @@ def get_market_items(
             updated_at=item.updated_at.isoformat(),
             view_count=item.view_count,
             like_count=item.like_count,
-            is_liked=False  # TODO: 現在のユーザーのいいね状態を確認
+            is_liked=False,  # TODO: 現在のユーザーのいいね状態を確認
+            comment_count=int(comment_count)
         ))
     
     return result
@@ -184,6 +190,11 @@ def get_market_item(
             images = json.loads(item.images)
         except:
             images = []
+    # コメント数
+    try:
+        comment_count = db.query(models.MarketItemComment.id).filter(models.MarketItemComment.item_id == item.id).count()
+    except Exception:
+        comment_count = 0
     
     return schemas.MarketItemResponse(
         id=str(item.id),
@@ -202,7 +213,8 @@ def get_market_item(
         updated_at=item.updated_at.isoformat(),
         view_count=item.view_count,
         like_count=item.like_count,
-        is_liked=False  # TODO: 現在のユーザーのいいね状態を確認
+        is_liked=False,  # TODO: 現在のユーザーのいいね状態を確認
+        comment_count=int(comment_count)
     )
 
 @router.post("/items", response_model=schemas.MarketItemResponse)
