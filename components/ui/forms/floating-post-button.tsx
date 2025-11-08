@@ -363,7 +363,7 @@ export function FloatingPostButton() {
         'circle': 'サークルまとめ'
       }[postType] || '投稿'
       
-      // 軽量なキャッシュ無効化と遷移
+      // 軽量なキャッシュ無効化と遷移（遷移後にrefreshで最新化）
       try {
         if (postType === 'board') {
           invalidateCache('latest-feed')
@@ -372,6 +372,9 @@ export function FloatingPostButton() {
           const bid = body && (body as any).board_id
           if (pid && bid) {
             router.push(`/board/${bid}?post_id=${pid}`)
+            setTimeout(() => {
+              try { router.refresh() } catch {}
+            }, 300)
           }
         } else if (postType === 'market') {
           invalidateCache('market-items')
@@ -381,12 +384,17 @@ export function FloatingPostButton() {
           } else {
             router.push('/market')
           }
+          setTimeout(() => {
+            try { router.refresh() } catch {}
+          }, 300)
         } else if (postType === 'course') {
           const sid = created?.id
           router.push(sid ? `/home#course-${sid}` : '/home')
+          setTimeout(() => { try { router.refresh() } catch {} }, 300)
         } else if (postType === 'circle') {
           const sid = created?.id
           router.push(sid ? `/home#circle-${sid}` : '/home')
+          setTimeout(() => { try { router.refresh() } catch {} }, 300)
         }
       } catch {}
       
