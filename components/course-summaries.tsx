@@ -137,9 +137,12 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 10000) // 10秒タイムアウト
       
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+      const headers: HeadersInit = userId ? { 'X-User-Id': String(userId) } : {}
       const res = await fetch(`${API_BASE_URL}/courses/summaries?${params.toString()}`, { 
         cache: 'no-store',
-        signal: controller.signal
+        signal: controller.signal,
+        headers
       })
       
       clearTimeout(timeoutId)
