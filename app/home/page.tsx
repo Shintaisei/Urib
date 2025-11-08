@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 export const dynamic = 'force-dynamic'
 import { Header } from "@/components/header"
 import { BoardGrid } from "@/components/board/board-grid"
-import { UniversityInfo } from "@/components/university-info"
 import { PostFeed } from "@/components/board/post-feed"
 import { MarketWidget } from "@/components/market/market-widget"
 import { MarketBoard } from "@/components/market/market-board"
@@ -134,7 +133,7 @@ export default function HomePage() {
       <Header />
 
       <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <UniversityInfo />
+        
 
         {/* タブナビゲーション */}
         <div className="mt-8 flex gap-2 border-b border-border">
