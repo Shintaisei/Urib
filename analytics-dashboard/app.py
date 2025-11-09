@@ -343,7 +343,8 @@ def engagement_tab():
         days_back = st.slider("対象期間（日）", 7, 180, 60, key="pv_user_time_days")
         topn = st.slider("表示ユーザー数（上位PV）", 10, 100, 40, step=5, key="pv_user_time_topn")
         res_label = st.select_slider("時間解像度", options=["15分", "30分", "1時間", "3時間", "6時間"], value="1時間", key="pv_user_time_res")
-        freq_map = {"15分":"15min", "30分":"30min", "1時間":"1H", "3時間":"3H", "6時間":"6H"}
+        # pandas 2.2+ は 'H' が非推奨のため小文字へ
+        freq_map = {"15分":"15min", "30分":"30min", "1時間":"1h", "3時間":"3h", "6時間":"6h"}
         freq = freq_map.get(res_label, "1H")
         df = pv_raw.copy()
         df["email"] = df.get("email", "").astype(str)
