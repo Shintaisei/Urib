@@ -330,7 +330,8 @@ def market_tab():
             bins = [0, 500, 1000, 2000, 5000, 10000, 20000, 9999999]
             labels = ["0-500", "500-1k", "1k-2k", "2k-5k", "5k-10k", "10k-20k", "20k+"]
             items["price_band"] = pd.cut(items["price"], bins=bins, labels=labels, include_lowest=True)
-            cross = items.groupby(["type","price_band"]).size().reset_index(name="count")
+            # pandas の observed 既定値変更への対応
+            cross = items.groupby(["type","price_band"], observed=False).size().reset_index(name="count")
             heat = alt.Chart(cross).mark_rect().encode(
                 x=alt.X("price_band:N", title="価格帯", sort=labels),
                 y=alt.Y("type:N", title="種別"),
@@ -353,13 +354,60 @@ def engagement_tab():
         return
     # 管理者除外
     pv = pv[~pv["email"].astype(str).apply(is_admin_email)]
-    pv = to_numeric(pv, ["active_days_total","active_days_30d","active_days_7d","longest_streak_days","current_streak_days"])
-    st.markdown("#### 分布（直近30日アクティブ日数）")
-    hist = alt.Chart(pv).mark_bar().encode(
-        x=alt.X("active_days_30d:Q", bin=alt.Bin(maxbins=30), title="Active Days (30d)"),
-        y=alt.Y("count()", title="Users"),
-    ).properties(height=260)
-    st.altair_chart(hist, use_container_width=True)
+    # page_views.csv からメール紐付けで再集計（信頼性向上）
+    pv_user = pd.DataFrame()
+    if not pv_raw.empty:
+        dfu = pv_raw.copy()
+        dfu["email"] = dfu.get("email", "").astype(str)
+        dfu = dfu[dfu["email"].str.contains("@", na=False)]
+        dfu = dfu[~dfu["email"].apply(is_admin_email)]
+        dfu["created_at"] = parse_date(dfu.get("created_at"))
+        dfu = dfu.dropna(subset=["created_at"])
+        dfu["day"] = dfu["created_at"].dt.date
+        cutoff_30 = pd.Timestamp.now().date() - pd.Timedelta(days=30)
+        cutoff_7 = pd.Timestamp.now().date() - pd.Timedelta(days=7)
+        # 基本集計
+        base = dfu.groupby("email").agg(
+            pv_total=("email", "count"),
+            first_seen=("created_at", "min"),
+            last_seen=("created_at", "max"),
+        ).reset_index()
+        days_total = dfu.groupby(["email","day"]).size().reset_index(name="pv").groupby("email")["day"].nunique().reset_index(name="active_days_total")
+        days_30 = dfu[dfu["day"] >= cutoff_30].groupby(["email","day"]).size().reset_index(name="pv").groupby("email")["day"].nunique().reset_index(name="active_days_30d")
+        days_7 = dfu[dfu["day"] >= cutoff_7].groupby(["email","day"]).size().reset_index(name="pv").groupby("email")["day"].nunique().reset_index(name="active_days_7d")
+        pv_user = base.merge(days_total, on="email", how="left").merge(days_30, on="email", how="left").merge(days_7, on="email", how="left").fillna(0)
+        # 連続日数（current / longest）
+        def calc_streaks(days):
+            if not len(days):
+                return 0, 0
+            days = sorted(set(days))
+            longest = cur = 1
+            for i in range(1, len(days)):
+                if (days[i] - days[i-1]).days == 1:
+                    cur += 1
+                    longest = max(longest, cur)
+                else:
+                    cur = 1
+            # 現在の連続（日付末尾から逆方向）
+            cur_now = 1
+            for i in range(len(days)-1, 0, -1):
+                if (days[i] - days[i-1]).days == 1:
+                    cur_now += 1
+                else:
+                    break
+            return cur_now, longest
+        streaks = dfu.groupby("email")["day"].apply(lambda s: pd.Series(calc_streaks(pd.to_datetime(s).dt.date.tolist()), index=["current_streak_days","longest_streak_days"])).reset_index()
+        pv_user = pv_user.merge(streaks, on="email", how="left").fillna(0)
+        # 型
+        pv_user = to_numeric(pv_user, ["pv_total","active_days_total","active_days_30d","active_days_7d","current_streak_days","longest_streak_days"])
+    # 分布（直近30日アクティブ日数）: 再集計に基づく
+    if not pv_user.empty:
+        st.markdown("#### 分布（直近30日アクティブ日数）")
+        hist = alt.Chart(pv_user).mark_bar().encode(
+            x=alt.X("active_days_30d:Q", bin=alt.Bin(maxbins=30), title="Active Days (30d)"),
+            y=alt.Y("count()", title="Users"),
+        ).properties(height=260)
+        st.altair_chart(hist, use_container_width=True)
     # 全体: 日付 × 時間 帯のヒートマップ（周期性の把握）
     if not pv_raw.empty:
         st.markdown("#### 全体の周期性（日付 × 時間帯 ヒートマップ）")
@@ -454,12 +502,13 @@ def engagement_tab():
             ).properties(height=240)
             st.altair_chart(hist, use_container_width=True)
     # 下部にデータ一覧
-    with st.expander("データ一覧（pageviews_by_user）", expanded=False):
-        st.dataframe(
-            pv.sort_values(["active_days_30d","current_streak_days"], ascending=[False, False]),
-            use_container_width=True,
-            height=420
-        )
+    with st.expander("データ一覧（page_views 由来のユーザー集計）", expanded=False):
+        if not pv_user.empty:
+            show_cols = ["email","pv_total","active_days_total","active_days_30d","active_days_7d","current_streak_days","longest_streak_days","first_seen","last_seen"]
+            display = pv_user[show_cols].sort_values(["active_days_30d","current_streak_days","pv_total"], ascending=[False, False, False])
+            st.dataframe(display, use_container_width=True, height=420)
+        else:
+            st.info("page_views.csv が空、または有効なメールが含まれていません。")
 
 def admins_tab():
     st.subheader("管理者の担当者別アクティビティ")
