@@ -202,7 +202,6 @@ def users_tab():
             df[c] = pd.to_numeric(df[c], errors="ignore")
     if q:
         df = df[df["email"].astype(str).str.contains(q, case=False, na=False)]
-    st.dataframe(df.sort_values("board_posts", ascending=False), use_container_width=True, height=420)
     # 追加チャート
     st.markdown("#### 上位ユーザーの比較（棒グラフ）")
     left, right = st.columns(2)
@@ -215,6 +214,9 @@ def users_tab():
             chart = bar(pv[["email","active_days_30d"]], x="email", y="active_days_30d", title="Active Days (30d) Top", top_n=20)
             if chart is not None:
                 st.altair_chart(chart, use_container_width=True)
+    # 下部にデータ一覧
+    with st.expander("データ一覧（users_full_summary）", expanded=False):
+        st.dataframe(df.sort_values("board_posts", ascending=False), use_container_width=True, height=420)
 
 def boards_tab():
     st.subheader("掲示板 集計")
@@ -224,7 +226,6 @@ def boards_tab():
     if boards.empty:
         st.info("boards_summary.csv がありません。")
         return
-    st.dataframe(boards, use_container_width=True, height=420)
     # スタック棒（投稿+返信）
     boards = to_numeric(boards, ["post_count", "reply_count"])
     stacked = boards.melt(id_vars=["board_id"], value_vars=["post_count","reply_count"], var_name="type", value_name="count")
@@ -257,6 +258,9 @@ def boards_tab():
                 tooltip=list(p_ser.columns),
             ).properties(height=260)
             st.altair_chart(c2, use_container_width=True)
+    # 下部にデータ一覧
+    with st.expander("データ一覧（boards_summary）", expanded=False):
+        st.dataframe(boards, use_container_width=True, height=420)
 
 def market_tab():
     st.subheader("マーケット 集計")
@@ -268,7 +272,6 @@ def market_tab():
     # 管理者除外
     market = market[~market["email"].astype(str).apply(is_admin_email)]
     market = to_numeric(market, ["items","likes_given_items","likes_received_items"])
-    st.dataframe(market.sort_values("items", ascending=False), use_container_width=True, height=420)
     st.markdown("#### 出品数 上位（棒グラフ）")
     chart = bar(market[["email","items"]], x="email", y="items", title="Items by User", top_n=15)
     if chart is not None:
@@ -290,6 +293,9 @@ def market_tab():
                 c3 = line(daily, x="day", y="items", title="出品数（推移）")
                 if c3 is not None:
                     st.altair_chart(c3, use_container_width=True)
+    # 下部にデータ一覧
+    with st.expander("データ一覧（market_summary）", expanded=False):
+        st.dataframe(market.sort_values("items", ascending=False), use_container_width=True, height=420)
 
 def engagement_tab():
     st.subheader("継続ログイン (PageViews)")
@@ -301,22 +307,17 @@ def engagement_tab():
     # 管理者除外
     pv = pv[~pv["email"].astype(str).apply(is_admin_email)]
     pv = to_numeric(pv, ["active_days_total","active_days_30d","active_days_7d","longest_streak_days","current_streak_days"])
-    st.dataframe(
-        pv.sort_values(["active_days_30d","current_streak_days"], ascending=[False, False]),
-        use_container_width=True,
-        height=420
-    )
     st.markdown("#### 分布（直近30日アクティブ日数）")
     hist = alt.Chart(pv).mark_bar().encode(
         x=alt.X("active_days_30d:Q", bin=alt.Bin(maxbins=30), title="Active Days (30d)"),
         y=alt.Y("count()", title="Users"),
     ).properties(height=260)
     st.altair_chart(hist, use_container_width=True)
-    # ユーザー×日付のヒートマップ（トップNユーザー）
+    # ユーザー × 時間帯のヒートマップ（見やすさ重視）
     if not pv_raw.empty:
-        st.markdown("#### ユーザー × 日付 ヒートマップ（PV数）")
-        days = st.slider("期間(日)", 7, 120, 60, key="pv_heat_days")
-        topn = st.slider("表示ユーザー数（上位PV）", 10, 100, 40, step=5)
+        st.markdown("#### ユーザー × 時間帯 ヒートマップ（PV頻度）")
+        days = st.slider("期間(日)", 7, 120, 60, key="pv_heat_days_hour")
+        topn = st.slider("表示ユーザー数（上位PV）", 10, 100, 40, step=5, key="pv_heat_topn_hour")
         df = pv_raw.copy()
         df["email"] = df.get("email", "").astype(str)
         df = df[~df["email"].apply(is_admin_email)]
@@ -324,18 +325,33 @@ def engagement_tab():
         df = df.dropna(subset=["created_at"])
         cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
         df = df[df["created_at"] >= cutoff]
-        df["date"] = df["created_at"].dt.date
-        # 上位ユーザー抽出
+        df["hour"] = df["created_at"].dt.hour
+        # 上位ユーザー抽出（期間内PV上位）
         tops = df.groupby("email").size().reset_index(name="pv").sort_values("pv", ascending=False).head(topn)["email"]
         df = df[df["email"].isin(tops)]
-        pivot = df.groupby(["email","date"]).size().reset_index(name="pv")
+        pivot = df.groupby(["email","hour"]).size().reset_index(name="pv")
         heat = alt.Chart(pivot).mark_rect().encode(
-            x=alt.X("date:T", title="日付"),
-            y=alt.Y("email:N", title="ユーザー", sort="-x"),
-            color=alt.Color("pv:Q", title="PV"),
+            x=alt.X("hour:O", title="時間帯(0-23)", sort=list(range(24))),
+            y=alt.Y("email:N", title="ユーザー"),
+            color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="blues")),
             tooltip=list(pivot.columns),
         ).properties(height=max(220, topn*10))
         st.altair_chart(heat, use_container_width=True)
+        # 全体の時間帯分布（棒）
+        total_per_hour = df.groupby("hour").size().reset_index(name="pv")
+        bar_hour = alt.Chart(total_per_hour).mark_bar().encode(
+            x=alt.X("hour:O", title="時間帯(0-23)", sort=list(range(24))),
+            y=alt.Y("pv:Q", title="PV"),
+            tooltip=list(total_per_hour.columns),
+        ).properties(height=220, title="全体の時間帯分布")
+        st.altair_chart(bar_hour, use_container_width=True)
+    # 下部にデータ一覧
+    with st.expander("データ一覧（pageviews_by_user）", expanded=False):
+        st.dataframe(
+            pv.sort_values(["active_days_30d","current_streak_days"], ascending=[False, False]),
+            use_container_width=True,
+            height=420
+        )
 
 def admins_tab():
     st.subheader("管理者の担当者別アクティビティ")
