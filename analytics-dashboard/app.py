@@ -957,7 +957,10 @@ def ai_tab():
         circle = dfs.get("circle_summaries.csv (raw)", pd.DataFrame())
         if not course.empty:
             c = course.copy()
-            c["created_at"] = parse_date(c.get("created_at"))
+            if "created_at" in c.columns:
+                c["created_at"] = parse_date(c["created_at"])
+            else:
+                c["created_at"] = pd.NaT
             c = c.dropna(subset=["created_at"])
             c = c[c["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
             sections.append(fmt_section("授業まとめ",
@@ -965,7 +968,10 @@ def ai_tab():
             ))
         if not circle.empty:
             cc = circle.copy()
-            cc["created_at"] = parse_date(cc.get("created_at"))
+            if "created_at" in cc.columns:
+                cc["created_at"] = parse_date(cc["created_at"])
+            else:
+                cc["created_at"] = pd.NaT
             cc = cc.dropna(subset=["created_at"])
             cc = cc[cc["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
             sections.append(fmt_section("サークルまとめ",
@@ -983,7 +989,10 @@ def ai_tab():
                     vv["email"] = pd.Series([""] * len(vv), index=vv.index)
                 vv = vv[vv["email"].str.contains("@", na=False)]
                 vv = vv[~vv["email"].apply(is_admin_email)]
-                vv["created_at"] = parse_date(vv.get("created_at"))
+                if "created_at" in vv.columns:
+                    vv["created_at"] = parse_date(vv["created_at"])
+                else:
+                    vv["created_at"] = pd.NaT
                 vv = vv.dropna(subset=["created_at"])
                 vv = vv[vv["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
                 users_visit = set(vv["email"].unique())
@@ -999,7 +1008,10 @@ def ai_tab():
                 pp["email"] = base_email.astype(str).map(normalize_email)
                 pp = pp[pp["email"].str.contains("@", na=False)]
                 pp = pp[~pp["email"].apply(is_admin_email)]
-                pp["created_at"] = parse_date(pp.get("created_at"))
+                if "created_at" in pp.columns:
+                    pp["created_at"] = parse_date(pp["created_at"])
+                else:
+                    pp["created_at"] = pd.NaT
                 pp = pp.dropna(subset=["created_at"])
                 pp = pp[pp["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
                 users_post = set(pp["email"].unique())
@@ -1015,7 +1027,10 @@ def ai_tab():
                 rr["email"] = base_email_r.astype(str).map(normalize_email)
                 rr = rr[rr["email"].str.contains("@", na=False)]
                 rr = rr[~rr["email"].apply(is_admin_email)]
-                rr["created_at"] = parse_date(rr.get("created_at"))
+                if "created_at" in rr.columns:
+                    rr["created_at"] = parse_date(rr["created_at"])
+                else:
+                    rr["created_at"] = pd.NaT
                 rr = rr.dropna(subset=["created_at"])
                 rr = rr[rr["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
                 users_reply = set(rr["email"].unique())
@@ -1028,7 +1043,10 @@ def ai_tab():
                     mm["email"] = pd.Series([""] * len(mm), index=mm.index)
                 mm = mm[mm["email"].str.contains("@", na=False)]
                 mm = mm[~mm["email"].apply(is_admin_email)]
-                mm["created_at"] = parse_date(mm.get("created_at"))
+                if "created_at" in mm.columns:
+                    mm["created_at"] = parse_date(mm["created_at"])
+                else:
+                    mm["created_at"] = pd.NaT
                 mm = mm.dropna(subset=["created_at"])
                 mm = mm[mm["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
                 users_market = set(mm["email"].unique())
