@@ -437,6 +437,17 @@ def engagement_tab():
             pv_user["first_seen"] = pd.NaT
         if "last_seen" not in pv_user.columns:
             pv_user["last_seen"] = pd.NaT
+        # 念のため email 単位で再集約（重複行を完全排除）
+        pv_user = pv_user.groupby("email", as_index=False).agg({
+            "pv_total": "sum",
+            "active_days_total": "max",
+            "active_days_30d": "max",
+            "active_days_7d": "max",
+            "current_streak_days": "max",
+            "longest_streak_days": "max",
+            "first_seen": "min",
+            "last_seen": "max",
+        })
     # 分布（直近30日アクティブ日数）: 再集計に基づく
     if not pv_user.empty:
         st.markdown("#### 分布（直近30日アクティブ日数）")
