@@ -345,7 +345,7 @@ def engagement_tab():
         res_label = st.select_slider("時間解像度", options=["15分", "30分", "1時間", "3時間", "6時間"], value="1時間", key="pv_user_time_res")
         # pandas 2.2+ は 'H' が非推奨のため小文字へ
         freq_map = {"15分":"15min", "30分":"30min", "1時間":"1h", "3時間":"3h", "6時間":"6h"}
-        freq = freq_map.get(res_label, "1H")
+        freq = freq_map.get(res_label, "1h")
         df = pv_raw.copy()
         df["email"] = df.get("email", "").astype(str)
         df = df[~df["email"].apply(is_admin_email)]
@@ -355,15 +355,22 @@ def engagement_tab():
         df = df[df["created_at"] >= cutoff]
         # 解像度でバケット
         df["bucket"] = df["created_at"].dt.floor(freq)
-        # 上位ユーザー抽出（期間内PV上位）
-        tops = df.groupby("email").size().reset_index(name="pv").sort_values("pv", ascending=False).head(topn)["email"]
+        # 上位ユーザー抽出（期間内PV上位） + 上限を実データ数に合わせる
+        unique_emails = df["email"].unique().tolist()
+        topn_eff = min(topn, len(unique_emails))
+        tops = df.groupby("email").size().reset_index(name="pv").sort_values("pv", ascending=False).head(topn_eff)["email"]
         df = df[df["email"].isin(tops)]
         # 並び順（総PV降順）
         totals = df.groupby("email").size().sort_values(ascending=False)
         email_order = totals.index.tolist()
         # ピボット（日付時刻 × ユーザー）: presence(1/0) を色にして「色が付いていたら来訪」
+        # 完全グリッド化（未訪も0で描画）
+        full_buckets = pd.date_range(start=df["bucket"].min(), end=df["bucket"].max(), freq=freq)
+        users_sel = pd.Index(email_order, name="email")
+        grid = pd.MultiIndex.from_product([users_sel, full_buckets], names=["email","bucket"]).to_frame(index=False)
         pivot = df.groupby(["email","bucket"]).size().reset_index(name="pv")
-        pivot["present"] = 1  # 存在するバケットのみ1として描画
+        pivot = grid.merge(pivot, on=["email","bucket"], how="left").fillna({"pv": 0})
+        pivot["present"] = (pivot["pv"] > 0).astype(int)
         heat = alt.Chart(pivot).mark_rect(stroke=None).encode(
             x=alt.X("bucket:T", title=f"時刻（{res_label}バケット）"),
             y=alt.Y("email:N", title="ユーザー", sort=email_order),
@@ -371,7 +378,7 @@ def engagement_tab():
                             title="在席",
                             scale=alt.Scale(domain=[0,1], range=["#f3f4f6", "#10b981"])),
             tooltip=["email","bucket:T","pv:Q"],
-        ).properties(height=max(240, topn*10))
+        ).properties(height=max(240, len(email_order)*12))
         st.altair_chart(heat, use_container_width=True)
         st.caption(f"表示中: {len(email_order)} ユーザー（上限 {topn}） / 期間: 過去 {days_back} 日 / 解像度: {res_label}")
     # 下部にデータ一覧
