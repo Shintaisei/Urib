@@ -360,13 +360,16 @@ def engagement_tab():
         # 並び順（総PV降順）
         totals = df.groupby("email").size().sort_values(ascending=False)
         email_order = totals.index.tolist()
-        # ピボット（日付時刻 × ユーザー）
+        # ピボット（日付時刻 × ユーザー）: presence(1/0) を色にして「色が付いていたら来訪」
         pivot = df.groupby(["email","bucket"]).size().reset_index(name="pv")
-        heat = alt.Chart(pivot).mark_rect().encode(
+        pivot["present"] = 1  # 存在するバケットのみ1として描画
+        heat = alt.Chart(pivot).mark_rect(stroke=None).encode(
             x=alt.X("bucket:T", title=f"時刻（{res_label}バケット）"),
             y=alt.Y("email:N", title="ユーザー", sort=email_order),
-            color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="magma")),
-            tooltip=list(pivot.columns),
+            color=alt.Color("present:Q",
+                            title="在席",
+                            scale=alt.Scale(domain=[0,1], range=["#f3f4f6", "#10b981"])),
+            tooltip=["email","bucket:T","pv:Q"],
         ).properties(height=max(240, topn*10))
         st.altair_chart(heat, use_container_width=True)
         st.caption(f"表示中: {len(email_order)} ユーザー（上限 {topn}） / 期間: 過去 {days_back} 日 / 解像度: {res_label}")
