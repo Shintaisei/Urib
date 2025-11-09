@@ -375,7 +375,7 @@ export function PostFeed() {
                             </div>
                           </div>
                         ) : (
-                          <p className="text-sm text-foreground line-clamp-2 mb-2">
+                          <p className="text-sm text-foreground mb-2 whitespace-pre-wrap">
                             {post.content}
                           </p>
                         )}
@@ -490,7 +490,7 @@ export function PostFeed() {
                             </span>
                           )}
                         </div>
-                        <div className="text-sm text-foreground line-clamp-2">{row.reply.content}</div>
+                        <div className="text-sm text-foreground whitespace-pre-wrap">{row.reply.content}</div>
                       </div>
 
                       <div className="text-xs text-muted-foreground mb-2">元投稿: {row.post.content.slice(0, 80)}</div>
@@ -606,7 +606,7 @@ export function PostFeed() {
                             </div>
                           </div>
                         ) : (
-                          <p className="text-sm text-foreground line-clamp-2 mb-2">
+                          <p className="text-sm text-foreground mb-2 whitespace-pre-wrap">
                             {post.content}
                           </p>
                         )}
