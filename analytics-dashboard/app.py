@@ -849,14 +849,35 @@ def ai_tab():
     def fmt_section(title: str, lines: list[str]) -> str:
         return "## " + title + "\n" + "\n".join([f"- {ln}" for ln in lines]) + "\n"
 
-    def build_samples(bundles: list[tuple[str, pd.DataFrame]], max_rows: int) -> str:
+    def build_samples(
+        bundles: list[tuple[str, pd.DataFrame]],
+        max_rows: int,
+        max_bytes_total: int = 2_000_000,
+        max_bytes_per_ds: int = 200_000,
+    ) -> str:
+        """
+        各データセットの先頭行サンプル（全列）を連結して返す。
+        - 総バイト数上限（max_bytes_total）とデータセットごとの上限（max_bytes_per_ds）で安全に切り詰め
+        """
         parts: list[str] = []
+        used = 0
         for name, df in bundles:
             if df.empty:
                 continue
             cols = list(df.columns)
             head = df.head(max_rows)
-            parts.append(f"### {name}\ncolumns: {cols}\nrows(sample):\n{head.to_csv(index=False)}")
+            chunk = f"### {name}\ncolumns: {cols}\nrows(sample):\n{head.to_csv(index=False)}"
+            # データセットごとの上限で切り詰め
+            if len(chunk) > max_bytes_per_ds:
+                chunk = chunk[: max_bytes_per_ds] + "\n...(truncated)\n"
+            # 総上限を超えるなら打ち切り
+            if used + len(chunk) > max_bytes_total:
+                remaining = max_bytes_total - used
+                if remaining > 0:
+                    parts.append(chunk[:remaining] + "\n...(truncated end)\n")
+                break
+            parts.append(chunk)
+            used += len(chunk)
         return "\n\n".join(parts)
 
     def build_marketing_brief(bundles: list[tuple[str, pd.DataFrame]], topn: int, days: int, gap_min: int) -> str:
@@ -1115,9 +1136,18 @@ def ai_tab():
         context = build_marketing_brief(bundles, topn=brief_topn, days=brief_days, gap_min=brief_gap)
         context_for_model = context
         if include_samples:
-            samples_text = build_samples(bundles, max_rows=max_rows)
+            # サンプルは安全上限に収まるように強制的に圧縮
+            SAFE_TOTAL = 2_000_000  # ~2MB
+            SAFE_PER_DS = 150_000   # 150KB/DS
+            rows_for_samples = min(max_rows, 100)
+            samples_text = build_samples(
+                bundles,
+                max_rows=rows_for_samples,
+                max_bytes_total=SAFE_TOTAL,
+                max_bytes_per_ds=SAFE_PER_DS,
+            )
             if samples_text:
-                context_for_model = context + "\n\n### データサンプル（全列・先頭）\n" + samples_text
+                context_for_model = context + "\n\n### データサンプル（全列・先頭・圧縮）\n" + samples_text
         outputs = []
         progress = st.progress(0.0, text="分析中…")
         for idx, (role, instruction) in enumerate(roles, start=1):
