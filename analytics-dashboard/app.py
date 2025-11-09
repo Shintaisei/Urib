@@ -825,7 +825,19 @@ def ai_tab():
     selected = []
     for i, (label, path) in enumerate(ds_specs):
         with cols[i % 3]:
-            if path.exists() and st.checkbox(label, value=("summary" in str(path).lower() or "pageviews_by_user" in str(path)), key=f"ai_ds_{i}"):
+            # デフォルト選択: 必須級RAW + 主要RAW + pageviews_by_user
+            fname = path.name.lower()
+            default_names = {
+                "page_views.csv",
+                "board_posts.csv",
+                "board_replies.csv",
+                "board_visits.csv",
+                "market_items.csv",
+                "course_summaries.csv",
+                "circle_summaries.csv",
+            }
+            default_checked = (fname in default_names) or ("pageviews_by_user" in fname)
+            if path.exists() and st.checkbox(label, value=default_checked, key=f"ai_ds_{i}"):
                 selected.append((label, path))
     max_rows = st.slider("各データセットの最大行数（サンプル）", 50, 2000, 300, step=50)
     def df_profile_text(df: pd.DataFrame, name: str) -> str:
