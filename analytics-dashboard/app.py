@@ -1014,7 +1014,7 @@ def ai_tab():
                     pp["created_at"] = pd.NaT
                 pp = pp.dropna(subset=["created_at"])
                 pp = pp[pp["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
-                users_post = set(pp["email"].unique())
+                users_post = set(pp["email"].unique()) if "email" in pp.columns else set()
             users_reply = set()
             if not replies.empty:
                 rr = replies.copy()
@@ -1033,7 +1033,7 @@ def ai_tab():
                     rr["created_at"] = pd.NaT
                 rr = rr.dropna(subset=["created_at"])
                 rr = rr[rr["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
-                users_reply = set(rr["email"].unique())
+                users_reply = set(rr["email"].unique()) if "email" in rr.columns else set()
             users_market = set()
             if not market.empty:
                 mm = market.copy()
