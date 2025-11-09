@@ -422,6 +422,25 @@ def engagement_tab():
             y=alt.Y("count()", title="Users"),
         ).properties(height=360)
         st.altair_chart(hist, use_container_width=True)
+        # page_views 由来の指標（総PVに基づく）
+        st.markdown("#### page_views 由来の指標")
+        cols = st.columns(3)
+        with cols[0]:
+            st.metric("ユーザー数", f"{len(pv_user):,}")
+        with cols[1]:
+            st.metric("平均ログイン回数（総PV）", f"{pv_user['pv_total'].mean():.1f}")
+        with cols[2]:
+            st.metric("中央値（総PV）", f"{pv_user['pv_total'].median():.0f}")
+        thr_max = int(max(1, pv_user["pv_total"].max()))
+        thr = st.slider("しきい値（総PVが以上のユーザー）", 1, thr_max, min(10, thr_max), key="pv_total_threshold")
+        cohort = pv_user[pv_user["pv_total"] >= thr].copy().sort_values("pv_total", ascending=False)
+        st.write(f"該当ユーザー数: {len(cohort)} 人 / しきい値: {thr} 回以上")
+        with st.expander("該当メールアドレス（コピー用）", expanded=False):
+            emails_text = "\n".join(cohort["email"].astype(str).tolist())
+            st.text_area("Emails", emails_text, height=180)
+        with st.expander("該当ユーザー詳細", expanded=False):
+            st.dataframe(cohort[["email","pv_total","active_days_total","active_days_30d","current_streak_days","longest_streak_days","first_seen","last_seen"]],
+                         use_container_width=True, height=360)
     # 全体: 日付 × 時間帯（任意解像度）ヒートマップ（pv_rawをメール紐付け・管理者除外で使用）
     if not pv_raw.empty:
         st.markdown("#### 全体の周期性（日付 × 時間帯 ヒートマップ）")
