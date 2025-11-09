@@ -849,6 +849,16 @@ def ai_tab():
     def fmt_section(title: str, lines: list[str]) -> str:
         return "## " + title + "\n" + "\n".join([f"- {ln}" for ln in lines]) + "\n"
 
+    def build_samples(bundles: list[tuple[str, pd.DataFrame]], max_rows: int) -> str:
+        parts: list[str] = []
+        for name, df in bundles:
+            if df.empty:
+                continue
+            cols = list(df.columns)
+            head = df.head(max_rows)
+            parts.append(f"### {name}\ncolumns: {cols}\nrows(sample):\n{head.to_csv(index=False)}")
+        return "\n\n".join(parts)
+
     def build_marketing_brief(bundles: list[tuple[str, pd.DataFrame]], topn: int, days: int, gap_min: int) -> str:
         # 可能な限り多角的なKPIとTopを凝縮したブリーフィングを生成（マーケ視点）
         # 存在判定
@@ -1098,21 +1108,27 @@ def ai_tab():
         brief_topn = st.slider("TopN", 3, 30, 10, key="ai_brief_topn")
     with colb3:
         brief_gap = st.slider("セッション区切り(分)", 5, 120, 30, step=5, key="ai_brief_gap")
+    include_samples = st.checkbox("データサンプル（全列）をAIに付与する", value=True)
     if st.button("AI分析を実行", type="primary", use_container_width=True):
         client = OpenAI(api_key=api_key)  # type: ignore
         # マーケ向けブリーフィングを構築して渡す（生データは渡さない）
         context = build_marketing_brief(bundles, topn=brief_topn, days=brief_days, gap_min=brief_gap)
+        context_for_model = context
+        if include_samples:
+            samples_text = build_samples(bundles, max_rows=max_rows)
+            if samples_text:
+                context_for_model = context + "\n\n### データサンプル（全列・先頭）\n" + samples_text
         outputs = []
         progress = st.progress(0.0, text="分析中…")
         for idx, (role, instruction) in enumerate(roles, start=1):
-            prompt = f"""あなたは {role} です。以下のマーケティング・ブリーフィングを読み、{instruction}
+            prompt = f"""あなたは {role} です。以下のマーケティング・ブリーフィング{ '＋データサンプル' if include_samples else '' }を読み、{instruction}
 制約:
 - 根拠（KPI名・指標・具体値）を明示
 - 見出し＋箇条書きで、できるだけ簡潔に（最大600〜900日本語トークン）
 - 最後に「即実行(1週間)」「短期(1ヶ月)」「中期(1-3ヶ月)」のアクションを箇条書きで列挙
 
 マーケティング・ブリーフィング（KPI/Top/ファネル/期間={brief_days}日, TopN={brief_topn}）:
-{context}
+{context_for_model}
 """
             try:
                 resp = client.chat.completions.create(  # type: ignore
@@ -1139,7 +1155,7 @@ def ai_tab():
 を日本語で簡潔に作成してください。
 
 マーケティング・ブリーフィング:
-{context}
+{context_for_model}
 
 各アナリスト所見:
 """ + "\n\n".join([f"### {r}\n{text}" for r, text in outputs])
