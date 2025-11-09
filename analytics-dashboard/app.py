@@ -834,7 +834,7 @@ def diagnostics_tab():
 
     # サマリ表
     rows = []
-    def add_row(name: str, df: pd.DataFrame, required: list[str], id_col: str | None = None):
+    def add_row(name: str, df: pd.DataFrame, required: list[str], id_col: Optional[str] = None):
         present = {c: (c in df.columns) for c in required}
         nn = nn_rate(df, required)
         dup = int(df.duplicated(subset=[id_col]).sum()) if (id_col and id_col in df.columns) else None
