@@ -37,6 +37,16 @@ streamlit run app.py
 cd Uriv-app/analytics-dashboard
 bash start_dashboard.sh
 ```
+- 初回は自動で `.venv` を作成して依存を導入します
+- Pythonが見つからない場合は表示される案内に従ってインストールしてください（macOSなら`brew install python` など）
+ - DB接続URL（SUPABASE_DB_URL）は以下の優先順で参照します
+   1. 実行時の環境変数 `SUPABASE_DB_URL`
+   2. `analytics-dashboard/.env`（未設定なら対話で作成します）
+   3. `backend/.env`
+ - 対話入力をスキップしたい場合は、事前に `analytics-dashboard/.env` を作成してください
+   ```bash
+   echo 'SUPABASE_DB_URL="postgresql://...:...@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"' > Uriv-app/analytics-dashboard/.env
+   ```
 
 ### B. コマンドラインで取得・集計だけ行う
 ```bash
