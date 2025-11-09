@@ -392,6 +392,8 @@ def engagement_tab():
         freq = freq_map.get(res_label, "1h")
         df = pv_raw.copy()
         df["email"] = df.get("email", "").astype(str)
+        # 無効メール除外（admin/空/nan）
+        df = df[df["email"].str.contains("@", na=False)]
         df = df[~df["email"].apply(is_admin_email)]
         df["created_at"] = parse_date(df.get("created_at"))
         df = df.dropna(subset=["created_at"])
@@ -415,9 +417,18 @@ def engagement_tab():
         pivot = df.groupby(["email","bucket"]).size().reset_index(name="pv")
         pivot = grid.merge(pivot, on=["email","bucket"], how="left").fillna({"pv": 0})
         pivot["present"] = (pivot["pv"] > 0).astype(int)
+        # 離散ラベルで横軸を明示（連続軸で間引かれるのを防ぐ）
+        pivot["bucket_str"] = pivot["bucket"].dt.strftime("%Y-%m-%d %H:%M")
+        bucket_order = pivot["bucket_str"].drop_duplicates().sort_values().tolist()
         heat = alt.Chart(pivot).mark_rect(stroke=None).encode(
-            x=alt.X("bucket:T", title=f"時刻（{res_label}バケット）"),
-            y=alt.Y("email:N", title="ユーザー", sort=email_order),
+            x=alt.X("bucket_str:N",
+                    sort=bucket_order,
+                    title=f"時刻（{res_label}バケット）",
+                    axis=alt.Axis(labelAngle=-45, labelOverlap=False, labelLimit=1000)),
+            y=alt.Y("email:N",
+                    title="ユーザー",
+                    sort=email_order,
+                    axis=alt.Axis(labelLimit=1000, labelOverlap=False, labelFontSize=10)),
             color=alt.Color("present:Q",
                             title="在席",
                             scale=alt.Scale(domain=[0,1], range=["#f3f4f6", "#10b981"])),
