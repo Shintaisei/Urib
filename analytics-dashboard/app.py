@@ -829,22 +829,200 @@ def ai_tab():
                 selected.append((label, path))
     max_rows = st.slider("各データセットの最大行数（サンプル）", 50, 2000, 300, step=50)
     def df_profile_text(df: pd.DataFrame, name: str) -> str:
+        # 旧: 生データを渡す。→ トークン効率のため廃止（最小限メタ情報のみ）
         if df.empty:
-            return f"# {name}\nEMPTY\n"
-        # 基本統計＋先頭サンプル
-        txt = [f"# {name}", f"shape: {df.shape[0]} rows × {df.shape[1]} cols", f"columns: {list(df.columns)}"]
-        # 数値列の基本統計
-        try:
-            desc = df.describe(include="all").fillna("").astype(str)
-            desc_rows = min(len(desc), 20)
-            txt.append("stats:")
-            txt.append(desc.head(desc_rows).to_csv())
-        except Exception:
-            pass
-        sample = df.head(max_rows)
-        txt.append("sample:")
-        txt.append(sample.to_csv(index=False))
-        return "\n".join(txt) + "\n"
+            return f"- {name}: 0 rows\n"
+        return f"- {name}: {df.shape[0]} rows, {df.shape[1]} cols, cols={list(df.columns)}\n"
+
+    def fmt_section(title: str, lines: list[str]) -> str:
+        return "## " + title + "\n" + "\n".join([f"- {ln}" for ln in lines]) + "\n"
+
+    def build_marketing_brief(bundles: list[tuple[str, pd.DataFrame]], topn: int, days: int, gap_min: int) -> str:
+        # 可能な限り多角的なKPIとTopを凝縮したブリーフィングを生成（マーケ視点）
+        # 存在判定
+        dfs = {name: df for name, df in bundles}
+        lines = []
+        sections = []
+        # 概要（ユーザー・PV）
+        pv = dfs.get("page_views.csv (raw)", pd.DataFrame())
+        if not pv.empty:
+            tmp = pv.copy()
+            tmp["email"] = tmp.get("email", "").astype(str).map(normalize_email)
+            tmp = tmp[tmp["email"].str.contains("@", na=False)]
+            tmp = tmp[~tmp["email"].apply(is_admin_email)]
+            tmp["created_at"] = parse_date(tmp.get("created_at"))
+            tmp = tmp.dropna(subset=["created_at"])
+            cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
+            pv_d = tmp[tmp["created_at"] >= cutoff]
+            dau = pv_d.assign(day=pv_d["created_at"].dt.date).groupby("day")["email"].nunique()
+            wau = pv_d.assign(week=pv_d["created_at"].dt.to_period("W")).groupby("week")["email"].nunique()
+            sections.append(fmt_section("概要(KPI)",
+                [
+                    f"対象期間: 過去{days}日",
+                    f"総PV: {len(pv_d):,}",
+                    f"ユニークユーザー(期間内): {pv_d['email'].nunique():,}",
+                    f"平均DAU: {dau.mean():.1f} (最近のDAU: {dau.tail(1).mean() if len(dau)>0 else 0:.0f})",
+                    f"平均WAU: {wau.mean():.1f}",
+                ]
+            ))
+            # カテゴリ別PV
+            cat = pv_d["path"].astype(str).map(path_category).value_counts().to_dict()
+            sections.append(fmt_section("カテゴリ別PV構成", [f"{k}: {v:,}" for k, v in cat.items()]))
+            # セッション概要
+            sess = compute_sessions(pv_d[["email","created_at","path"]], threshold_minutes=gap_min)
+            if not sess.empty:
+                sections.append(fmt_section("セッションKPI",
+                    [
+                        f"セッション数: {len(sess):,}",
+                        f"平均滞在(分): {sess['duration_minutes'].mean():.1f} / 中央値: {sess['duration_minutes'].median():.1f}",
+                        f"平均PV/セッション: {sess['pageviews'].mean():.1f}",
+                        f"ユニーク投稿閲覧(合計): {int(sess['unique_board_posts'].sum())}",
+                        f"ユニークMarket閲覧(合計): {int(sess['unique_market_items'].sum())}",
+                    ]
+                ))
+        # 掲示板
+        posts = dfs.get("board_posts.csv (raw)", pd.DataFrame())
+        replies = dfs.get("board_replies.csv (raw)", pd.DataFrame())
+        visits = dfs.get("board_visits.csv (raw)", pd.DataFrame())
+        if not posts.empty:
+            p = posts.copy()
+            p["created_at"] = parse_date(p.get("created_at"))
+            p = p.dropna(subset=["created_at"])
+            p = p[p["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+            top_boards = p["board_id"].value_counts().head(topn)
+            sections.append(fmt_section("掲示板(投稿)",
+                [
+                    f"投稿数(期間): {len(p):,}",
+                    "Top Boards: " + ", ".join([f"{int(i)}({c})" for i, c in top_boards.items()]),
+                ]
+            ))
+        if not replies.empty:
+            r = replies.copy()
+            r["created_at"] = parse_date(r.get("created_at"))
+            r = r.dropna(subset=["created_at"])
+            r = r[r["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+            sections.append(fmt_section("掲示板(返信)",
+                [
+                    f"返信数(期間): {len(r):,}",
+                ]
+            ))
+            # 返信までの時間
+            if not posts.empty:
+                pr = posts[["id","created_at"]].copy()
+                pr["post_ts"] = parse_date(pr["created_at"])
+                rr = r[["post_id","created_at"]].copy()
+                rr["reply_ts"] = parse_date(rr["created_at"])
+                fr = rr.sort_values("reply_ts").dropna(subset=["reply_ts"]).groupby("post_id").first().reset_index()
+                mg = pr.merge(fr, left_on="id", right_on="post_id", how="inner")
+                mg["mins"] = (mg["reply_ts"] - mg["post_ts"]).dt.total_seconds() / 60
+                if not mg.empty:
+                    sections.append(fmt_section("初返信までの時間",
+                        [
+                            f"平均(分): {mg['mins'].mean():.1f}, 中央値: {mg['mins'].median():.1f}",
+                        ]
+                    ))
+        # マーケット
+        market = dfs.get("market_items.csv (raw)", pd.DataFrame())
+        if not market.empty:
+            m = market.copy()
+            m["created_at"] = parse_date(m.get("created_at"))
+            m = m.dropna(subset=["created_at"])
+            m = m[m["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+            m["price"] = pd.to_numeric(m.get("price", 0), errors="coerce").fillna(0)
+            sections.append(fmt_section("マーケット",
+                [
+                    f"出品数(期間): {len(m):,}",
+                    f"価格中央値: {m['price'].median():.0f}, 平均: {m['price'].mean():.0f}",
+                ]
+            ))
+            if "type" in m.columns:
+                top_types = m["type"].astype(str).value_counts().head(topn)
+                sections.append(fmt_section("出品種別 上位",
+                    [f"{k}: {v}" for k, v in top_types.items()]
+                ))
+        # 授業/サークル
+        course = dfs.get("course_summaries.csv (raw)", pd.DataFrame())
+        circle = dfs.get("circle_summaries.csv (raw)", pd.DataFrame())
+        if not course.empty:
+            c = course.copy()
+            c["created_at"] = parse_date(c.get("created_at"))
+            c = c.dropna(subset=["created_at"])
+            c = c[c["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+            sections.append(fmt_section("授業まとめ",
+                [f"投稿数(期間): {len(c):,}"]
+            ))
+        if not circle.empty:
+            cc = circle.copy()
+            cc["created_at"] = parse_date(cc.get("created_at"))
+            cc = cc.dropna(subset=["created_at"])
+            cc = cc[cc["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+            sections.append(fmt_section("サークルまとめ",
+                [f"投稿数(期間): {len(cc):,}"]
+            ))
+        # ファネル（ユーザー単位）
+        if not pv.empty:
+            users_pv = set(pv_d["email"].unique()) if not pv.empty else set()
+            users_visit = set()
+            if not visits.empty:
+                vv = visits.copy()
+                vv["email"] = vv.get("email", "").astype(str).map(normalize_email)
+                vv = vv[vv["email"].str.contains("@", na=False)]
+                vv = vv[~vv["email"].apply(is_admin_email)]
+                vv["created_at"] = parse_date(vv.get("created_at"))
+                vv = vv.dropna(subset=["created_at"])
+                vv = vv[vv["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+                users_visit = set(vv["email"].unique())
+            users_post = set()
+            if not posts.empty:
+                pp = posts.copy()
+                pp["email"] = pp.get("author_email", pp.get("email", "")).astype(str).map(normalize_email)
+                pp = pp[pp["email"].str.contains("@", na=False)]
+                pp = pp[~pp["email"].apply(is_admin_email)]
+                pp["created_at"] = parse_date(pp.get("created_at"))
+                pp = pp.dropna(subset=["created_at"])
+                pp = pp[pp["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+                users_post = set(pp["email"].unique())
+            users_reply = set()
+            if not replies.empty:
+                rr = replies.copy()
+                rr["email"] = rr.get("author_email", rr.get("email", "")).astype(str).map(normalize_email)
+                rr = rr[rr["email"].str.contains("@", na=False)]
+                rr = rr[~rr["email"].apply(is_admin_email)]
+                rr["created_at"] = parse_date(rr.get("created_at"))
+                rr = rr.dropna(subset=["created_at"])
+                rr = rr[rr["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+                users_reply = set(rr["email"].unique())
+            users_market = set()
+            if not market.empty:
+                mm = market.copy()
+                mm["email"] = mm.get("email", "").astype(str).map(normalize_email)
+                mm = mm[mm["email"].str.contains("@", na=False)]
+                mm = mm[~mm["email"].apply(is_admin_email)]
+                mm["created_at"] = parse_date(mm.get("created_at"))
+                mm = mm.dropna(subset=["created_at"])
+                mm = mm[mm["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+                users_market = set(mm["email"].unique())
+            def rate(a, b):
+                return 0 if b == 0 else 100.0 * a / b
+            sections.append(fmt_section("ユーザーファネル(期間内一度以上)",
+                [
+                    f"PVユーザー: {len(users_pv)}",
+                    f"→ Board閲覧: {len(users_visit)} ({rate(len(users_visit), len(users_pv)):.1f}%)",
+                    f"→ 投稿: {len(users_post)} ({rate(len(users_post), len(users_visit)):.1f}%)",
+                    f"→ 返信: {len(users_reply)} ({rate(len(users_reply), len(users_post)):.1f}%)",
+                    f"→ Market出品: {len(users_market)} ({rate(len(users_market), len(users_pv)):.1f}%)",
+                ]
+            ))
+        # Topセグメント（メールはそのまま出す想定）
+        if not posts.empty:
+            posters = posts.get("author_email", posts.get("email", pd.Series(dtype=str))).astype(str).map(normalize_email).value_counts().head(topn)
+            sections.append(fmt_section("Top投稿者", [f"{k}: {v}" for k, v in posters.items()]))
+        if not market.empty:
+            sellers = market.get("email", pd.Series(dtype=str)).astype(str).map(normalize_email).value_counts().head(topn)
+            sections.append(fmt_section("Top出品者", [f"{k}: {v}" for k, v in sellers.items()]))
+        # 最後に、データセットのメタ概要
+        meta = "### datasets\n" + "".join([df_profile_text(df, name) for name, df in bundles])
+        return "\n".join(sections) + "\n" + meta
     # データを読み込み
     bundles = []
     for label, path in selected:
@@ -864,22 +1042,28 @@ def ai_tab():
         ("グロース責任者", "上記全てを統合し、具体的アクションプラン（KPI・フェーズ・優先度）を箇条書きで提示。"),
     ]
     # 実行
+    st.markdown("#### ブリーフィング設定")
+    colb1, colb2, colb3 = st.columns(3)
+    with colb1:
+        brief_days = st.slider("分析対象期間(日)", 7, 180, 60, key="ai_brief_days")
+    with colb2:
+        brief_topn = st.slider("TopN", 3, 30, 10, key="ai_brief_topn")
+    with colb3:
+        brief_gap = st.slider("セッション区切り(分)", 5, 120, 30, step=5, key="ai_brief_gap")
     if st.button("AI分析を実行", type="primary", use_container_width=True):
         client = OpenAI(api_key=api_key)  # type: ignore
-        context_text = []
-        for name, df in bundles:
-            context_text.append(df_profile_text(df, name))
-        context = "\n\n".join(context_text)
+        # マーケ向けブリーフィングを構築して渡す（生データは渡さない）
+        context = build_marketing_brief(bundles, topn=brief_topn, days=brief_days, gap_min=brief_gap)
         outputs = []
         progress = st.progress(0.0, text="分析中…")
         for idx, (role, instruction) in enumerate(roles, start=1):
-            prompt = f"""あなたは {role} です。以下のデータダイジェストを読み、{instruction}
+            prompt = f"""あなたは {role} です。以下のマーケティング・ブリーフィングを読み、{instruction}
 制約:
-- 根拠（列名・指標・具体値）を明示
-- 簡潔な見出しと箇条書きで、最大600〜900日本語トークン
-- 最後に「即実行アクション(1週間)」「短期(1ヶ月)」「中期(1-3ヶ月)」を列挙
+- 根拠（KPI名・指標・具体値）を明示
+- 見出し＋箇条書きで、できるだけ簡潔に（最大600〜900日本語トークン）
+- 最後に「即実行(1週間)」「短期(1ヶ月)」「中期(1-3ヶ月)」のアクションを箇条書きで列挙
 
-データダイジェスト（サンプル／統計／列情報）:
+マーケティング・ブリーフィング（KPI/Top/ファネル/期間={brief_days}日, TopN={brief_topn}）:
 {context}
 """
             try:
