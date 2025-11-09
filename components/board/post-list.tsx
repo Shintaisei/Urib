@@ -342,6 +342,11 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-[12px] font-medium text-foreground truncate">{post.author_name}</span>
+                  {isRecent && (
+                    <span className="inline-flex items-center text-[12px] font-semibold bg-rose-500 text-white px-2 py-0.5 rounded-full shadow-sm">
+                      新着
+                    </span>
+                  )}
                   {post.author_department && post.author_year && (
                     <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                       {post.author_department} {post.author_year}
@@ -350,11 +355,6 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-[10px] text-muted-foreground">{getTimeDiff(post.created_at)}</span>
-                  {isRecent && (
-                    <span className="inline-flex items-center text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200">
-                      新着
-                    </span>
-                  )}
                 </div>
               </div>
 
