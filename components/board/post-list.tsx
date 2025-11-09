@@ -6,6 +6,7 @@ import { MentionTextarea } from "@/components/ui/forms/mention-textarea"
 import { Heart, MessageCircle, Send, Loader2 } from "lucide-react"
 import { LoadingProgress } from "@/components/loading-progress"
 import { useCachedFetch } from "@/lib/api-cache"
+import { isAdminEmail } from "@/lib/utils"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 // 掲示板名マップ（表示用）
@@ -100,8 +101,14 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
   const [replyContent, setReplyContent] = useState<{ [key: number]: string }>({})
   const [submittingReply, setSubmittingReply] = useState<number | null>(null)
   const [loadingReplies, setLoadingReplies] = useState<number | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   
   const { fetchWithCache, getCached, invalidateCache } = useCachedFetch()
+
+  useEffect(() => {
+    const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
+    setIsAdmin(isAdminEmail(email))
+  }, [])
 
   const fetchPosts = async () => {
     try {
@@ -137,6 +144,25 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
       setError(err.message || '投稿の取得に失敗しました')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const adminDeletePost = async (postId: number) => {
+    if (!isAdmin) return
+    if (!confirm('この投稿を削除しますか？')) return
+    try {
+      const userId = localStorage.getItem('user_id')
+      if (!userId) throw new Error('ユーザーIDが見つかりません')
+      const res = await fetch(`${API_BASE_URL}/board/admin/posts/${postId}`, {
+        method: 'DELETE',
+        headers: { 'X-User-Id': userId },
+      })
+      if (!res.ok) throw new Error('削除に失敗しました')
+      setPosts(prev => prev.filter(p => p.id !== postId))
+      if (expandedPostId === postId) setExpandedPostId(null)
+      invalidateCache(`posts-${boardId}`)
+    } catch (e: any) {
+      alert(e?.message || '削除に失敗しました')
     }
   }
 
@@ -355,6 +381,16 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-[10px] text-muted-foreground">{getTimeDiff(post.created_at)}</span>
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-destructive text-[11px]"
+                      onClick={() => adminDeletePost(post.id)}
+                    >
+                      削除
+                    </Button>
+                  )}
                 </div>
               </div>
 
