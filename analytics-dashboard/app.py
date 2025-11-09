@@ -283,7 +283,9 @@ def boards_tab():
                 x=alt.X("day:T", title="日付"),
                 y=alt.Y("dau:Q", title="DAU"),
                 color=alt.Color("board_id:N", title="Board"),
-                tooltip=list(dau_b.columns),
+                tooltip=[alt.Tooltip("board_id:N", title="Board"),
+                         alt.Tooltip("day:T", title="日付"),
+                         alt.Tooltip("dau:Q", title="DAU")],
             ).properties(height=260)
             st.altair_chart(chart_b, use_container_width=True)
     # 下部にデータ一覧
@@ -336,7 +338,9 @@ def market_tab():
                 x=alt.X("price_band:N", title="価格帯", sort=labels),
                 y=alt.Y("type:N", title="種別"),
                 color=alt.Color("count:Q", title="件数"),
-                tooltip=list(cross.columns),
+                tooltip=[alt.Tooltip("type:N", title="種別"),
+                         alt.Tooltip("price_band:N", title="価格帯"),
+                         alt.Tooltip("count:Q", title="件数")],
             ).properties(height=240)
             st.altair_chart(heat, use_container_width=True)
     # 下部にデータ一覧
@@ -449,7 +453,9 @@ def engagement_tab():
             x=alt.X("date:O", title="日付", axis=alt.Axis(format="%m/%d")),
             y=alt.Y("t_label:O", title=f"時間帯（{res_label_cal}）", sort=t_sort),
             color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="greens")),
-            tooltip=list(cal.columns),
+            tooltip=[alt.Tooltip("date:O", title="日付"),
+                     alt.Tooltip("t_label:O", title="時間帯"),
+                     alt.Tooltip("pv:Q", title="PV")],
         ).properties(height=420)
         st.altair_chart(heat_cal, use_container_width=True)
     # ユーザー別: 日時バケット × ユーザー ヒートマップ（縦=ユーザー, 横=時系列）
@@ -503,7 +509,9 @@ def engagement_tab():
             color=alt.Color("present:Q",
                             title="在席",
                             scale=alt.Scale(domain=[0,1], range=["#f3f4f6", "#10b981"])),
-            tooltip=["email","bucket:T","pv:Q"],
+            tooltip=[alt.Tooltip("email:N", title="ユーザー"),
+                     alt.Tooltip("bucket:T", title="時刻"),
+                     alt.Tooltip("pv:Q", title="PV")],
         ).properties(height=max(360, len(email_order)*16))
         st.altair_chart(heat, use_container_width=True)
         st.caption(f"表示中: {len(email_order)} ユーザー（上限 {topn}） / 期間: 過去 {days_back} 日 / 解像度: {res_label}")
