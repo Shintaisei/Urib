@@ -137,47 +137,47 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-6xl">
         
 
         {/* タブナビゲーション */}
-        <div className="mt-8 flex gap-2 border-b border-border">
+        <div className="mt-4 sm:mt-8 flex gap-1.5 sm:gap-2 border-b border-border">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+            className={`pb-2.5 sm:pb-3 px-3 sm:px-6 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'overview'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <LayoutGrid className="w-4 h-4 inline mr-2" />
+            <LayoutGrid className="w-4 h-4 inline mr-1.5 sm:mr-2" />
             ホーム
           </button>
           <button
             onClick={() => setActiveTab('feed')}
-            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+            className={`pb-2.5 sm:pb-3 px-3 sm:px-6 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'feed'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <TrendingUp className="w-4 h-4 inline mr-2" />
+            <TrendingUp className="w-4 h-4 inline mr-1.5 sm:mr-2" />
             話題の投稿
           </button>
           <button
             onClick={() => setActiveTab('boards')}
-            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+            className={`pb-2.5 sm:pb-3 px-3 sm:px-6 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'boards'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <LayoutGrid className="w-4 h-4 inline mr-2" />
+            <LayoutGrid className="w-4 h-4 inline mr-1.5 sm:mr-2" />
             掲示板一覧
           </button>
           <button
             onClick={() => setActiveTab('market')}
-            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+            className={`pb-2.5 sm:pb-3 px-3 sm:px-6 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'market'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -187,13 +187,13 @@ export default function HomePage() {
           </button>
           <button
             onClick={() => setActiveTab('summaries')}
-            className={`pb-3 px-6 text-sm font-medium border-b-2 transition-colors ${
+            className={`pb-2.5 sm:pb-3 px-3 sm:px-6 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'summaries'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <BookOpen className="w-4 h-4 inline mr-2" />
+            <BookOpen className="w-4 h-4 inline mr-1.5 sm:mr-2" />
             サークル授業レビュー
           </button>
         </div>
@@ -201,53 +201,53 @@ export default function HomePage() {
         {/* タブコンテンツ */}
         <div className="mt-6">
           {activeTab === 'overview' && (
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {/* 機能紹介（メリハリのあるカード） */}
               <section>
                 <h2 className="text-xl font-bold text-foreground mb-3">URIVでできること</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="border rounded-lg p-4 bg-card/80 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-5 h-5 text-primary" />
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="border rounded-lg p-3 sm:p-4 bg-card/80 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                      <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                       <div className="font-semibold">掲示板</div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">匿名で相談・交流。学内の最新トピックをチェック。</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">匿名で相談・交流。学内の最新トピックをチェック。</p>
                     <button
                       onClick={() => setActiveTab('boards')}
-                      className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
+                      className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
                     >掲示板を見る</button>
                   </div>
-                  <div className="border rounded-lg p-4 bg-card/80 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <LayoutGrid className="w-5 h-5 text-primary" />
+                  <div className="border rounded-lg p-3 sm:p-4 bg-card/80 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                      <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                       <div className="font-semibold">中古品売買</div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">教科書・生活用品の売買を安全に。</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">教科書・生活用品の売買を安全に。</p>
                     <button
                       onClick={() => setActiveTab('market')}
-                      className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
+                      className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
                     >中古品を見る</button>
                   </div>
-                  <div className="border rounded-lg p-4 bg-card/80 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BookOpen className="w-5 h-5 text-primary" />
+                  <div className="border rounded-lg p-3 sm:p-4 bg-card/80 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                      <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                       <div className="font-semibold">授業まとめ</div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">先輩の知見で履修を賢く。</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">先輩の知見で履修を賢く。</p>
                     <button
                       onClick={() => { setActiveTab('summaries'); setSummaryTab('courses') }}
-                      className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
+                      className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
                     >授業まとめを見る</button>
                   </div>
-                  <div className="border rounded-lg p-4 bg-card/80 hover:shadow-md transition-shadow">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-5 h-5 text-primary" />
+                  <div className="border rounded-lg p-3 sm:p-4 bg-card/80 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                       <div className="font-semibold">サークルまとめ</div>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-3">活動内容や雰囲気をまとめてチェック。</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">活動内容や雰囲気をまとめてチェック。</p>
                     <button
                       onClick={() => { setActiveTab('summaries'); setSummaryTab('circles') }}
-                      className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
+                      className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90"
                     >サークルまとめを見る</button>
                   </div>
                 </div>
@@ -256,30 +256,30 @@ export default function HomePage() {
               {/* 新着ダイジェスト（コンパクト表示） */}
               <section>
                 <h3 className="text-lg font-semibold text-foreground mb-3">新着ダイジェスト</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
                   {/* 最新投稿（コンパクト） */}
-                  <div className="border rounded-lg p-4 bg-card/80">
+                  <div className="border rounded-lg p-3 sm:p-4 bg-card/80">
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold">掲示板 最新投稿</div>
                       <button
                         onClick={() => setActiveTab('feed')}
-                        className="text-xs text-primary hover:underline"
+                        className="text-[11px] sm:text-xs text-primary hover:underline"
                       >もっと見る</button>
                     </div>
                     {loadingOverview ? (
-                      <div className="text-sm text-muted-foreground py-4">読み込み中...</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground py-3 sm:py-4">読み込み中...</div>
                     ) : (overviewPosts.length === 0 ? (
-                      <div className="text-sm text-muted-foreground py-4">まだ投稿がありません</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground py-3 sm:py-4">まだ投稿がありません</div>
                     ) : (
-                      <ul className="space-y-2">
+                      <ul className="space-y-1.5 sm:space-y-2">
                         {overviewPosts.slice(0, 6).map((p: any) => (
-                          <li key={`ov-post-${p.id}`} className="text-sm">
+                          <li key={`ov-post-${p.id}`} className="text-xs sm:text-sm">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
                                 <div className="font-medium text-foreground truncate">{p.author_name}</div>
                                 <div className="text-muted-foreground truncate">{(p.content || '').slice(0, 60)}{(p.content || '').length > 60 ? '…' : ''}</div>
                               </div>
-                              <div className="flex-shrink-0 text-xs text-muted-foreground">{p.reply_count}件</div>
+                              <div className="flex-shrink-0 text-[11px] sm:text-xs text-muted-foreground">{p.reply_count}件</div>
                             </div>
                           </li>
                         ))}
@@ -288,18 +288,18 @@ export default function HomePage() {
                   </div>
 
                   {/* 授業・サークルまとめ 新着（統合） */}
-                  <div className="border rounded-lg p-4 bg-card/80">
+                  <div className="border rounded-lg p-3 sm:p-4 bg-card/80">
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold">授業・サークルまとめ 新着</div>
                       <button
                         onClick={() => { setActiveTab('summaries'); setSummaryTab('courses') }}
-                        className="text-xs text-primary hover:underline"
+                        className="text-[11px] sm:text-xs text-primary hover:underline"
                       >もっと見る</button>
                     </div>
                     {loadingOverview ? (
-                      <div className="text-sm text-muted-foreground py-4">読み込み中...</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground py-3 sm:py-4">読み込み中...</div>
                     ) : ((overviewCourses.length + overviewCircles.length) === 0 ? (
-                      <div className="text-sm text-muted-foreground py-4">まだまとめがありません</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground py-3 sm:py-4">まだまとめがありません</div>
                     ) : (
                       (() => {
                         // 混合リスト（最新順に近い感じで単純に先頭から閾値まで）
@@ -308,13 +308,13 @@ export default function HomePage() {
                           ...overviewCircles.map((s: any) => ({ ...s, _type: 'circle' })),
                         ].slice(0, 8)
                         return (
-                          <ul className="space-y-2">
+                          <ul className="space-y-1.5 sm:space-y-2">
                             {combined.map((s: any, idx: number) => (
-                              <li key={`ov-sum-${s._type}-${s.id}-${idx}`} className="text-sm">
+                              <li key={`ov-sum-${s._type}-${s.id}-${idx}`} className="text-xs sm:text-sm">
                                 <div className="truncate font-medium text-foreground">
                                   {s.title}
                                 </div>
-                                <div className="text-xs text-muted-foreground truncate">
+                                <div className="text-[11px] sm:text-xs text-muted-foreground truncate">
                                   {s._type === 'course' ? (s.course_name || s.department || '') : (s.circle_name || s.category || '')}
                                 </div>
                               </li>
@@ -326,28 +326,28 @@ export default function HomePage() {
                   </div>
 
                   {/* 中古品売買 新着 */}
-                  <div className="border rounded-lg p-4 bg-card/80">
+                  <div className="border rounded-lg p-3 sm:p-4 bg-card/80">
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold">中古品売買 新着</div>
                       <button
                         onClick={() => setActiveTab('market')}
-                        className="text-xs text-primary hover:underline"
+                        className="text-[11px] sm:text-xs text-primary hover:underline"
                       >もっと見る</button>
                     </div>
                     {loadingOverview ? (
-                      <div className="text-sm text-muted-foreground py-4">読み込み中...</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground py-3 sm:py-4">読み込み中...</div>
                     ) : (overviewMarket.length === 0 ? (
-                      <div className="text-sm text-muted-foreground py-4">まだ出品がありません</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground py-3 sm:py-4">まだ出品がありません</div>
                     ) : (
-                      <ul className="space-y-2">
+                      <ul className="space-y-1.5 sm:space-y-2">
                         {overviewMarket.slice(0, 6).map((m: any) => (
-                          <li key={`ov-market-${m.id}`} className="text-sm">
+                          <li key={`ov-market-${m.id}`} className="text-xs sm:text-sm">
                             <div className="flex items-center justify-between gap-2">
                               <div className="min-w-0">
                                 <div className="truncate font-medium text-foreground">{m.title}</div>
-                                <div className="text-xs text-muted-foreground truncate">{m.price === 0 ? '無料' : (m.price != null ? `¥${m.price}` : '')}</div>
+                                <div className="text-[11px] sm:text-xs text-muted-foreground truncate">{m.price === 0 ? '無料' : (m.price != null ? `¥${m.price}` : '')}</div>
                               </div>
-                              <div className="flex-shrink-0 text-xs text-muted-foreground">{m.type === 'sell' ? '売' : '買'}</div>
+                              <div className="flex-shrink-0 text-[11px] sm:text-xs text-muted-foreground">{m.type === 'sell' ? '売' : '買'}</div>
                             </div>
                           </li>
                         ))}
@@ -360,7 +360,7 @@ export default function HomePage() {
           )}
 
           {activeTab === 'feed' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-6">
               <div className="lg:col-span-2">
                 <PostFeed />
               </div>
@@ -373,7 +373,7 @@ export default function HomePage() {
           {activeTab === 'boards' && (
             <div>
               {/* 掲示板タブ */}
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                 {[
                   { id: '1', title: '全体' },
                   { id: '2', title: '授業・履修' },
@@ -385,7 +385,7 @@ export default function HomePage() {
                   <button
                     key={`board-tab-${b.id}`}
                     onClick={() => setSelectedBoardId(b.id)}
-                    className={`px-3 py-1.5 rounded border text-sm transition-colors ${
+                    className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded border text-xs sm:text-sm transition-colors ${
                       selectedBoardId === b.id
                         ? 'bg-primary text-white border-primary'
                         : 'bg-background text-foreground border-border hover:bg-muted'
@@ -414,16 +414,16 @@ export default function HomePage() {
           {activeTab === 'summaries' && (
             <div>
               {/* 内部タブ */}
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                 <button
                   onClick={() => setSummaryTab('courses')}
-                  className={`px-3 py-1.5 rounded border text-sm transition-colors ${
+                  className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded border text-xs sm:text-sm transition-colors ${
                     summaryTab === 'courses' ? 'bg-muted text-foreground border-border' : 'text-muted-foreground border-border hover:bg-muted'
                   }`}
                 >授業まとめ</button>
                 <button
                   onClick={() => setSummaryTab('circles')}
-                  className={`px-3 py-1.5 rounded border text-sm transition-colors ${
+                  className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded border text-xs sm:text-sm transition-colors ${
                     summaryTab === 'circles' ? 'bg-muted text-foreground border-border' : 'text-muted-foreground border-border hover:bg-muted'
                   }`}
                 >サークルまとめ</button>
