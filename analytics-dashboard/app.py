@@ -790,6 +790,122 @@ def sessions_tab():
         use_container_width=True
     )
 
+def diagnostics_tab():
+    st.subheader("データ健全性チェック")
+    # 読み込み（raw中心）
+    pv = load_csv(EXPORT_DIR / "page_views.csv")
+    posts = load_csv(EXPORT_DIR / "board_posts.csv")
+    replies = load_csv(EXPORT_DIR / "board_replies.csv")
+    visits = load_csv(EXPORT_DIR / "board_visits.csv")
+    market = load_csv(EXPORT_DIR / "market_items.csv")
+    course = load_csv(EXPORT_DIR / "course_summaries.csv")
+    circle = load_csv(EXPORT_DIR / "circle_summaries.csv")
+    pv_user = load_csv(AGG_DIR / "pageviews_by_user.csv")
+
+    days = st.slider("対象期間（日）", 7, 180, 60, key="diag_days")
+    cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
+
+    def nn_rate(df: pd.DataFrame, cols: list[str]) -> dict:
+        out = {}
+        for c in cols:
+            if c in df.columns:
+                out[c] = float(df[c].notna().mean()) if len(df) else 0.0
+            else:
+                out[c] = None
+        return out
+
+    def prep(df: pd.DataFrame) -> pd.DataFrame:
+        if df.empty:
+            return df
+        d = df.copy()
+        if "created_at" in d.columns:
+            d["created_at"] = parse_date(d["created_at"])
+            d = d.dropna(subset=["created_at"])
+            d = d[d["created_at"] >= cutoff]
+        return d
+
+    pv_f = prep(pv)
+    posts_f = prep(posts)
+    replies_f = prep(replies)
+    visits_f = prep(visits)
+    market_f = prep(market)
+    course_f = prep(course)
+    circle_f = prep(circle)
+
+    # サマリ表
+    rows = []
+    def add_row(name: str, df: pd.DataFrame, required: list[str], id_col: str | None = None):
+        present = {c: (c in df.columns) for c in required}
+        nn = nn_rate(df, required)
+        dup = int(df.duplicated(subset=[id_col]).sum()) if (id_col and id_col in df.columns) else None
+        rows.append({
+            "dataset": name,
+            "rows": len(df),
+            "cols": len(df.columns) if not df.empty else 0,
+            "required_present": present,
+            "non_null_rate": nn,
+            "duplicates": dup,
+        })
+
+    add_row("page_views.csv", pv_f, ["email","created_at","path"])
+    add_row("board_posts.csv", posts_f, ["created_at","board_id"], id_col="id")
+    add_row("board_replies.csv", replies_f, ["created_at","post_id"], id_col="id")
+    add_row("board_visits.csv", visits_f, ["created_at","board_id","email"])
+    add_row("market_items.csv", market_f, ["created_at","type","price"], id_col="id")
+    add_row("course_summaries.csv", course_f, ["created_at"], id_col="id")
+    add_row("circle_summaries.csv", circle_f, ["created_at"], id_col="id")
+    add_row("pageviews_by_user.csv (agg)", pv_user, ["email","active_days_30d"])
+
+    diag_df = pd.DataFrame(rows)
+    # 展開カラムを文字列化して可視化
+    if not diag_df.empty:
+        diag_view = diag_df.copy()
+        diag_view["required_present"] = diag_view["required_present"].astype(str)
+        diag_view["non_null_rate"] = diag_view["non_null_rate"].astype(str)
+        st.markdown("#### データセット健全性サマリ")
+        st.dataframe(diag_view, use_container_width=True, height=360)
+
+    # 相互整合チェック（ファネル実数）
+    st.markdown("#### 相互整合チェック")
+    def uniq_emails(df: pd.DataFrame, col: str = "email") -> int:
+        return int(df[col].astype(str).str.contains("@", na=False).sum()) if (not df.empty and col in df.columns) else 0
+    pv_users = pv_f["email"].astype(str).str.contains("@", na=False).sum() if ("email" in pv_f.columns) else 0
+    visit_users = visits_f["email"].astype(str).str.contains("@", na=False).sum() if ("email" in visits_f.columns) else 0
+    st.write(pd.DataFrame([
+        {"metric":"pv_users(raw,期間内)", "value": int(pv_users)},
+        {"metric":"board_visit_users(raw,期間内,email列有)", "value": int(visit_users)},
+        {"metric":"posts(期間内)", "value": len(posts_f)},
+        {"metric":"replies(期間内)", "value": len(replies_f)},
+        {"metric":"market_items(期間内)", "value": len(market_f)},
+    ]))
+
+    # 欠損可視化（主要列）
+    st.markdown("#### 欠損率（主要列）")
+    major = []
+    def add_major(name: str, df: pd.DataFrame, cols: list[str]):
+        for c in cols:
+            if c in df.columns:
+                major.append({"dataset": name, "column": c, "non_null_rate": float(df[c].notna().mean())})
+            else:
+                major.append({"dataset": name, "column": c, "non_null_rate": None})
+    add_major("page_views.csv", pv_f, ["email","created_at","path"])
+    add_major("board_visits.csv", visits_f, ["email","created_at","board_id"])
+    add_major("board_posts.csv", posts_f, ["created_at","board_id"])
+    add_major("board_replies.csv", replies_f, ["created_at","post_id"])
+    add_major("market_items.csv", market_f, ["created_at","type","price"])
+    miss_df = pd.DataFrame(major)
+    st.dataframe(miss_df.pivot_table(index=["dataset","column"], values="non_null_rate", aggfunc="first").reset_index(),
+                 use_container_width=True, height=360)
+
+    # ダウンロード
+    st.download_button(
+        "健全性サマリをCSVでダウンロード",
+        data=diag_view.to_csv(index=False).encode("utf-8") if not diag_df.empty else "".encode("utf-8"),
+        file_name="diagnostics_summary.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
 def ai_tab():
     st.subheader("AI 集計アシスタント")
     # OpenAI import可否
@@ -1310,7 +1426,7 @@ def main():
         st.success("最新データに更新しました。")
         st.rerun()
 
-    tab_names = ["Overview", "Users", "Boards", "Market", "Engagement", "Sessions", "AI", "Admins"]
+    tab_names = ["Overview", "Users", "Boards", "Market", "Engagement", "Sessions", "Diagnostics", "AI", "Admins"]
     tabs = st.tabs(tab_names)
     with tabs[0]:
         overview_tab()
@@ -1325,8 +1441,10 @@ def main():
     with tabs[5]:
         sessions_tab()
     with tabs[6]:
-        ai_tab()
+        diagnostics_tab()
     with tabs[7]:
+        ai_tab()
+    with tabs[8]:
         admins_tab()
 
 if __name__ == "__main__":
