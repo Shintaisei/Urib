@@ -418,35 +418,48 @@ def engagement_tab():
             y=alt.Y("count()", title="Users"),
         ).properties(height=360)
         st.altair_chart(hist, use_container_width=True)
-    # 全体: 日付 × 時間 帯のヒートマップ（周期性の把握）
+    # 全体: 日付 × 時間帯（任意解像度）ヒートマップ（pv_rawをメール紐付け・管理者除外で使用）
     if not pv_raw.empty:
         st.markdown("#### 全体の周期性（日付 × 時間帯 ヒートマップ）")
-        days_cal = st.slider("期間(日)", 7, 180, 90, key="pv_calendar_days")
+        col1, col2 = st.columns([2,1])
+        with col1:
+            days_cal = st.slider("期間(日)", 7, 180, 90, key="pv_calendar_days")
+        with col2:
+            res_label_cal = st.select_slider("時間解像度", options=["15分","30分","1時間","3時間","6時間","12時間","1日"], value="1時間", key="pv_calendar_res")
+        freq_map_cal = {"15分":"15min","30分":"30min","1時間":"1h","3時間":"3h","6時間":"6h","12時間":"12h","1日":"1d"}
+        freq_cal = freq_map_cal.get(res_label_cal, "1h")
         df_cal = pv_raw.copy()
         df_cal["email"] = df_cal.get("email", "").astype(str)
+        df_cal = df_cal[df_cal["email"].str.contains("@", na=False)]
         df_cal = df_cal[~df_cal["email"].apply(is_admin_email)]
         df_cal["created_at"] = parse_date(df_cal.get("created_at"))
         df_cal = df_cal.dropna(subset=["created_at"])
         cutoff_cal = pd.Timestamp.now() - pd.Timedelta(days=days_cal)
         df_cal = df_cal[df_cal["created_at"] >= cutoff_cal]
-        df_cal["date"] = df_cal["created_at"].dt.date
-        df_cal["hour"] = df_cal["created_at"].dt.hour
-        cal = df_cal.groupby(["date","hour"]).size().reset_index(name="pv")
+        df_cal["bucket"] = df_cal["created_at"].dt.floor(freq_cal)
+        df_cal["date"] = df_cal["bucket"].dt.date
+        if freq_cal.endswith("d"):
+            df_cal["t_label"] = "終日"
+            t_sort = ["終日"]
+        else:
+            df_cal["t_label"] = df_cal["bucket"].dt.strftime("%H:%M")
+            t_sort = sorted(df_cal["t_label"].unique().tolist())
+        cal = df_cal.groupby(["date","t_label"]).size().reset_index(name="pv")
         heat_cal = alt.Chart(cal).mark_rect().encode(
-            x=alt.X("date:T", title="日付"),
-            y=alt.Y("hour:O", title="時間帯(0-23)", sort=list(range(24))),
+            x=alt.X("date:O", title="日付", axis=alt.Axis(format="%m/%d")),
+            y=alt.Y("t_label:O", title=f"時間帯（{res_label_cal}）", sort=t_sort),
             color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="greens")),
             tooltip=list(cal.columns),
-        ).properties(height=400)
+        ).properties(height=420)
         st.altair_chart(heat_cal, use_container_width=True)
     # ユーザー別: 日時バケット × ユーザー ヒートマップ（縦=ユーザー, 横=時系列）
     if not pv_raw.empty:
         st.markdown("#### ユーザー × 時系列 ヒートマップ（縦=ユーザー, 横=日付時刻）")
         days_back = st.slider("対象期間（日）", 7, 180, 60, key="pv_user_time_days")
         topn = st.slider("表示ユーザー数（上位PV）", 10, 100, 40, step=5, key="pv_user_time_topn")
-        res_label = st.select_slider("時間解像度", options=["15分", "30分", "1時間", "3時間", "6時間"], value="1時間", key="pv_user_time_res")
+        res_label = st.select_slider("時間解像度", options=["15分", "30分", "1時間", "3時間", "6時間", "12時間"], value="1時間", key="pv_user_time_res")
         # pandas 2.2+ は 'H' が非推奨のため小文字へ
-        freq_map = {"15分":"15min", "30分":"30min", "1時間":"1h", "3時間":"3h", "6時間":"6h"}
+        freq_map = {"15分":"15min", "30分":"30min", "1時間":"1h", "3時間":"3h", "6時間":"6h", "12時間":"12h"}
         freq = freq_map.get(res_label, "1h")
         df = pv_raw.copy()
         df["email"] = df.get("email", "").astype(str)
