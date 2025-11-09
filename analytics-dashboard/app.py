@@ -126,6 +126,36 @@ def line(df: pd.DataFrame, x: str, y: str, color: Optional[str] = None, title: s
     chart = alt.Chart(df).mark_line(point=True).encode(**enc).properties(title=title, height=260)
     return chart
 
+def compute_sessions(dfu: pd.DataFrame, threshold_minutes: int = 30) -> pd.DataFrame:
+    """
+    page_views の行からセッションを推定し集計を返す。
+    - 連続リクエストの間隔が threshold_minutes を超えると新しいセッション
+    返却カラム: email, session_id, start, end, duration_minutes, pageviews, unique_paths, unique_posts
+    """
+    if dfu.empty:
+        return pd.DataFrame()
+    dfu = dfu.copy().sort_values(["email", "created_at"])
+    # セッション境界を検出
+    gap_min = dfu.groupby("email")["created_at"].diff().dt.total_seconds().div(60)
+    gap_min = gap_min.fillna(threshold_minutes + 1)
+    new_session = (gap_min > threshold_minutes).astype(int)
+    session_id = new_session.groupby(dfu["email"]).cumsum()
+    dfu["session_id"] = session_id
+    # 集計
+    def count_unique_posts(paths: pd.Series) -> int:
+        return paths.astype(str).str.extract(r"/board/(\\d+)", expand=False).dropna().nunique()
+    agg = dfu.groupby(["email", "session_id"]).agg(
+        start=("created_at", "min"),
+        end=("created_at", "max"),
+        pageviews=("path", "count"),
+        unique_paths=("path", lambda s: s.astype(str).nunique()),
+        unique_posts=("path", count_unique_posts),
+    ).reset_index()
+    agg["duration_minutes"] = (agg["end"] - agg["start"]).dt.total_seconds().div(60).round(1)
+    # 表示順に並べ替え
+    agg = agg.sort_values(["email", "start"]).reset_index(drop=True)
+    return agg
+
 def overview_tab():
     st.subheader("概要")
     users_full = load_csv(AGG_DIR / "users_full_summary.csv")
@@ -550,6 +580,65 @@ def engagement_tab():
                 tooltip=["count()"]
             ).properties(height=240)
             st.altair_chart(hist, use_container_width=True)
+    # セッション分析（page_views から推定）
+    if not pv_raw.empty:
+        with st.expander("セッション分析（page_views）", expanded=True):
+            days = st.slider("対象期間（日）", 1, 90, 14, key="sess_days")
+            gap = st.slider("セッション区切り（分）", 5, 120, 30, step=5, key="sess_gap")
+            q = st.text_input("メール部分一致フィルタ（空で全体）", "", key="sess_q")
+            df = pv_raw.copy()
+            df["email"] = df.get("email", "").astype(str).map(normalize_email)
+            df = df[df["email"].str.contains("@", na=False)]
+            df = df[~df["email"].apply(is_admin_email)]
+            df["created_at"] = parse_date(df.get("created_at"))
+            df = df.dropna(subset=["created_at"])
+            cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
+            df = df[df["created_at"] >= cutoff]
+            if q.strip():
+                df = df[df["email"].str.contains(q.strip(), case=False, na=False)]
+            sessions = compute_sessions(df[["email","created_at","path"]], threshold_minutes=gap)
+            if sessions.empty:
+                st.info("対象期間にセッションがありません。")
+            else:
+                # KPI
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("セッション数", f"{len(sessions):,}")
+                with col2:
+                    st.metric("平均滞在時間(分)", f"{sessions['duration_minutes'].mean():.1f}")
+                with col3:
+                    st.metric("平均PV/セッション", f"{sessions['pageviews'].mean():.1f}")
+                # 分布
+                c1 = alt.Chart(sessions).mark_bar().encode(
+                    x=alt.X("duration_minutes:Q", bin=alt.Bin(maxbins=40), title="滞在時間(分)"),
+                    y=alt.Y("count()", title="セッション数"),
+                ).properties(height=260, title="滞在時間 分布")
+                c2 = alt.Chart(sessions).mark_bar().encode(
+                    x=alt.X("pageviews:Q", bin=alt.Bin(maxbins=30), title="PV/セッション"),
+                    y=alt.Y("count()", title="セッション数"),
+                ).properties(height=260, title="PV/セッション 分布")
+                st.altair_chart(alt.hconcat(c1, c2).resolve_scale(y="shared"), use_container_width=True)
+                # 上位セッションとユーザー別サマリ
+                top_sessions = sessions.sort_values(["duration_minutes","pageviews"], ascending=False).head(50)
+                user_summary = sessions.groupby("email", as_index=False).agg(
+                    sessions=("session_id","count"),
+                    avg_duration=("duration_minutes","mean"),
+                    avg_pv=("pageviews","mean"),
+                    total_pv=("pageviews","sum"),
+                    unique_posts=("unique_posts","sum"),
+                ).sort_values("sessions", ascending=False)
+                st.markdown("#### 上位セッション（滞在時間）")
+                st.dataframe(top_sessions, use_container_width=True, height=320)
+                st.markdown("#### ユーザー別サマリ")
+                st.dataframe(user_summary, use_container_width=True, height=360)
+                # ダウンロード
+                st.download_button(
+                    "セッションCSVをダウンロード",
+                    data=sessions.to_csv(index=False).encode("utf-8"),
+                    file_name="sessions.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
     # 下部にデータ一覧
     with st.expander("データ一覧（page_views 由来のユーザー集計）", expanded=False):
         if not pv_user.empty:
