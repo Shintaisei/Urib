@@ -18,6 +18,26 @@ def load_csv(path: Path) -> pd.DataFrame:
     except Exception:
         return pd.DataFrame()
 
+def to_numeric(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    for c in cols:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+    return df
+
+def bar(df: pd.DataFrame, x: str, y: str, title: str = "", top_n: int | None = None):
+    if df.empty or x not in df.columns or y not in df.columns:
+        return None
+    data = df.copy()
+    data = to_numeric(data, [y])
+    if top_n:
+        data = data.sort_values(y, ascending=False).head(top_n)
+    chart = alt.Chart(data).mark_bar().encode(
+        x=alt.X(x + ":N", sort='-y', title=x),
+        y=alt.Y(y + ":Q", title=y),
+        tooltip=list(data.columns),
+    ).properties(title=title, height=260)
+    return chart
+
 def ensure_dirs() -> None:
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
     AGG_DIR.mkdir(parents=True, exist_ok=True)
@@ -47,32 +67,44 @@ def overview_tab():
         st.metric("出品数(総計)", f"{m_items:,}")
 
     if not users_full.empty:
-        st.markdown("#### 直近30日アクティブ上位")
-        top_pv = (
-            pv.sort_values("active_days_30d", ascending=False)[["email", "active_days_30d"]]
-            .head(10)
-        ) if not pv.empty else pd.DataFrame()
-        if not top_pv.empty:
-            st.dataframe(top_pv, use_container_width=True, hide_index=True)
-
-        st.markdown("#### 掲示板投稿上位")
-        top_posts = users_full.sort_values("board_posts", ascending=False)[["email","board_posts"]].head(10)
-        st.dataframe(top_posts, use_container_width=True, hide_index=True)
+        left, right = st.columns(2)
+        with left:
+            st.markdown("#### 掲示板投稿 上位")
+            chart = bar(users_full[["email","board_posts"]], x="email", y="board_posts", title="Top Posters", top_n=15)
+            if chart is not None:
+                st.altair_chart(chart, use_container_width=True)
+        with right:
+            st.markdown("#### 直近30日アクティブ日数 上位")
+            if not pv.empty:
+                chart = bar(pv[["email","active_days_30d"]], x="email", y="active_days_30d", title="Active Days (30d) Top", top_n=15)
+                if chart is not None:
+                    st.altair_chart(chart, use_container_width=True)
 
     if not boards.empty:
         st.markdown("#### 掲示板別の活動量")
-        for c in ["post_count","reply_count","post_likes","reply_likes","unique_visitors","unique_posters"]:
-            boards[c] = pd.to_numeric(boards[c], errors="coerce").fillna(0)
-        chart = alt.Chart(boards).mark_bar().encode(
-            x=alt.X("board_id:N", title="Board"),
-            y=alt.Y("post_count:Q", title="投稿数"),
-            tooltip=list(boards.columns),
-        ).properties(height=260)
-        st.altair_chart(chart, use_container_width=True)
+        boards = to_numeric(boards, ["post_count","reply_count","post_likes","reply_likes","unique_visitors","unique_posters"])
+        tabs = st.tabs(["投稿数", "返信数", "投稿いいね", "返信いいね", "訪問者数", "投稿者数"])
+        metrics = [
+            ("post_count","投稿数"),
+            ("reply_count","返信数"),
+            ("post_likes","投稿いいね"),
+            ("reply_likes","返信いいね"),
+            ("unique_visitors","訪問者数"),
+            ("unique_posters","投稿者数"),
+        ]
+        for i, (col, ttl) in enumerate(metrics):
+            with tabs[i]:
+                chart = alt.Chart(boards).mark_bar().encode(
+                    x=alt.X("board_id:N", title="Board"),
+                    y=alt.Y(f"{col}:Q", title=ttl),
+                    tooltip=list(boards.columns),
+                ).properties(height=260)
+                st.altair_chart(chart, use_container_width=True)
 
 def users_tab():
     st.subheader("ユーザー別 行動サマリ")
     users_full = load_csv(AGG_DIR / "users_full_summary.csv")
+    pv = load_csv(AGG_DIR / "pageviews_by_user.csv")
     if users_full.empty:
         st.info("users_full_summary.csv がまだありません。「最新データを取得して集計」を実行してください。")
         return
@@ -84,6 +116,18 @@ def users_tab():
     if q:
         df = df[df["email"].astype(str).str.contains(q, case=False, na=False)]
     st.dataframe(df.sort_values("board_posts", ascending=False), use_container_width=True, height=420)
+    # 追加チャート
+    st.markdown("#### 上位ユーザーの比較（棒グラフ）")
+    left, right = st.columns(2)
+    with left:
+        chart = bar(df[["email","board_posts"]], x="email", y="board_posts", title="Board Posts Top", top_n=20)
+        if chart is not None:
+            st.altair_chart(chart, use_container_width=True)
+    with right:
+        if not pv.empty:
+            chart = bar(pv[["email","active_days_30d"]], x="email", y="active_days_30d", title="Active Days (30d) Top", top_n=20)
+            if chart is not None:
+                st.altair_chart(chart, use_container_width=True)
 
 def boards_tab():
     st.subheader("掲示板 集計")
@@ -99,7 +143,12 @@ def market_tab():
     if market.empty:
         st.info("market_summary.csv がありません。")
         return
+    market = to_numeric(market, ["items","likes_given_items","likes_received_items"])
     st.dataframe(market.sort_values("items", ascending=False), use_container_width=True, height=420)
+    st.markdown("#### 出品数 上位（棒グラフ）")
+    chart = bar(market[["email","items"]], x="email", y="items", title="Items by User", top_n=15)
+    if chart is not None:
+        st.altair_chart(chart, use_container_width=True)
 
 def engagement_tab():
     st.subheader("継続ログイン (PageViews)")
@@ -107,13 +156,18 @@ def engagement_tab():
     if pv.empty:
         st.info("pageviews_by_user.csv がありません。")
         return
-    for col in ["active_days_total","active_days_30d","active_days_7d","longest_streak_days","current_streak_days"]:
-        pv[col] = pd.to_numeric(pv[col], errors="coerce").fillna(0)
+    pv = to_numeric(pv, ["active_days_total","active_days_30d","active_days_7d","longest_streak_days","current_streak_days"])
     st.dataframe(
         pv.sort_values(["active_days_30d","current_streak_days"], ascending=[False, False]),
         use_container_width=True,
         height=420
     )
+    st.markdown("#### 分布（直近30日アクティブ日数）")
+    hist = alt.Chart(pv).mark_bar().encode(
+        x=alt.X("active_days_30d:Q", bin=alt.Bin(maxbins=30), title="Active Days (30d)"),
+        y=alt.Y("count()", title="Users"),
+    ).properties(height=260)
+    st.altair_chart(hist, use_container_width=True)
 
 def main():
     st.set_page_config(page_title="URIV Analytics", page_icon="📊", layout="wide")
