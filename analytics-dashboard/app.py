@@ -226,6 +226,7 @@ def boards_tab():
     boards = load_csv(AGG_DIR / "boards_summary.csv")
     posts_raw = load_csv(EXPORT_DIR / "board_posts.csv")
     replies_raw = load_csv(EXPORT_DIR / "board_replies.csv")
+    pv_raw = load_csv(EXPORT_DIR / "page_views.csv")
     if boards.empty:
         st.info("boards_summary.csv がありません。")
         return
@@ -261,6 +262,30 @@ def boards_tab():
                 tooltip=list(p_ser.columns),
             ).properties(height=260)
             st.altair_chart(c2, use_container_width=True)
+    # ボード別DAU（パスから推定）
+    if not pv_raw.empty:
+        with st.expander("ボード別 DAU（PageViewのpathから推定）", expanded=False):
+            dfp = pv_raw.copy()
+            dfp["email"] = dfp.get("email", "").astype(str)
+            dfp = dfp[~dfp["email"].apply(is_admin_email)]
+            dfp["created_at"] = parse_date(dfp.get("created_at"))
+            dfp = dfp.dropna(subset=["created_at"])
+            # pathから /board/<id> を抽出
+            dfp["path"] = dfp.get("path", "").astype(str)
+            dfp["board_id"] = dfp["path"].str.extract(r"/board/(\\d+)", expand=False)
+            dfp = dfp.dropna(subset=["board_id"])
+            dfp = dfp.assign(day=lambda d: d["created_at"].dt.date)
+            dau_b = dfp.groupby(["board_id","day"])["email"].nunique().reset_index(name="dau")
+            sel = st.multiselect("対象Board", sorted(dau_b["board_id"].unique().tolist()), default=sorted(dau_b["board_id"].unique().tolist())[:3])
+            if sel:
+                dau_b = dau_b[dau_b["board_id"].isin(sel)]
+            chart_b = alt.Chart(dau_b).mark_line(point=True).encode(
+                x=alt.X("day:T", title="日付"),
+                y=alt.Y("dau:Q", title="DAU"),
+                color=alt.Color("board_id:N", title="Board"),
+                tooltip=list(dau_b.columns),
+            ).properties(height=260)
+            st.altair_chart(chart_b, use_container_width=True)
     # 下部にデータ一覧
     with st.expander("データ一覧（boards_summary）", expanded=False):
         st.dataframe(boards, use_container_width=True, height=420)
@@ -296,6 +321,23 @@ def market_tab():
                 c3 = line(daily, x="day", y="items", title="出品数（推移）")
                 if c3 is not None:
                     st.altair_chart(c3, use_container_width=True)
+    # 価格帯×種別ヒートマップ
+    if not items_raw.empty:
+        with st.expander("価格帯 × 種別 ヒートマップ", expanded=False):
+            items = items_raw.copy()
+            items["type"] = items.get("type", "").fillna("unknown").astype(str)
+            items["price"] = pd.to_numeric(items.get("price", 0), errors="coerce").fillna(0)
+            bins = [0, 500, 1000, 2000, 5000, 10000, 20000, 9999999]
+            labels = ["0-500", "500-1k", "1k-2k", "2k-5k", "5k-10k", "10k-20k", "20k+"]
+            items["price_band"] = pd.cut(items["price"], bins=bins, labels=labels, include_lowest=True)
+            cross = items.groupby(["type","price_band"]).size().reset_index(name="count")
+            heat = alt.Chart(cross).mark_rect().encode(
+                x=alt.X("price_band:N", title="価格帯", sort=labels),
+                y=alt.Y("type:N", title="種別"),
+                color=alt.Color("count:Q", title="件数"),
+                tooltip=list(cross.columns),
+            ).properties(height=240)
+            st.altair_chart(heat, use_container_width=True)
     # 下部にデータ一覧
     with st.expander("データ一覧（market_summary）", expanded=False):
         st.dataframe(market.sort_values("items", ascending=False), use_container_width=True, height=420)
@@ -304,6 +346,8 @@ def engagement_tab():
     st.subheader("継続ログイン (PageViews)")
     pv = load_csv(AGG_DIR / "pageviews_by_user.csv")
     pv_raw = load_csv(EXPORT_DIR / "page_views.csv")
+    posts_raw = load_csv(EXPORT_DIR / "board_posts.csv")
+    replies_raw = load_csv(EXPORT_DIR / "board_replies.csv")
     if pv.empty:
         st.info("pageviews_by_user.csv がありません。")
         return
@@ -381,6 +425,23 @@ def engagement_tab():
         ).properties(height=max(240, len(email_order)*12))
         st.altair_chart(heat, use_container_width=True)
         st.caption(f"表示中: {len(email_order)} ユーザー（上限 {topn}） / 期間: 過去 {days_back} 日 / 解像度: {res_label}")
+    # 投稿→初返信までの時間（分）の分布
+    if not posts_raw.empty and not replies_raw.empty:
+        with st.expander("投稿→初返信までの時間（分）", expanded=False):
+            p = posts_raw[["id","created_at"]].copy()
+            p["post_ts"] = parse_date(p["created_at"])
+            r = replies_raw[["post_id","created_at"]].copy()
+            r["reply_ts"] = parse_date(r["created_at"])
+            first_r = r.sort_values("reply_ts").dropna(subset=["reply_ts"]).groupby("post_id").first().reset_index()
+            merged = p.merge(first_r, left_on="id", right_on="post_id", how="inner")
+            merged["mins"] = (merged["reply_ts"] - merged["post_ts"]).dt.total_seconds() / 60.0
+            merged = merged[(merged["mins"] >= 0) & (merged["mins"].notna())]
+            hist = alt.Chart(merged).mark_bar().encode(
+                x=alt.X("mins:Q", bin=alt.Bin(maxbins=50), title="経過時間（分）"),
+                y=alt.Y("count()", title="投稿数"),
+                tooltip=["count()"]
+            ).properties(height=240)
+            st.altair_chart(hist, use_container_width=True)
     # 下部にデータ一覧
     with st.expander("データ一覧（pageviews_by_user）", expanded=False):
         st.dataframe(
