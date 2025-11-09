@@ -337,46 +337,39 @@ def engagement_tab():
             tooltip=list(cal.columns),
         ).properties(height=320)
         st.altair_chart(heat_cal, use_container_width=True)
-    # ユーザー別: 週 × 時間 ヒートマップ（周期性: どの週のどの時間に来ているか）
+    # ユーザー別: 日時バケット × ユーザー ヒートマップ（縦=ユーザー, 横=時系列）
     if not pv_raw.empty:
-        st.markdown("#### ユーザー別 週 × 時間 ヒートマップ（周期性）")
-        weeks_back = st.slider("対象期間（週）", 4, 52, 26, key="pv_week_hour_weeks")
-        topn = st.slider("表示ユーザー数（上位PV）", 8, 48, 16, step=4, key="pv_week_hour_topn")
-        columns = st.slider("列数（横方向の面数）", 2, 6, 4, key="pv_week_hour_cols")
+        st.markdown("#### ユーザー × 時系列 ヒートマップ（縦=ユーザー, 横=日付時刻）")
+        days_back = st.slider("対象期間（日）", 7, 180, 60, key="pv_user_time_days")
+        topn = st.slider("表示ユーザー数（上位PV）", 10, 100, 40, step=5, key="pv_user_time_topn")
+        res_label = st.select_slider("時間解像度", options=["15分", "30分", "1時間", "3時間", "6時間"], value="1時間", key="pv_user_time_res")
+        freq_map = {"15分":"15min", "30分":"30min", "1時間":"1H", "3時間":"3H", "6時間":"6H"}
+        freq = freq_map.get(res_label, "1H")
         df = pv_raw.copy()
         df["email"] = df.get("email", "").astype(str)
         df = df[~df["email"].apply(is_admin_email)]
         df["created_at"] = parse_date(df.get("created_at"))
         df = df.dropna(subset=["created_at"])
-        cutoff = pd.Timestamp.now() - pd.Timedelta(weeks=weeks_back)
+        cutoff = pd.Timestamp.now() - pd.Timedelta(days=days_back)
         df = df[df["created_at"] >= cutoff]
-        # 週（ISO）と時間帯
-        iso = df["created_at"].dt.isocalendar()
-        df["year"] = iso["year"].astype(int)
-        df["week"] = iso["week"].astype(int)
-        df["year_week"] = df["year"].astype(str) + "-W" + df["week"].apply(lambda w: f"{int(w):02d}")
-        df["hour"] = df["created_at"].dt.hour
+        # 解像度でバケット
+        df["bucket"] = df["created_at"].dt.floor(freq)
         # 上位ユーザー抽出（期間内PV上位）
         tops = df.groupby("email").size().reset_index(name="pv").sort_values("pv", ascending=False).head(topn)["email"]
         df = df[df["email"].isin(tops)]
-        # 並び順
+        # 並び順（総PV降順）
         totals = df.groupby("email").size().sort_values(ascending=False)
         email_order = totals.index.tolist()
-        # 週×時間のピボット
-        wk_order = sorted(df["year_week"].unique().tolist(), key=lambda s: (int(s.split("-W")[0]), int(s.split("-W")[1])))
-        pivot = df.groupby(["email","year_week","hour"]).size().reset_index(name="pv")
-        base = alt.Chart(pivot).mark_rect().encode(
-            x=alt.X("year_week:N", title="週(ISO)", sort=wk_order),
-            y=alt.Y("hour:O", title="時間帯(0-23)", sort=list(range(24))),
+        # ピボット（日付時刻 × ユーザー）
+        pivot = df.groupby(["email","bucket"]).size().reset_index(name="pv")
+        heat = alt.Chart(pivot).mark_rect().encode(
+            x=alt.X("bucket:T", title=f"時刻（{res_label}バケット）"),
+            y=alt.Y("email:N", title="ユーザー", sort=email_order),
             color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="magma")),
             tooltip=list(pivot.columns),
-        )
-        faceted = base.facet(
-            row=alt.Row("email:N", sort=email_order, title="ユーザー"),
-            columns=columns
-        ).properties(spacing=8)
-        st.altair_chart(faceted, use_container_width=True)
-        st.caption(f"表示中: {len(email_order)} ユーザー（要求上限 {topn}） / 期間: 過去 {weeks_back} 週")
+        ).properties(height=max(240, topn*10))
+        st.altair_chart(heat, use_container_width=True)
+        st.caption(f"表示中: {len(email_order)} ユーザー（上限 {topn}） / 期間: 過去 {days_back} 日 / 解像度: {res_label}")
     # 下部にデータ一覧
     with st.expander("データ一覧（pageviews_by_user）", expanded=False):
         st.dataframe(
