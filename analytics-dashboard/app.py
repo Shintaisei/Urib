@@ -977,7 +977,10 @@ def ai_tab():
             users_visit = set()
             if not visits.empty:
                 vv = visits.copy()
-                vv["email"] = vv.get("email", "").astype(str).map(normalize_email)
+                if "email" in vv.columns:
+                    vv["email"] = vv["email"].astype(str).map(normalize_email)
+                else:
+                    vv["email"] = pd.Series([""] * len(vv), index=vv.index)
                 vv = vv[vv["email"].str.contains("@", na=False)]
                 vv = vv[~vv["email"].apply(is_admin_email)]
                 vv["created_at"] = parse_date(vv.get("created_at"))
@@ -987,7 +990,13 @@ def ai_tab():
             users_post = set()
             if not posts.empty:
                 pp = posts.copy()
-                pp["email"] = pp.get("author_email", pp.get("email", "")).astype(str).map(normalize_email)
+                if "author_email" in pp.columns:
+                    base_email = pp["author_email"]
+                elif "email" in pp.columns:
+                    base_email = pp["email"]
+                else:
+                    base_email = pd.Series([""] * len(pp), index=pp.index)
+                pp["email"] = base_email.astype(str).map(normalize_email)
                 pp = pp[pp["email"].str.contains("@", na=False)]
                 pp = pp[~pp["email"].apply(is_admin_email)]
                 pp["created_at"] = parse_date(pp.get("created_at"))
@@ -997,7 +1006,13 @@ def ai_tab():
             users_reply = set()
             if not replies.empty:
                 rr = replies.copy()
-                rr["email"] = rr.get("author_email", rr.get("email", "")).astype(str).map(normalize_email)
+                if "author_email" in rr.columns:
+                    base_email_r = rr["author_email"]
+                elif "email" in rr.columns:
+                    base_email_r = rr["email"]
+                else:
+                    base_email_r = pd.Series([""] * len(rr), index=rr.index)
+                rr["email"] = base_email_r.astype(str).map(normalize_email)
                 rr = rr[rr["email"].str.contains("@", na=False)]
                 rr = rr[~rr["email"].apply(is_admin_email)]
                 rr["created_at"] = parse_date(rr.get("created_at"))
@@ -1007,7 +1022,10 @@ def ai_tab():
             users_market = set()
             if not market.empty:
                 mm = market.copy()
-                mm["email"] = mm.get("email", "").astype(str).map(normalize_email)
+                if "email" in mm.columns:
+                    mm["email"] = mm["email"].astype(str).map(normalize_email)
+                else:
+                    mm["email"] = pd.Series([""] * len(mm), index=mm.index)
                 mm = mm[mm["email"].str.contains("@", na=False)]
                 mm = mm[~mm["email"].apply(is_admin_email)]
                 mm["created_at"] = parse_date(mm.get("created_at"))
