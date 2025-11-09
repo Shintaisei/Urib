@@ -790,6 +790,121 @@ def sessions_tab():
         use_container_width=True
     )
 
+def ai_tab():
+    st.subheader("AI 集計アシスタント")
+    # OpenAI import可否
+    try:
+        from openai import OpenAI  # type: ignore
+    except Exception:
+        OpenAI = None  # type: ignore
+    api_key = st.text_input("OpenAI API Key を入力", type="password", value=st.session_state.get("OPENAI_API_KEY", ""))
+    if api_key:
+        st.session_state["OPENAI_API_KEY"] = api_key
+    if OpenAI is None:
+        st.warning("openai パッケージが見つかりません。requirements.txt に openai を追加し、依存を再インストールしてください。")
+        return
+    if not api_key:
+        st.info("API Key を入力すると分析を実行できます。")
+        return
+    # 利用可能なデータセット
+    ds_specs = [
+        ("users_full_summary.csv", AGG_DIR / "users_full_summary.csv"),
+        ("boards_summary.csv", AGG_DIR / "boards_summary.csv"),
+        ("market_summary.csv", AGG_DIR / "market_summary.csv"),
+        ("pageviews_by_user.csv", AGG_DIR / "pageviews_by_user.csv"),
+        ("board_posts.csv (raw)", EXPORT_DIR / "board_posts.csv"),
+        ("board_replies.csv (raw)", EXPORT_DIR / "board_replies.csv"),
+        ("board_visits.csv (raw)", EXPORT_DIR / "board_visits.csv"),
+        ("market_items.csv (raw)", EXPORT_DIR / "market_items.csv"),
+        ("course_summaries.csv (raw)", EXPORT_DIR / "course_summaries.csv"),
+        ("circle_summaries.csv (raw)", EXPORT_DIR / "circle_summaries.csv"),
+        ("page_views.csv (raw)", EXPORT_DIR / "page_views.csv"),
+    ]
+    st.markdown("#### 解析に渡すデータセットを選択")
+    cols = st.columns(3)
+    selected = []
+    for i, (label, path) in enumerate(ds_specs):
+        with cols[i % 3]:
+            if path.exists() and st.checkbox(label, value=("summary" in str(path).lower() or "pageviews_by_user" in str(path)), key=f"ai_ds_{i}"):
+                selected.append((label, path))
+    max_rows = st.slider("各データセットの最大行数（サンプル）", 50, 2000, 300, step=50)
+    def df_profile_text(df: pd.DataFrame, name: str) -> str:
+        if df.empty:
+            return f"# {name}\nEMPTY\n"
+        # 基本統計＋先頭サンプル
+        txt = [f"# {name}", f"shape: {df.shape[0]} rows × {df.shape[1]} cols", f"columns: {list(df.columns)}"]
+        # 数値列の基本統計
+        try:
+            desc = df.describe(include="all").fillna("").astype(str)
+            desc_rows = min(len(desc), 20)
+            txt.append("stats:")
+            txt.append(desc.head(desc_rows).to_csv())
+        except Exception:
+            pass
+        sample = df.head(max_rows)
+        txt.append("sample:")
+        txt.append(sample.to_csv(index=False))
+        return "\n".join(txt) + "\n"
+    # データを読み込み
+    bundles = []
+    for label, path in selected:
+        df = load_csv(path)
+        if "email" in df.columns:
+            df["email"] = df["email"].astype(str).map(normalize_email)
+        if "created_at" in df.columns:
+            df["created_at"] = parse_date(df["created_at"])
+        bundles.append((label, df))
+    # 役割ごとの指示
+    roles = [
+        ("データ品質監査官", "欠損・外れ値・重複・整合性・偏り・サンプルサイズの妥当性を確認し、改善提案を出して。"),
+        ("エンゲージメント分析官", "活性ユーザーの特徴、継続・休眠の傾向、時間帯や曜日の傾向を特定して。"),
+        ("掲示板分析官", "投稿/返信/訪問の関係、ボード別の偏り、反応を生む要素を特定し、改善提案を。"),
+        ("マーケット分析官", "価格帯やカテゴリの分布、反応しやすい出品、潜在ニーズを推定し、施策を提案。"),
+        ("授業/サークル分析官", "レビュー/サマリの傾向、活用シナリオ、追加すべきコンテンツを提案。"),
+        ("グロース責任者", "上記全てを統合し、具体的アクションプラン（KPI・フェーズ・優先度）を箇条書きで提示。"),
+    ]
+    # 実行
+    if st.button("AI分析を実行", type="primary", use_container_width=True):
+        client = OpenAI(api_key=api_key)  # type: ignore
+        context_text = []
+        for name, df in bundles:
+            context_text.append(df_profile_text(df, name))
+        context = "\n\n".join(context_text)
+        outputs = []
+        progress = st.progress(0.0, text="分析中…")
+        for idx, (role, instruction) in enumerate(roles, start=1):
+            prompt = f"""あなたは {role} です。以下のデータダイジェストを読み、{instruction}
+制約:
+- 根拠（列名・指標・具体値）を明示
+- 簡潔な見出しと箇条書きで、最大600〜900日本語トークン
+- 最後に「即実行アクション(1週間)」「短期(1ヶ月)」「中期(1-3ヶ月)」を列挙
+
+データダイジェスト（サンプル／統計／列情報）:
+{context}
+"""
+            try:
+                resp = client.chat.completions.create(  # type: ignore
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "あなたは冷静で厳密なデータアナリストです。"},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.3,
+                )
+                text = resp.choices[0].message.content if resp and resp.choices else "(no response)"
+            except Exception as e:
+                text = f"(error) {e}"
+            outputs.append((role, text))
+            progress.progress(idx / len(roles))
+        progress.empty()
+        # 表示
+        for role, text in outputs:
+            st.markdown(f"### {role}")
+            st.markdown(text or "")
+        # ダウンロード
+        md = "\n\n".join([f"## {r}\n\n{text}" for r, text in outputs])
+        st.download_button("分析結果をMarkdownでダウンロード", data=md.encode("utf-8"), file_name="ai_analysis.md", mime="text/markdown", use_container_width=True)
+
 def main():
     st.set_page_config(page_title="URIV Analytics", page_icon="📊", layout="wide")
     ensure_dirs()
@@ -801,7 +916,7 @@ def main():
         st.success("最新データに更新しました。")
         st.rerun()
 
-    tab_names = ["Overview", "Users", "Boards", "Market", "Engagement", "Sessions", "Admins"]
+    tab_names = ["Overview", "Users", "Boards", "Market", "Engagement", "Sessions", "AI", "Admins"]
     tabs = st.tabs(tab_names)
     with tabs[0]:
         overview_tab()
@@ -816,6 +931,8 @@ def main():
     with tabs[5]:
         sessions_tab()
     with tabs[6]:
+        ai_tab()
+    with tabs[7]:
         admins_tab()
 
 if __name__ == "__main__":
