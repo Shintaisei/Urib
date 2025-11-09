@@ -396,17 +396,27 @@ def engagement_tab():
                 else:
                     break
             return cur_now, longest
-        streaks = dfu.groupby("email")["day"].apply(lambda s: pd.Series(calc_streaks(pd.to_datetime(s).dt.date.tolist()), index=["current_streak_days","longest_streak_days"])).reset_index()
-        pv_user = pv_user.merge(streaks, on="email", how="left").fillna(0)
-        # 型
+        def streak_metrics(s: pd.Series) -> pd.Series:
+            cur, longest = calc_streaks(pd.to_datetime(s).dt.date.tolist())
+            return pd.Series({"current_streak_days": cur, "longest_streak_days": longest})
+        streaks = dfu.groupby("email")["day"].apply(streak_metrics).reset_index()
+        pv_user = pv_user.merge(streaks, on="email", how="left")
+        # 型・欠損補完
+        for col in ["pv_total","active_days_total","active_days_30d","active_days_7d","current_streak_days","longest_streak_days"]:
+            if col not in pv_user.columns:
+                pv_user[col] = 0
         pv_user = to_numeric(pv_user, ["pv_total","active_days_total","active_days_30d","active_days_7d","current_streak_days","longest_streak_days"])
+        if "first_seen" not in pv_user.columns:
+            pv_user["first_seen"] = pd.NaT
+        if "last_seen" not in pv_user.columns:
+            pv_user["last_seen"] = pd.NaT
     # 分布（直近30日アクティブ日数）: 再集計に基づく
     if not pv_user.empty:
         st.markdown("#### 分布（直近30日アクティブ日数）")
         hist = alt.Chart(pv_user).mark_bar().encode(
             x=alt.X("active_days_30d:Q", bin=alt.Bin(maxbins=30), title="Active Days (30d)"),
             y=alt.Y("count()", title="Users"),
-        ).properties(height=260)
+        ).properties(height=360)
         st.altair_chart(hist, use_container_width=True)
     # 全体: 日付 × 時間 帯のヒートマップ（周期性の把握）
     if not pv_raw.empty:
@@ -427,7 +437,7 @@ def engagement_tab():
             y=alt.Y("hour:O", title="時間帯(0-23)", sort=list(range(24))),
             color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="greens")),
             tooltip=list(cal.columns),
-        ).properties(height=320)
+        ).properties(height=400)
         st.altair_chart(heat_cal, use_container_width=True)
     # ユーザー別: 日時バケット × ユーザー ヒートマップ（縦=ユーザー, 横=時系列）
     if not pv_raw.empty:
@@ -481,7 +491,7 @@ def engagement_tab():
                             title="在席",
                             scale=alt.Scale(domain=[0,1], range=["#f3f4f6", "#10b981"])),
             tooltip=["email","bucket:T","pv:Q"],
-        ).properties(height=max(240, len(email_order)*12))
+        ).properties(height=max(360, len(email_order)*16))
         st.altair_chart(heat, use_container_width=True)
         st.caption(f"表示中: {len(email_order)} ユーザー（上限 {topn}） / 期間: 過去 {days_back} 日 / 解像度: {res_label}")
     # 投稿→初返信までの時間（分）の分布
