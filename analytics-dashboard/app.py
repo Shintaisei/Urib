@@ -880,6 +880,88 @@ def ai_tab():
             used += len(chunk)
         return "\n\n".join(parts)
 
+    def build_aggregates(
+        bundles: list[tuple[str, pd.DataFrame]],
+        days: int,
+        gap_min: int,
+        topn: int,
+    ) -> str:
+        """
+        生データではなく、コンパクトな集計テーブル群を構築して返す。
+        すべてCSVテキスト（小規模・列名付き）で出力。
+        """
+        dfs = {name: df for name, df in bundles}
+        out_parts: list[str] = []
+        # page_views フィルタ
+        pv = dfs.get("page_views.csv (raw)", pd.DataFrame())
+        if not pv.empty:
+            tmp = pv.copy()
+            tmp["email"] = tmp.get("email", "").astype(str).map(normalize_email)
+            tmp = tmp[tmp["email"].str.contains("@", na=False)]
+            tmp = tmp[~tmp["email"].apply(is_admin_email)]
+            tmp["created_at"] = parse_date(tmp.get("created_at"))
+            tmp = tmp.dropna(subset=["created_at"])
+            cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
+            pv_d = tmp[tmp["created_at"] >= cutoff]
+            # DAU（直近30行まで）
+            dau = pv_d.assign(day=pv_d["created_at"].dt.date).groupby("day")["email"].nunique().reset_index(name="dau").sort_values("day")
+            out_parts.append("### dau.csv\n" + dau.tail(30).to_csv(index=False))
+            # カテゴリ別PV
+            cat = pv_d["path"].astype(str).map(path_category).value_counts().reset_index()
+            cat.columns = ["category", "pv"]
+            out_parts.append("### category_pv.csv\n" + cat.to_csv(index=False))
+            # セッション集計（ユーザー別TopN）
+            sessions = compute_sessions(pv_d[["email","created_at","path"]], threshold_minutes=gap_min)
+            if not sessions.empty:
+                user_summary = sessions.groupby("email", as_index=False).agg(
+                    sessions=("session_id","count"),
+                    avg_duration=("duration_minutes","mean"),
+                    avg_pv=("pageviews","mean"),
+                    total_pv=("pageviews","sum"),
+                    unique_board_posts=("unique_board_posts","sum"),
+                ).sort_values("sessions", ascending=False).head(topn)
+                out_parts.append("### sessions_user_summary.csv\n" + user_summary.to_csv(index=False))
+        # 掲示板
+        posts = dfs.get("board_posts.csv (raw)", pd.DataFrame())
+        if not posts.empty:
+            p = posts.copy()
+            p["created_at"] = parse_date(p.get("created_at"))
+            p = p.dropna(subset=["created_at"])
+            p = p[p["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+            top_boards = p["board_id"].value_counts().reset_index().head(topn)
+            top_boards.columns = ["board_id","posts"]
+            out_parts.append("### board_posts_top.csv\n" + top_boards.to_csv(index=False))
+            posters = (p.get("author_email", p.get("email", pd.Series(dtype=str)))
+                       .astype(str).map(normalize_email).value_counts().reset_index().head(topn))
+            posters.columns = ["email","posts"]
+            out_parts.append("### top_posters.csv\n" + posters.to_csv(index=False))
+        # マーケット
+        market = dfs.get("market_items.csv (raw)", pd.DataFrame())
+        if not market.empty:
+            m = market.copy()
+            m["created_at"] = parse_date(m.get("created_at"))
+            m = m.dropna(subset=["created_at"])
+            m = m[m["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+            types = m.get("type", pd.Series(dtype=str)).astype(str).value_counts().reset_index().head(topn)
+            types.columns = ["type","count"]
+            out_parts.append("### market_types.csv\n" + types.to_csv(index=False))
+        # ファネル（1行）
+        visits = dfs.get("board_visits.csv (raw)", pd.DataFrame())
+        pv_users = len(pv_d["email"].unique()) if not pv.empty else 0
+        users_visit = 0
+        if not visits.empty:
+            vv = visits.copy()
+            if "email" in vv.columns:
+                vv["email"] = vv["email"].astype(str).map(normalize_email)
+                vv = vv[vv["email"].str.contains("@", na=False)]
+                vv = vv[~vv["email"].apply(is_admin_email)]
+                vv["created_at"] = parse_date(vv.get("created_at"))
+                vv = vv.dropna(subset=["created_at"])
+                vv = vv[vv["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
+                users_visit = vv["email"].nunique()
+        funnel = pd.DataFrame([{"pv_users": pv_users, "board_view_users": users_visit}])
+        out_parts.append("### funnel.csv\n" + funnel.to_csv(index=False))
+        return "\n\n".join(out_parts)
     def build_marketing_brief(bundles: list[tuple[str, pd.DataFrame]], topn: int, days: int, gap_min: int) -> str:
         # 可能な限り多角的なKPIとTopを凝縮したブリーフィングを生成（マーケ視点）
         # 存在判定
@@ -1129,12 +1211,16 @@ def ai_tab():
         brief_topn = st.slider("TopN", 3, 30, 10, key="ai_brief_topn")
     with colb3:
         brief_gap = st.slider("セッション区切り(分)", 5, 120, 30, step=5, key="ai_brief_gap")
-    include_samples = st.checkbox("データサンプル（全列）をAIに付与する", value=True)
+    include_samples = st.checkbox("データサンプル（全列）をAIに付与する", value=False)
     if st.button("AI分析を実行", type="primary", use_container_width=True):
         client = OpenAI(api_key=api_key)  # type: ignore
         # マーケ向けブリーフィングを構築して渡す（生データは渡さない）
         context = build_marketing_brief(bundles, topn=brief_topn, days=brief_days, gap_min=brief_gap)
+        # 追加で「集計テーブル（小型）」を付与（生データは渡さない）
+        aggregates_text = build_aggregates(bundles, days=brief_days, gap_min=brief_gap, topn=brief_topn)
         context_for_model = context
+        if aggregates_text:
+            context_for_model = context_for_model + "\n\n### 集計テーブル（コンパクト）\n" + aggregates_text
         if include_samples:
             # サンプルは安全上限に収まるように強制的に圧縮
             SAFE_TOTAL = 2_000_000  # ~2MB
