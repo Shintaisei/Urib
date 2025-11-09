@@ -89,3 +89,6 @@ pnpm-lock.yaml
 DEPLOYMENT_INFO.md
 *_CREDENTIALS.md
 *_PASSWORDS.txt
+\
+# Local secrets for analytics dashboard
+analytics-dashboard/start_dashboard.local.sh

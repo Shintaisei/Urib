@@ -1,7 +1,10 @@
 # Local exports
+# Local exports
 data_exports/
 .venv/
 .streamlit/
 __pycache__/
 *.pyc
+.env
+start_dashboard.local.sh
 
