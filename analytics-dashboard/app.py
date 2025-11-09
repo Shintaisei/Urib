@@ -56,6 +56,28 @@ def is_admin_email(email: str) -> bool:
         return False
     return ADMIN_EMAIL_RE.match(email.strip()) is not None
 
+def normalize_email(value: str) -> str:
+    """
+    メールアドレスの正規化:
+    - 前後空白除去、全小文字化
+    - Gmail/Googlemail/icloud は +以降を除去（サブアドレス無視）
+    - Gmail/Googlemail は local のドットを無視し、googlemail を gmail に統一
+    """
+    if not isinstance(value, str):
+        return ""
+    s = value.strip().lower()
+    if "@" not in s:
+        return s
+    local, domain = s.split("@", 1)
+    if domain in ("googlemail.com",):
+        domain = "gmail.com"
+    if domain in ("gmail.com", "googlemail.com", "icloud.com"):
+        if "+" in local:
+            local = local.split("+", 1)[0]
+    if domain in ("gmail.com", "googlemail.com"):
+        local = local.replace(".", "")
+    return f"{local}@{domain}"
+
 def admin_group(email: str) -> Optional[str]:
     """
     master/msterXX の XX を 1-10 / 11-20 / 21-30 でグループ化
@@ -266,7 +288,8 @@ def boards_tab():
     if not pv_raw.empty:
         with st.expander("ボード別 DAU（PageViewのpathから推定）", expanded=False):
             dfp = pv_raw.copy()
-            dfp["email"] = dfp.get("email", "").astype(str)
+            dfp["email"] = dfp.get("email", "").astype(str).map(normalize_email)
+            dfp = dfp[dfp["email"].str.contains("@", na=False)]
             dfp = dfp[~dfp["email"].apply(is_admin_email)]
             dfp["created_at"] = parse_date(dfp.get("created_at"))
             dfp = dfp.dropna(subset=["created_at"])
@@ -362,7 +385,7 @@ def engagement_tab():
     pv_user = pd.DataFrame()
     if not pv_raw.empty:
         dfu = pv_raw.copy()
-        dfu["email"] = dfu.get("email", "").astype(str)
+        dfu["email"] = dfu.get("email", "").astype(str).map(normalize_email)
         dfu = dfu[dfu["email"].str.contains("@", na=False)]
         dfu = dfu[~dfu["email"].apply(is_admin_email)]
         dfu["created_at"] = parse_date(dfu.get("created_at"))
@@ -452,7 +475,7 @@ def engagement_tab():
         freq_map = {"15分":"15min", "30分":"30min", "1時間":"1h", "3時間":"3h", "6時間":"6h", "12時間":"12h"}
         freq = freq_map.get(res_label, "1h")
         df = pv_raw.copy()
-        df["email"] = df.get("email", "").astype(str)
+        df["email"] = df.get("email", "").astype(str).map(normalize_email)
         # 無効メール除外（admin/空/nan）
         df = df[df["email"].str.contains("@", na=False)]
         df = df[~df["email"].apply(is_admin_email)]
