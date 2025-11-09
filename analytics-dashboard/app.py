@@ -995,7 +995,7 @@ def ai_tab():
                     vv["created_at"] = pd.NaT
                 vv = vv.dropna(subset=["created_at"])
                 vv = vv[vv["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
-                users_visit = set(vv["email"].unique())
+                users_visit = set(vv["email"].unique()) if "email" in vv.columns else set()
             users_post = set()
             if not posts.empty:
                 pp = posts.copy()
