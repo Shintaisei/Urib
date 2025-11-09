@@ -317,13 +317,26 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
             <div className="text-xs font-semibold text-foreground mb-1">24時間以内の投稿</div>
             <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
               {recent.map(r => (
-                <div key={`recent-${r.id}`} className="flex items-center gap-2">
+                <button
+                  key={`recent-${r.id}`}
+                  type="button"
+                  className="flex items-center gap-2 w-full text-left hover:bg-muted/40 rounded px-1 py-0.5"
+                  onClick={() => {
+                    const el = document.getElementById(`post-${r.id}`)
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }
+                    if (expandedPostId !== r.id) {
+                      toggleReplies(r.id)
+                    }
+                  }}
+                >
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary border border-primary/20">
                     {BOARD_NAMES[r.board_id] || `掲示板${r.board_id}`}
                   </span>
                   <span className="text-[12px] text-foreground truncate flex-1">{r.content}</span>
                   <span className="text-[10px] text-muted-foreground">{getTimeDiff(r.created_at)}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -384,10 +397,28 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
               )}
 
               <div className="mt-1 flex items-center gap-4 text-[12px] text-muted-foreground">
-                <div className="inline-flex items-center gap-1">
-                  <Heart className="w-3 h-3" />
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 hover:text-foreground"
+                  onClick={async () => {
+                    try {
+                      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
+                      if (!userId) return
+                      const res = await fetch(`${API_BASE_URL}/board/posts/${post.id}/like`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+                      })
+                      if (!res.ok) return
+                      const data = await res.json()
+                      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, is_liked: data.is_liked, like_count: data.like_count } : p))
+                      invalidateCache(`posts-${boardId}`)
+                    } catch {}
+                  }}
+                  aria-label="いいね"
+                >
+                  <Heart className={`w-3 h-3 ${post.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
                   {post.like_count}
-                </div>
+                </button>
                 <button
                   type="button"
                   className={`inline-flex items-center gap-1 ${expandedPostId === post.id ? 'text-primary' : ''}`}
