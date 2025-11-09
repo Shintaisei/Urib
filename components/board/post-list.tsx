@@ -370,8 +370,8 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                 <span className="text-[10px] text-muted-foreground flex-shrink-0">{getTimeDiff(post.created_at)}</span>
               </div>
 
-              <div className="mt-1 text-[13px] text-foreground truncate">
-                {post.content}
+              <div className="mt-1 text-[13px] text-foreground">
+                <ExpandableText text={post.content} maxChars={200} />
               </div>
               {keywordChips.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
