@@ -199,7 +199,10 @@ def users_tab():
     df = users_full.copy()
     for c in df.columns:
         if c not in ("email",):
-            df[c] = pd.to_numeric(df[c], errors="ignore")
+            try:
+                df[c] = pd.to_numeric(df[c])
+            except Exception:
+                df[c] = pd.to_numeric(df[c], errors="coerce")
     if q:
         df = df[df["email"].astype(str).str.contains(q, case=False, na=False)]
     # 追加チャート
@@ -329,14 +332,18 @@ def engagement_tab():
         # 上位ユーザー抽出（期間内PV上位）
         tops = df.groupby("email").size().reset_index(name="pv").sort_values("pv", ascending=False).head(topn)["email"]
         df = df[df["email"].isin(tops)]
+        # y軸を「総PV順」に整列
+        totals = df.groupby("email").size().sort_values(ascending=False)
+        email_order = totals.index.tolist()
         pivot = df.groupby(["email","hour"]).size().reset_index(name="pv")
         heat = alt.Chart(pivot).mark_rect().encode(
             x=alt.X("hour:O", title="時間帯(0-23)", sort=list(range(24))),
-            y=alt.Y("email:N", title="ユーザー"),
+            y=alt.Y("email:N", title="ユーザー", sort=email_order),
             color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="blues")),
             tooltip=list(pivot.columns),
         ).properties(height=max(220, topn*10))
         st.altair_chart(heat, use_container_width=True)
+        st.caption(f"表示中: {len(email_order)} ユーザー（要求上限 {topn}）")
         # 全体の時間帯分布（棒）
         total_per_hour = df.groupby("hour").size().reset_index(name="pv")
         bar_hour = alt.Chart(total_per_hour).mark_bar().encode(
