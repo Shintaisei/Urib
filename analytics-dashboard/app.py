@@ -441,42 +441,7 @@ def engagement_tab():
         with st.expander("該当ユーザー詳細", expanded=False):
             st.dataframe(cohort[["email","pv_total","active_days_total","active_days_30d","current_streak_days","longest_streak_days","first_seen","last_seen"]],
                          use_container_width=True, height=360)
-    # 全体: 日付 × 時間帯（任意解像度）ヒートマップ（pv_rawをメール紐付け・管理者除外で使用）
-    if not pv_raw.empty:
-        st.markdown("#### 全体の周期性（日付 × 時間帯 ヒートマップ）")
-        col1, col2 = st.columns([2,1])
-        with col1:
-            days_cal = st.slider("期間(日)", 7, 180, 90, key="pv_calendar_days")
-        with col2:
-            res_label_cal = st.select_slider("時間解像度", options=["15分","30分","1時間","3時間","6時間","12時間","1日"], value="1時間", key="pv_calendar_res")
-        freq_map_cal = {"15分":"15min","30分":"30min","1時間":"1h","3時間":"3h","6時間":"6h","12時間":"12h","1日":"1d"}
-        freq_cal = freq_map_cal.get(res_label_cal, "1h")
-        df_cal = pv_raw.copy()
-        df_cal["email"] = df_cal.get("email", "").astype(str)
-        df_cal = df_cal[df_cal["email"].str.contains("@", na=False)]
-        df_cal = df_cal[~df_cal["email"].apply(is_admin_email)]
-        df_cal["created_at"] = parse_date(df_cal.get("created_at"))
-        df_cal = df_cal.dropna(subset=["created_at"])
-        cutoff_cal = pd.Timestamp.now() - pd.Timedelta(days=days_cal)
-        df_cal = df_cal[df_cal["created_at"] >= cutoff_cal]
-        df_cal["bucket"] = df_cal["created_at"].dt.floor(freq_cal)
-        df_cal["date"] = df_cal["bucket"].dt.date
-        if freq_cal.endswith("d"):
-            df_cal["t_label"] = "終日"
-            t_sort = ["終日"]
-        else:
-            df_cal["t_label"] = df_cal["bucket"].dt.strftime("%H:%M")
-            t_sort = sorted(df_cal["t_label"].unique().tolist())
-        cal = df_cal.groupby(["date","t_label"]).size().reset_index(name="pv")
-        heat_cal = alt.Chart(cal).mark_rect().encode(
-            x=alt.X("date:O", title="日付", axis=alt.Axis(format="%m/%d")),
-            y=alt.Y("t_label:O", title=f"時間帯（{res_label_cal}）", sort=t_sort),
-            color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="greens")),
-            tooltip=[alt.Tooltip("date:O", title="日付"),
-                     alt.Tooltip("t_label:O", title="時間帯"),
-                     alt.Tooltip("pv:Q", title="PV")],
-        ).properties(height=420)
-        st.altair_chart(heat_cal, use_container_width=True)
+    # 全体ヒートマップは非表示（要望により削除）
     # ユーザー別: 日時バケット × ユーザー ヒートマップ（縦=ユーザー, 横=時系列）
     if not pv_raw.empty:
         st.markdown("#### ユーザー × 時系列 ヒートマップ（縦=ユーザー, 横=日付時刻）")
