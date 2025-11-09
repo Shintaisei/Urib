@@ -1049,7 +1049,7 @@ def ai_tab():
                     mm["created_at"] = pd.NaT
                 mm = mm.dropna(subset=["created_at"])
                 mm = mm[mm["created_at"] >= pd.Timestamp.now() - pd.Timedelta(days=days)]
-                users_market = set(mm["email"].unique())
+                users_market = set(mm["email"].unique()) if "email" in mm.columns else set()
             def rate(a, b):
                 return 0 if b == 0 else 100.0 * a / b
             sections.append(fmt_section("ユーザーファネル(期間内一度以上)",
