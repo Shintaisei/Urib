@@ -1081,13 +1081,43 @@ def ai_tab():
             outputs.append((role, text))
             progress.progress(idx / len(roles))
         progress.empty()
+        # 2ndパス: 総合レポート（マルチエージェントの統合と優先順位付け）
+        synthesis_prompt = f"""あなたはチーフ・アナリストです。以下の複数アナリストの所見を統合し、
+- 5つのキーハイライト
+- KPIサマリ（重要指標と現状、過去{brief_days}日の要点）
+- 優先アクション: 即実行/短期/中期（最大5件ずつ、担当/難易度/期待効果を括弧に）
+- 実験案バックログ（仮説・測定指標・成功基準）
+- リスク/留意点（データ品質/倫理/運用）
+を日本語で簡潔に作成してください。
+
+マーケティング・ブリーフィング:
+{context}
+
+各アナリスト所見:
+""" + "\n\n".join([f"### {r}\n{text}" for r, text in outputs])
+        try:
+            synth = client.chat.completions.create(  # type: ignore
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "あなたは厳密で行動志向のチーフ・アナリストです。"},
+                    {"role": "user", "content": synthesis_prompt},
+                ],
+                temperature=0.25,
+            )
+            synthesis_text = synth.choices[0].message.content if synth and synth.choices else "(no synthesis)"
+        except Exception as e:
+            synthesis_text = f"(synthesis error) {e}"
         # 表示
         for role, text in outputs:
             st.markdown(f"### {role}")
             st.markdown(text or "")
+        st.markdown("### エグゼクティブ統合レポート")
+        st.markdown(synthesis_text or "")
         # ダウンロード
-        md = "\n\n".join([f"## {r}\n\n{text}" for r, text in outputs])
-        st.download_button("分析結果をMarkdownでダウンロード", data=md.encode("utf-8"), file_name="ai_analysis.md", mime="text/markdown", use_container_width=True)
+        md_agents = "\n\n".join([f"## {r}\n\n{text}" for r, text in outputs])
+        md_full = "# エグゼクティブ統合レポート\n\n" + (synthesis_text or "") + "\n\n---\n\n" + md_agents
+        st.download_button("統合レポート(Markdown)をダウンロード", data=md_full.encode("utf-8"), file_name="ai_report.md", mime="text/markdown", use_container_width=True)
+        st.download_button("エージェント別結果(Markdown)をダウンロード", data=md_agents.encode("utf-8"), file_name="ai_agents.md", mime="text/markdown", use_container_width=True)
 
 def main():
     st.set_page_config(page_title="URIV Analytics", page_icon="📊", layout="wide")
