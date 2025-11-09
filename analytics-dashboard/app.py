@@ -5,6 +5,7 @@ import streamlit as st
 import altair as alt
 from typing import Optional
 import re
+import datetime as dt
 
 # Paths
 ROOT = Path(__file__).resolve().parent
@@ -80,12 +81,38 @@ def admin_group(email: str) -> Optional[str]:
         return "21-30"
     return None
 
+def parse_date(col: pd.Series) -> pd.Series:
+    return pd.to_datetime(col, errors="coerce").dt.tz_localize(None) if str(col.dtype) == "object" else pd.to_datetime(col, errors="coerce").dt.tz_localize(None)
+
+def last_ndays_filter(df: pd.DataFrame, date_col: str, days: int = 30) -> pd.DataFrame:
+    if df.empty or date_col not in df.columns:
+        return df
+    d = parse_date(df[date_col])
+    cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
+    return df.loc[d >= cutoff].assign(**{date_col: d})
+
+def line(df: pd.DataFrame, x: str, y: str, color: Optional[str] = None, title: str = ""):
+    if df.empty or x not in df.columns or y not in df.columns:
+        return None
+    enc = {
+        "x": alt.X(f"{x}:T", title=x),
+        "y": alt.Y(f"{y}:Q", title=y),
+        "tooltip": list(df.columns),
+    }
+    if color and color in df.columns:
+        enc["color"] = alt.Color(f"{color}:N", title=color)
+    chart = alt.Chart(df).mark_line(point=True).encode(**enc).properties(title=title, height=260)
+    return chart
+
 def overview_tab():
     st.subheader("概要")
     users_full = load_csv(AGG_DIR / "users_full_summary.csv")
     pv = load_csv(AGG_DIR / "pageviews_by_user.csv")
     boards = load_csv(AGG_DIR / "boards_summary.csv")
     market = load_csv(AGG_DIR / "market_summary.csv")
+    # raw for trends
+    posts_raw = load_csv(EXPORT_DIR / "board_posts.csv")
+    replies_raw = load_csv(EXPORT_DIR / "board_replies.csv")
 
     # 管理者を除外したビュー
     uf_non_admin = users_full[~users_full["email"].astype(str).apply(is_admin_email)] if not users_full.empty else users_full
@@ -118,6 +145,24 @@ def overview_tab():
                 chart = bar(pv_non_admin[["email","active_days_30d"]], x="email", y="active_days_30d", title="Active Days (30d) Top", top_n=15)
                 if chart is not None:
                     st.altair_chart(chart, use_container_width=True)
+
+    # トレンド: 直近30日の投稿/返信 推移
+    with st.expander("直近30日の投稿/返信トレンド", expanded=True):
+        n_days = st.slider("期間(日)", 7, 90, 30, key="ov_trend_days")
+        p30 = last_ndays_filter(posts_raw, "created_at", n_days)
+        r30 = last_ndays_filter(replies_raw, "created_at", n_days)
+        if not p30.empty or not r30.empty:
+            pser = p30.assign(date=parse_date(p30["created_at"]).dt.date).groupby("date").size().reset_index(name="posts")
+            rser = r30.assign(date=parse_date(r30["created_at"]).dt.date).groupby("date").size().reset_index(name="replies")
+            trend = pd.merge(pser, rser, on="date", how="outer").fillna(0).sort_values("date")
+            trend_long = trend.melt(id_vars=["date"], var_name="type", value_name="count")
+            c = alt.Chart(trend_long).mark_line(point=True).encode(
+                x=alt.X("date:T", title="日付"),
+                y=alt.Y("count:Q", title="件数"),
+                color=alt.Color("type:N", title="種別"),
+                tooltip=list(trend_long.columns),
+            ).properties(height=260)
+            st.altair_chart(c, use_container_width=True)
 
     if not boards.empty:
         st.markdown("#### 掲示板別の活動量")
@@ -174,14 +219,49 @@ def users_tab():
 def boards_tab():
     st.subheader("掲示板 集計")
     boards = load_csv(AGG_DIR / "boards_summary.csv")
+    posts_raw = load_csv(EXPORT_DIR / "board_posts.csv")
+    replies_raw = load_csv(EXPORT_DIR / "board_replies.csv")
     if boards.empty:
         st.info("boards_summary.csv がありません。")
         return
     st.dataframe(boards, use_container_width=True, height=420)
+    # スタック棒（投稿+返信）
+    boards = to_numeric(boards, ["post_count", "reply_count"])
+    stacked = boards.melt(id_vars=["board_id"], value_vars=["post_count","reply_count"], var_name="type", value_name="count")
+    c = alt.Chart(stacked).mark_bar().encode(
+        x=alt.X("board_id:N", title="Board"),
+        y=alt.Y("count:Q", stack="zero", title="件数"),
+        color=alt.Color("type:N", title="種別"),
+        tooltip=list(stacked.columns),
+    ).properties(title="投稿/返信 スタック", height=260)
+    st.altair_chart(c, use_container_width=True)
+
+    # ボード別トレンド
+    with st.expander("掲示板ごとのトレンド（直近60日）", expanded=False):
+        board_sel = st.text_input("対象 board_id（カンマ区切り可。空は全体）", "")
+        days = st.slider("期間(日)", 7, 120, 60, key="board_trend_days")
+        p = last_ndays_filter(posts_raw, "created_at", days)
+        r = last_ndays_filter(replies_raw, "created_at", days)
+        if board_sel.strip():
+            ids = [s.strip() for s in board_sel.split(",") if s.strip()]
+            p = p[p["board_id"].astype(str).isin(ids)]
+            # replies は post_idからboard_idを引けないので全体傾向として表示
+        p["date"] = parse_date(p["created_at"]).dt.date
+        p_ser = p.groupby(["board_id","date"]).size().reset_index(name="posts")
+        p_ser = p_ser.rename(columns={"board_id":"Board"})
+        if not p_ser.empty:
+            c2 = alt.Chart(p_ser).mark_line(point=True).encode(
+                x=alt.X("date:T", title="日付"),
+                y=alt.Y("posts:Q", title="投稿数"),
+                color=alt.Color("Board:N", title="Board"),
+                tooltip=list(p_ser.columns),
+            ).properties(height=260)
+            st.altair_chart(c2, use_container_width=True)
 
 def market_tab():
     st.subheader("マーケット 集計")
     market = load_csv(AGG_DIR / "market_summary.csv")
+    items_raw = load_csv(EXPORT_DIR / "market_items.csv")
     if market.empty:
         st.info("market_summary.csv がありません。")
         return
@@ -193,10 +273,28 @@ def market_tab():
     chart = bar(market[["email","items"]], x="email", y="items", title="Items by User", top_n=15)
     if chart is not None:
         st.altair_chart(chart, use_container_width=True)
+    # 価格分布と出品推移
+    with st.expander("価格分布 / 出品推移", expanded=False):
+        if not items_raw.empty:
+            items_raw["price"] = pd.to_numeric(items_raw.get("price", 0), errors="coerce").fillna(0)
+            items_raw["date"] = parse_date(items_raw.get("created_at"))
+            col1, col2 = st.columns(2)
+            with col1:
+                hist = alt.Chart(items_raw).mark_bar().encode(
+                    x=alt.X("price:Q", bin=alt.Bin(maxbins=40), title="価格"),
+                    y=alt.Y("count()", title="件数"),
+                ).properties(height=260, title="価格ヒストグラム")
+                st.altair_chart(hist, use_container_width=True)
+            with col2:
+                daily = items_raw.dropna(subset=["date"]).assign(day=lambda d: d["date"].dt.date).groupby("day").size().reset_index(name="items")
+                c3 = line(daily, x="day", y="items", title="出品数（推移）")
+                if c3 is not None:
+                    st.altair_chart(c3, use_container_width=True)
 
 def engagement_tab():
     st.subheader("継続ログイン (PageViews)")
     pv = load_csv(AGG_DIR / "pageviews_by_user.csv")
+    pv_raw = load_csv(EXPORT_DIR / "page_views.csv")
     if pv.empty:
         st.info("pageviews_by_user.csv がありません。")
         return
@@ -214,6 +312,30 @@ def engagement_tab():
         y=alt.Y("count()", title="Users"),
     ).properties(height=260)
     st.altair_chart(hist, use_container_width=True)
+    # ユーザー×日付のヒートマップ（トップNユーザー）
+    if not pv_raw.empty:
+        st.markdown("#### ユーザー × 日付 ヒートマップ（PV数）")
+        days = st.slider("期間(日)", 7, 120, 60, key="pv_heat_days")
+        topn = st.slider("表示ユーザー数（上位PV）", 10, 100, 40, step=5)
+        df = pv_raw.copy()
+        df["email"] = df.get("email", "").astype(str)
+        df = df[~df["email"].apply(is_admin_email)]
+        df["created_at"] = parse_date(df.get("created_at"))
+        df = df.dropna(subset=["created_at"])
+        cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
+        df = df[df["created_at"] >= cutoff]
+        df["date"] = df["created_at"].dt.date
+        # 上位ユーザー抽出
+        tops = df.groupby("email").size().reset_index(name="pv").sort_values("pv", ascending=False).head(topn)["email"]
+        df = df[df["email"].isin(tops)]
+        pivot = df.groupby(["email","date"]).size().reset_index(name="pv")
+        heat = alt.Chart(pivot).mark_rect().encode(
+            x=alt.X("date:T", title="日付"),
+            y=alt.Y("email:N", title="ユーザー", sort="-x"),
+            color=alt.Color("pv:Q", title="PV"),
+            tooltip=list(pivot.columns),
+        ).properties(height=max(220, topn*10))
+        st.altair_chart(heat, use_container_width=True)
 
 def admins_tab():
     st.subheader("管理者の担当者別アクティビティ")
