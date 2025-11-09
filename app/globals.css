@@ -4,24 +4,27 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
+    /* 優しい自然系（北海道大学イメージ）の淡いグリーン基調 */
+    --background: 120 20% 98%;
+    --foreground: 222 15% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --card-foreground: 222 15% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
+    --popover-foreground: 222 15% 10%;
+    /* 既存のボタン色は維持（primary は従来のブルー系を保持） */
     --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* セカンダリ/ミューテッドは柔らかい若草色トーンへ */
+    --secondary: 120 25% 94%;
+    --secondary-foreground: 120 20% 20%;
+    --muted: 120 22% 95%;
+    --muted-foreground: 120 8% 35%;
+    --accent: 120 28% 92%;
+    --accent-foreground: 120 18% 18%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 120 18% 90%;
+    --input: 120 18% 90%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
     --chart-1: 221.2 83.2% 53.3%;
@@ -32,24 +35,25 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    /* 深めの緑を感じる落ち着いたダーク */
+    --background: 140 25% 6%;
+    --foreground: 140 10% 96%;
+    --card: 140 20% 8%;
+    --card-foreground: 140 10% 96%;
+    --popover: 140 20% 8%;
+    --popover-foreground: 140 10% 96%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --secondary: 140 18% 16%;
+    --secondary-foreground: 140 10% 92%;
+    --muted: 140 18% 16%;
+    --muted-foreground: 140 10% 70%;
+    --accent: 140 20% 18%;
+    --accent-foreground: 140 10% 92%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 140 16% 16%;
+    --input: 140 16% 16%;
     --ring: 224.3 76.3% 48%;
     --chart-1: 217.2 91.2% 59.8%;
     --chart-2: 212 95% 68%;
