@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 import altair as alt
+from typing import Optional
 
 # Paths
 ROOT = Path(__file__).resolve().parent
@@ -24,7 +25,7 @@ def to_numeric(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
             df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
     return df
 
-def bar(df: pd.DataFrame, x: str, y: str, title: str = "", top_n: int | None = None):
+def bar(df: pd.DataFrame, x: str, y: str, title: str = "", top_n: Optional[int] = None):
     if df.empty or x not in df.columns or y not in df.columns:
         return None
     data = df.copy()
