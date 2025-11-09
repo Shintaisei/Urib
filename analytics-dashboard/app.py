@@ -241,7 +241,7 @@ def boards_tab():
     st.altair_chart(c, use_container_width=True)
 
     # ボード別トレンド
-    with st.expander("掲示板ごとのトレンド（直近60日）", expanded=False):
+    with st.expander("掲示板ごとのトレンド（直近60日）", expanded=True):
         board_sel = st.text_input("対象 board_id（カンマ区切り可。空は全体）", "")
         days = st.slider("期間(日)", 7, 120, 60, key="board_trend_days")
         p = last_ndays_filter(posts_raw, "created_at", days)
@@ -280,7 +280,7 @@ def market_tab():
     if chart is not None:
         st.altair_chart(chart, use_container_width=True)
     # 価格分布と出品推移
-    with st.expander("価格分布 / 出品推移", expanded=False):
+    with st.expander("価格分布 / 出品推移", expanded=True):
         if not items_raw.empty:
             items_raw["price"] = pd.to_numeric(items_raw.get("price", 0), errors="coerce").fillna(0)
             items_raw["date"] = parse_date(items_raw.get("created_at"))
@@ -316,6 +316,27 @@ def engagement_tab():
         y=alt.Y("count()", title="Users"),
     ).properties(height=260)
     st.altair_chart(hist, use_container_width=True)
+    # 全体: 日付 × 時間 帯のヒートマップ（周期性の把握）
+    if not pv_raw.empty:
+        st.markdown("#### 全体の周期性（日付 × 時間帯 ヒートマップ）")
+        days_cal = st.slider("期間(日)", 7, 180, 90, key="pv_calendar_days")
+        df_cal = pv_raw.copy()
+        df_cal["email"] = df_cal.get("email", "").astype(str)
+        df_cal = df_cal[~df_cal["email"].apply(is_admin_email)]
+        df_cal["created_at"] = parse_date(df_cal.get("created_at"))
+        df_cal = df_cal.dropna(subset=["created_at"])
+        cutoff_cal = pd.Timestamp.now() - pd.Timedelta(days=days_cal)
+        df_cal = df_cal[df_cal["created_at"] >= cutoff_cal]
+        df_cal["date"] = df_cal["created_at"].dt.date
+        df_cal["hour"] = df_cal["created_at"].dt.hour
+        cal = df_cal.groupby(["date","hour"]).size().reset_index(name="pv")
+        heat_cal = alt.Chart(cal).mark_rect().encode(
+            x=alt.X("date:T", title="日付"),
+            y=alt.Y("hour:O", title="時間帯(0-23)", sort=list(range(24))),
+            color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="greens")),
+            tooltip=list(cal.columns),
+        ).properties(height=320)
+        st.altair_chart(heat_cal, use_container_width=True)
     # ユーザー × 時間帯のヒートマップ（見やすさ重視）
     if not pv_raw.empty:
         st.markdown("#### ユーザー × 時間帯 ヒートマップ（PV頻度）")
