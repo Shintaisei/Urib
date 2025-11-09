@@ -130,7 +130,8 @@ def compute_sessions(dfu: pd.DataFrame, threshold_minutes: int = 30) -> pd.DataF
     """
     page_views の行からセッションを推定し集計を返す。
     - 連続リクエストの間隔が threshold_minutes を超えると新しいセッション
-    返却カラム: email, session_id, start, end, duration_minutes, pageviews, unique_paths, unique_posts
+    返却カラム: email, session_id, start, end, duration_minutes, pageviews, unique_paths,
+               unique_board_posts, unique_market_items, unique_course_pages, unique_circle_pages
     """
     if dfu.empty:
         return pd.DataFrame()
@@ -142,14 +143,22 @@ def compute_sessions(dfu: pd.DataFrame, threshold_minutes: int = 30) -> pd.DataF
     session_id = new_session.groupby(dfu["email"]).cumsum()
     dfu["session_id"] = session_id
     # 集計
-    def count_unique_posts(paths: pd.Series) -> int:
-        return paths.astype(str).str.extract(r"/board/(\\d+)", expand=False).dropna().nunique()
+    def count_unique_by_regex(paths: pd.Series, pat: str, fallback_contains: str | None = None) -> int:
+        s = paths.astype(str)
+        ids = s.str.extract(pat, expand=False)
+        n = ids.dropna().nunique()
+        if n == 0 and fallback_contains:
+            n = s[s.str.contains(fallback_contains, na=False)].nunique()
+        return int(n)
     agg = dfu.groupby(["email", "session_id"]).agg(
         start=("created_at", "min"),
         end=("created_at", "max"),
         pageviews=("path", "count"),
         unique_paths=("path", lambda s: s.astype(str).nunique()),
-        unique_posts=("path", count_unique_posts),
+        unique_board_posts=("path", lambda s: count_unique_by_regex(s, r"/board/(\\d+)", "/board")),
+        unique_market_items=("path", lambda s: count_unique_by_regex(s, r"/market(?:/item)?/(\\d+)", "/market")),
+        unique_course_pages=("path", lambda s: count_unique_by_regex(s, r"/course(?:s)?/(?:summary|detail)?/(\\d+)", "/course")),
+        unique_circle_pages=("path", lambda s: count_unique_by_regex(s, r"/circle(?:s)?/(?:summary|detail)?/(\\d+)", "/circle")),
     ).reset_index()
     agg["duration_minutes"] = (agg["end"] - agg["start"]).dt.total_seconds().div(60).round(1)
     # 表示順に並べ替え
@@ -625,7 +634,10 @@ def engagement_tab():
                     avg_duration=("duration_minutes","mean"),
                     avg_pv=("pageviews","mean"),
                     total_pv=("pageviews","sum"),
-                    unique_posts=("unique_posts","sum"),
+                    board_posts_viewed=("unique_board_posts","sum"),
+                    market_items_viewed=("unique_market_items","sum"),
+                    course_pages_viewed=("unique_course_pages","sum"),
+                    circle_pages_viewed=("unique_circle_pages","sum"),
                 ).sort_values("sessions", ascending=False)
                 st.markdown("#### 上位セッション（滞在時間）")
                 st.dataframe(top_sessions, use_container_width=True, height=320)
