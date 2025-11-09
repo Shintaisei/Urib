@@ -124,7 +124,7 @@ def main():
         with st.spinner("取得・集計中..."):
             run_fetch()
         st.success("最新データに更新しました。")
-        st.experimental_rerun()
+        st.rerun()
 
     tab_names = ["Overview", "Users", "Boards", "Market", "Engagement"]
     tabs = st.tabs(tab_names)
