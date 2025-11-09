@@ -32,6 +32,12 @@ streamlit run app.py
 ```
 - 画面左上の「最新データを取得して集計」ボタンを押すと、`analytics-dashboard/data_exports/latest` にCSV出力、`aggregated/` に集計結果が生成されます。
 
+または起動用スクリプト（初回セットアップ込み）:
+```bash
+cd Uriv-app/analytics-dashboard
+bash start_dashboard.sh
+```
+
 ### B. コマンドラインで取得・集計だけ行う
 ```bash
 cd Uriv-app/analytics-dashboard
