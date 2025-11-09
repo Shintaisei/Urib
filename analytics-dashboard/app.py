@@ -126,6 +126,20 @@ def line(df: pd.DataFrame, x: str, y: str, color: Optional[str] = None, title: s
     chart = alt.Chart(df).mark_line(point=True).encode(**enc).properties(title=title, height=260)
     return chart
 
+def path_category(path: str) -> str:
+    if not isinstance(path, str):
+        return "other"
+    p = path.lower()
+    if "/board" in p:
+        return "board"
+    if "/market" in p:
+        return "market"
+    if "/course" in p or "/courses" in p:
+        return "course"
+    if "/circle" in p or "/circles" in p:
+        return "circle"
+    return "other"
+
 def compute_sessions(dfu: pd.DataFrame, threshold_minutes: int = 30) -> pd.DataFrame:
     """
     page_views の行からセッションを推定し集計を返す。
@@ -143,7 +157,7 @@ def compute_sessions(dfu: pd.DataFrame, threshold_minutes: int = 30) -> pd.DataF
     session_id = new_session.groupby(dfu["email"]).cumsum()
     dfu["session_id"] = session_id
     # 集計
-    def count_unique_by_regex(paths: pd.Series, pat: str, fallback_contains: str | None = None) -> int:
+    def count_unique_by_regex(paths: pd.Series, pat: str, fallback_contains: Optional[str] = None) -> int:
         s = paths.astype(str)
         ids = s.str.extract(pat, expand=False)
         n = ids.dropna().nunique()
@@ -695,6 +709,87 @@ def admins_tab():
             ).properties(height=260)
             st.altair_chart(chart, use_container_width=True)
 
+def sessions_tab():
+    st.subheader("セッション ピボット")
+    pv_raw = load_csv(EXPORT_DIR / "page_views.csv")
+    if pv_raw.empty:
+        st.info("page_views.csv がありません。")
+        return
+    days = st.slider("対象期間（日）", 1, 120, 30, key="pv_pivot_days")
+    gap = st.slider("セッション区切り（分）", 5, 120, 30, step=5, key="pv_pivot_gap")
+    q = st.text_input("メール部分一致フィルタ（空で全体）", "", key="pv_pivot_q")
+    df = pv_raw.copy()
+    df["email"] = df.get("email", "").astype(str).map(normalize_email)
+    df = df[df["email"].str.contains("@", na=False)]
+    df = df[~df["email"].apply(is_admin_email)]
+    df["created_at"] = parse_date(df.get("created_at"))
+    df = df.dropna(subset=["created_at"])
+    cutoff = pd.Timestamp.now() - pd.Timedelta(days=days)
+    df = df[df["created_at"] >= cutoff]
+    if q.strip():
+        df = df[df["email"].str.contains(q.strip(), case=False, na=False)]
+    # カテゴリ
+    df["category"] = df.get("path", "").astype(str).map(path_category)
+    # セッション
+    sessions = compute_sessions(df[["email","created_at","path"]], threshold_minutes=gap)
+    if sessions.empty:
+        st.info("対象期間にセッションがありません。")
+        return
+    # Pivot 1: ユーザー×日 セッション数
+    sessions["day"] = sessions["start"].dt.date
+    p1 = sessions.pivot_table(index="email", columns="day", values="session_id", aggfunc="count", fill_value=0)
+    st.markdown("#### ユーザー × 日 セッション数")
+    st.dataframe(p1, use_container_width=True, height=320)
+    heat1 = alt.Chart(p1.reset_index().melt(id_vars=["email"], var_name="day", value_name="sessions")).mark_rect().encode(
+        x=alt.X("day:O", title="日付", axis=alt.Axis(format="%m/%d")),
+        y=alt.Y("email:N", title="ユーザー"),
+        color=alt.Color("sessions:Q", title="セッション数", scale=alt.Scale(scheme="blues")),
+        tooltip=["email","day","sessions"],
+    ).properties(height=max(360, len(p1.index)*14))
+    st.altair_chart(heat1, use_container_width=True)
+    # Pivot 2: ユーザー×日 平均滞在時間
+    p2 = sessions.pivot_table(index="email", columns="day", values="duration_minutes", aggfunc="mean", fill_value=0.0)
+    st.markdown("#### ユーザー × 日 平均滞在時間(分)")
+    st.dataframe(p2.round(1), use_container_width=True, height=320)
+    heat2 = alt.Chart(p2.reset_index().melt(id_vars=["email"], var_name="day", value_name="mins")).mark_rect().encode(
+        x=alt.X("day:O", title="日付", axis=alt.Axis(format="%m/%d")),
+        y=alt.Y("email:N", title="ユーザー"),
+        color=alt.Color("mins:Q", title="分", scale=alt.Scale(scheme="greens")),
+        tooltip=["email","day","mins"],
+    ).properties(height=max(360, len(p2.index)*14))
+    st.altair_chart(heat2, use_container_width=True)
+    # Pivot 3: カテゴリ × 日 PV
+    df["day"] = df["created_at"].dt.date
+    p3 = df.pivot_table(index="category", columns="day", values="path", aggfunc="count", fill_value=0)
+    st.markdown("#### カテゴリ × 日 PV")
+    st.dataframe(p3, use_container_width=True, height=280)
+    heat3 = alt.Chart(p3.reset_index().melt(id_vars=["category"], var_name="day", value_name="pv")).mark_rect().encode(
+        x=alt.X("day:O", title="日付", axis=alt.Axis(format="%m/%d")),
+        y=alt.Y("category:N", title="カテゴリ"),
+        color=alt.Color("pv:Q", title="PV", scale=alt.Scale(scheme="oranges")),
+        tooltip=["category","day","pv"],
+    ).properties(height=220)
+    st.altair_chart(heat3, use_container_width=True)
+    # Top paths
+    st.markdown("#### よく見られたパス（Top 50）")
+    top_paths = df["path"].astype(str).value_counts().head(50).reset_index()
+    top_paths.columns = ["path","pv"]
+    st.dataframe(top_paths, use_container_width=True, height=280)
+    st.download_button(
+        "ピボット結果をCSVでダウンロード（p1: sessions, p2: duration, p3: category）",
+        data=pd.concat(
+            [
+                p1.reset_index().melt(id_vars=["email"], var_name="day", value_name="sessions").assign(table="p1"),
+                p2.reset_index().melt(id_vars=["email"], var_name="day", value_name="duration_minutes").assign(table="p2"),
+                p3.reset_index().melt(id_vars=["category"], var_name="day", value_name="pv").assign(table="p3"),
+            ],
+            ignore_index=True
+        ).to_csv(index=False).encode("utf-8"),
+        file_name="pv_pivots.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
 def main():
     st.set_page_config(page_title="URIV Analytics", page_icon="📊", layout="wide")
     ensure_dirs()
@@ -706,7 +801,7 @@ def main():
         st.success("最新データに更新しました。")
         st.rerun()
 
-    tab_names = ["Overview", "Users", "Boards", "Market", "Engagement", "Admins"]
+    tab_names = ["Overview", "Users", "Boards", "Market", "Engagement", "Sessions", "Admins"]
     tabs = st.tabs(tab_names)
     with tabs[0]:
         overview_tab()
@@ -719,6 +814,8 @@ def main():
     with tabs[4]:
         engagement_tab()
     with tabs[5]:
+        sessions_tab()
+    with tabs[6]:
         admins_tab()
 
 if __name__ == "__main__":
