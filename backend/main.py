@@ -79,6 +79,17 @@ async def run_migrations():
             else:
                 print(f"⚠️ {col}フィールドは既に存在します")
 
+        # backfill existing rows: set NULL/empty university to 'hokudai'
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("UPDATE course_summaries SET university='hokudai' WHERE university IS NULL OR university=''"))
+            print("✅ universityの既存NULL/空をhokudaiにバックフィルしました")
+        except Exception as e:
+            print(f"⚠️ universityバックフィルに失敗しました: {e}")
+
+        # index for university
+        exec_tx("CREATE INDEX IF NOT EXISTS idx_course_summaries_university ON course_summaries(university)", "✅ idx_course_summaries_universityインデックスを追加しました", warn_phrases=("already exists",))
+
         # indexes
         exec_tx("CREATE INDEX IF NOT EXISTS idx_course_summaries_grade_level ON course_summaries(grade_level)", "✅ idx_course_summaries_grade_levelインデックスを追加しました", warn_phrases=("already exists",))
         exec_tx("CREATE INDEX IF NOT EXISTS idx_course_summaries_grade_score ON course_summaries(grade_score)", "✅ idx_course_summaries_grade_scoreインデックスを追加しました", warn_phrases=("already exists",))
