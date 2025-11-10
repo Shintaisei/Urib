@@ -195,6 +195,12 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
     return () => clearTimeout(timeoutId)
   }, [q, dept, ys, gradeLevel, gradeScore, difficultyLevel])
 
+  // 大学切り替え時は即再取得
+  useEffect(() => {
+    fetchList()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [university])
+
   useEffect(() => {
     const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') : null
     setIsAdmin(isAdminEmail(email))
@@ -222,6 +228,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           title: title.trim(),
           course_name: courseName.trim() || null,
           instructor: instructor.trim() || null,
+          university,
           department: department.trim() || null,
           year_semester: yearSemester.trim() || null,
           tags: tags.trim() || null,
@@ -487,9 +494,9 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
 
           <LoadingProgress isLoading={loading} text="授業まとめを読み込み中..." />
           {error && <div className="text-sm text-red-500">{error}</div>}
-          {/* 表示用リスト（小樽は現状データ未分類のため空扱い） */}
+          {/* 表示用リスト */}
           {(() => {
-            const displayList = university === 'hokudai' ? list : []
+            const displayList = list
             if (!loading && !error && displayList.length === 0) {
               return (
                 <div className="text-sm text-muted-foreground">
@@ -501,12 +508,14 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           })()}
 
           <div className="space-y-3">
-            {(university === 'hokudai' ? list : []).map((s) => (
+            {list.map((s) => (
               <div key={`course-summary-${s.id}`} id={`course-${s.id}`} className="border rounded p-2 sm:p-3">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="text-sm sm:text-base font-semibold text-foreground break-words">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 mr-2">北海道大学</span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 mr-2">
+                        {((s as any).university || 'hokudai') === 'otaru' ? '小樽商科大学' : '北海道大学'}
+                      </span>
                       {s.title}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1 space-y-1">

@@ -337,6 +337,8 @@ class CourseSummary(Base):
     title = Column(String(255), nullable=False)
     course_name = Column(String(255), nullable=True, index=True)
     instructor = Column(String(255), nullable=True, index=True)
+    # 大学（例: 'hokudai', 'otaru'）。既存データはNULL=hokudai扱い
+    university = Column(String(50), nullable=True, index=True)
     department = Column(String(100), nullable=True, index=True)
     year_semester = Column(String(50), nullable=True, index=True)  # 例: 2025春/2025秋
     tags = Column(String(500), nullable=True)  # スペース/カンマ区切り

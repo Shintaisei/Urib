@@ -181,6 +181,7 @@ class CourseSummaryCreate(BaseModel):
     title: Optional[str] = None
     course_name: Optional[str] = None
     instructor: Optional[str] = None
+    university: Optional[str] = None  # 'hokudai' | 'otaru'（NULLは既存=hokudai扱い）
     department: Optional[str] = None
     year_semester: Optional[str] = None
     tags: Optional[str] = None
@@ -197,6 +198,7 @@ class CourseSummaryResponse(BaseModel):
     title: str
     course_name: Optional[str] = None
     instructor: Optional[str] = None
+    university: Optional[str] = None
     department: Optional[str] = None
     year_semester: Optional[str] = None
     tags: Optional[str] = None

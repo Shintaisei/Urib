@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from typing import List
 import models, schemas, database
 from board_routes import get_current_user_id, get_user_by_id, get_or_create_anonymous_name, ensure_jst_aware, is_admin_user
@@ -17,6 +17,7 @@ def get_db():
 @router.get("/summaries", response_model=List[schemas.CourseSummaryResponse])
 def list_summaries(
     request: Request,
+    university: str = "",
     department: str = "", 
     year_semester: str = "", 
     grade_level: str = "",
@@ -65,6 +66,12 @@ def list_summaries(
             raise HTTPException(status_code=500, detail=f"CourseSummaryテーブルにアクセスできません: {str(table_error)}")
         
         query = db.query(models.CourseSummary)
+        # 大学フィルタ（hokudai指定時はNULLも含める＝既存データ互換）
+        if university and hasattr(models.CourseSummary, 'university'):
+            if university == "hokudai":
+                query = query.filter(or_(models.CourseSummary.university == "hokudai", models.CourseSummary.university.is_(None)))
+            else:
+                query = query.filter(models.CourseSummary.university == university)
         if department:
             query = query.filter(models.CourseSummary.department == department)
         if year_semester:
@@ -120,6 +127,7 @@ def list_summaries(
                         title=r.title,
                         course_name=r.course_name,
                         instructor=r.instructor,
+                        university=getattr(r, 'university', None),
                         department=r.department,
                         year_semester=r.year_semester,
                         tags=r.tags,
@@ -165,6 +173,7 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
         title=payload.title or (payload.course_name or "授業まとめ"),
         course_name=payload.course_name,
         instructor=payload.instructor,
+        university=getattr(payload, 'university', None),
         department=payload.department,
         year_semester=payload.year_semester,
         tags=payload.tags,
@@ -184,6 +193,7 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
         title=row.title,
         course_name=row.course_name,
         instructor=row.instructor,
+        university=getattr(row, 'university', None),
         department=row.department,
         year_semester=row.year_semester,
         tags=row.tags,
@@ -222,6 +232,8 @@ def update_summary(summary_id: int, payload: schemas.CourseSummaryCreate, reques
     if hasattr(row, 'reference_pdf'):
         row.reference_pdf = payload.reference_pdf if payload.reference_pdf is not None else row.reference_pdf
     # 新しいフィールド
+    if hasattr(row, 'university'):
+        row.university = payload.university if payload.university is not None else row.university
     if hasattr(row, 'grade_level'):
         row.grade_level = payload.grade_level if payload.grade_level is not None else row.grade_level
     if hasattr(row, 'grade_score'):
@@ -236,6 +248,7 @@ def update_summary(summary_id: int, payload: schemas.CourseSummaryCreate, reques
         title=row.title,
         course_name=row.course_name,
         instructor=row.instructor,
+        university=getattr(row, 'university', None),
         department=row.department,
         year_semester=row.year_semester,
         tags=row.tags,
