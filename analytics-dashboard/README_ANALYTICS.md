@@ -1,95 +1,75 @@
-# データ分析ダッシュボード（ローカル専用）
+# 埋め込み版ダッシュボードの使い方
 
-このフォルダは、運用中アプリとは独立して「最新データの取得 → 集計 → 可視化（ダッシュボード）」をローカルで実行するための専用ツール群です。既存のプロジェクトREADMEとは混ざりません。
+このフォルダは、埋め込みのDB接続URLを使って「最新データの取得 → 集計 → 可視化」をローカルで一発起動できる専用ツールです。GitHub等にアップしないローカル運用を前提としています。
 
-## 機能
-- Supabase（本番DB）から最新スナップショットを取得（CSV）
-- 既存の集計スクリプト（backend/aggregate_exports.py）を用いて集計CSVを生成
-- Streamlit で可視化（ユーザー行動、継続ログイン、掲示板・市場・授業/サークルレビュー等）
+## 1. 起動（埋め込みスクリプトを使うだけ）
 
-## セットアップ
-
-1) 依存のインストール（仮想環境推奨）
+### macOS の場合
+1) ターミナルを開く  
+2) フォルダへ移動  
 ```bash
 cd Uriv-app/analytics-dashboard
-python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
 ```
-
-2) DB 接続設定
-- 既存の `backend/.env` に `SUPABASE_DB_URL` を設定済みなら、そのまま利用されます。
-- 別URLを使いたい場合は、実行時に環境変数で上書き可能です（例: `SUPABASE_DB_URL=... streamlit run app.py`）。
-
-## 使い方
-
-### A. ダッシュボードを起動（中から「最新取得」ボタンで実行）
+3) 実行  
 ```bash
-cd Uriv-app/analytics-dashboard
-source .venv/bin/activate
-streamlit run app.py
-```
-- 画面左上の「最新データを取得して集計」ボタンを押すと、`analytics-dashboard/data_exports/latest` にCSV出力、`aggregated/` に集計結果が生成されます。
-
-または起動用スクリプト（初回セットアップ込み）:
-```bash
-cd Uriv-app/analytics-dashboard
-bash start_dashboard.sh
-```
-- 初回は自動で `.venv` を作成して依存を導入します
-- Pythonが見つからない場合は表示される案内に従ってインストールしてください（macOSなら`brew install python` など）
- - DB接続URL（SUPABASE_DB_URL）は以下の優先順で参照します
-   1. 実行時の環境変数 `SUPABASE_DB_URL`
-   2. `analytics-dashboard/.env`（未設定なら対話で作成します）
-   3. `backend/.env`
- - 対話入力をスキップしたい場合は、事前に `analytics-dashboard/.env` を作成してください
-   ```bash
-   echo 'SUPABASE_DB_URL="postgresql://...:...@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"' > Uriv-app/analytics-dashboard/.env
-   ```
-
-### C. どうしても環境設定を省略したい場合（ローカル秘密スクリプト：macOS / Windows）
-- 接続URLを埋め込んだローカル専用スクリプトがあります（どちらも `.gitignore` 済みでGitHubに上がりません）
-
-macOS:
-```bash
-cd Uriv-app/analytics-dashboard
 bash start_dashboard.local.sh
 ```
+→ 自動で Python 仮想環境を作成し、依存を入れて、ブラウザでダッシュボードが開きます（http://localhost:8501）。
 
-Windows（PowerShell）:
+### Windows（PowerShell）の場合
+1) PowerShell を開く  
+2) フォルダへ移動  
 ```powershell
 cd Uriv-app/analytics-dashboard
-./start_dashboard.local.ps1
 ```
-初回実行でブロックされた場合は、PowerShell をユーザー権限で開き以下を一度だけ実行してください。
+3) 初回のみ、実行ポリシーを許可（管理者不要）  
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
-※ これらのローカル秘密スクリプトは個人用途に限定し、他者へ共有しないでください。
+4) 実行（テンプレート版をコピーして使う場合は `.example` → 実体ファイルにリネーム）  
+```powershell
+# テンプレートから実体を作る例:
+Copy-Item .\start_dashboard.local.ps1.example .\start_dashboard.local.ps1
+# start_dashboard.local.ps1 を開いて SUPABASE_DB_URL を自分のURLに変更
+.\start_dashboard.local.ps1
+```
+→ 仮想環境の作成・依存導入後、ブラウザでダッシュボードが開きます。
 
-### B. コマンドラインで取得・集計だけ行う
+※ うまくいかないとき  
+- 「Python が見つからない」→ macOS は `brew install python`、Windows は https://www.python.org/downloads/ からインストールして PowerShell/ターミナルを開き直してください。  
+- セキュリティでブロックされた場合は、上記の実行ポリシー設定を一度だけ実行してください。  
+
+## 2. ダッシュボードの機能と使い方（ざっくり）
+
+- 画面左上の「最新データを取得して集計」ボタン  
+  - Supabase から最新CSVを取得 → `analytics-dashboard/data_exports/latest/` に保存  
+  - 集計CSVは `analytics-dashboard/data_exports/latest/aggregated/` に生成
+
+- タブの意味（よく使う順）
+  - Overview: 主要KPIの一枚絵  
+  - Users: ユーザー別の行動サマリ（投稿・返信・市場・授業/サークルなど）  
+  - Boards / Market: 掲示板・マーケットの詳細（Top/分布/トレンド）  
+  - Engagement: PageViews から継続ログインやユーザー×時間のヒートマップ  
+  - Sessions: セッション（来訪の塊）を自動推定して滞在時間・PV/セッションなどを可視化  
+  - Diagnostics: データ健全性（必須列・欠損率・重複・相互整合）をチェック  
+  - AI: 集計テーブル（コンパクト）を元にマルチエージェントが分析し、統合レポートを生成  
+    - デフォルトでは「生データ」は渡しません（必要ならサンプルON）
+
+### 出力フォルダ
+- 取得CSV: `analytics-dashboard/data_exports/latest/*.csv`  
+- 集計CSV: `analytics-dashboard/data_exports/latest/aggregated/*.csv`
+
+### 参考（中級者向けの起動）
+通常のセットアップで起動したい場合は、下記でも起動できます（埋め込み版を使わない場合）。  
 ```bash
 cd Uriv-app/analytics-dashboard
-source .venv/bin/activate
-python fetch_and_aggregate.py  # data_exports/latest に生成
+python3 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
-## 出力場所
-- 取得CSV: `analytics-dashboard/data_exports/latest/*.csv`
-- 集計CSV: `analytics-dashboard/data_exports/latest/aggregated/*.csv`
-  - `users_full_summary.csv`（メール軸で行動統合）
-  - `pageviews_by_user.csv`（活性度・連続日数）
-  - `boards_summary.csv`, `users_summary.csv`, `users_features.csv`, `user_board_engagement.csv`
-  - `market_summary.csv`（市場系）
-
-## トラブルシュート
-- Streamlit 起動してもボタンで失敗する場合:
-  - `backend/.env` の `SUPABASE_DB_URL` が正しいか確認してください
-  - ネットワーク/SSLで弾かれる場合はリトライしてください
-- macOS の Gatekeeper/権限で問題があれば、ターミナルをフルディスクアクセスに追加すると解決することがあります
-
 ## 注意
-- このフォルダはローカル分析専用です。本番アプリの起動・デプロイには影響しません。
-
-
+- `start_dashboard.local.sh` / `start_dashboard.local.ps1` はローカル秘密スクリプトです。第三者に共有しないでください。  
+- GitHubには `.example` のみを配置し、実体ファイル（URLを埋めたもの）は `.gitignore` 済みです。  
+- このフォルダはローカル分析専用で、本番アプリの挙動には影響しません。 

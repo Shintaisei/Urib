@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# このスクリプトは「ローカル専用・非公開」の埋め込み認証版のテンプレートです
+# 使い方:
+# 1) このファイルを start_dashboard.local.sh にコピー
+# 2) SUPABASE_DB_URL に自分の接続URLを埋め込む
+# 3) bash start_dashboard.local.sh で起動
+# 注意: start_dashboard.local.sh は .gitignore 済みです（GitHubには上げない）
+
+set -euo pipefail
+cd "$(dirname "$0")"
+
+# ここに固定（トランザクションプーラーURL）— 必ず自分の値に置き換えてください
+export SUPABASE_DB_URL="postgresql://<user>:<password>@<host>:<port>/postgres"
+
+PY_BIN=""
+if command -v python3 >/dev/null 2>&1; then
+  PY_BIN="python3"
+elif command -v python >/dev/null 2>&1; then
+  PY_BIN="python"
+else
+  echo "Python が見つかりません。macOSの方は 'brew install python' を実行してください。"
+  exit 1
+fi
+
+if [ ! -d ".venv" ]; then
+  $PY_BIN -m venv .venv
+fi
+source .venv/bin/activate
+$PY_BIN -m pip install --upgrade pip >/dev/null
+pip install -r requirements.txt
+
+exec streamlit run app.py
+
+

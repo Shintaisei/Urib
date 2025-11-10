@@ -1,0 +1,39 @@
+#!/usr/bin/env pwsh
+# ローカル専用（Windows PowerShell 用）テンプレート
+# 使い方:
+# 1) このファイルを start_dashboard.local.ps1 にコピー
+# 2) SUPABASE_DB_URL を自分の接続URLに置き換える
+# 3) PowerShell で .\start_dashboard.local.ps1 を実行
+#   初回は  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned  を一度だけ実行
+# 注意: start_dashboard.local.ps1 は .gitignore 済み（GitHubには上げない）
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+Set-Location -Path $PSScriptRoot
+
+# ここに固定（トランザクションプーラーURL）
+$env:SUPABASE_DB_URL = "postgresql://<user>:<password>@<host>:<port>/postgres"
+
+function Resolve-Python {
+  if (Get-Command py -ErrorAction SilentlyContinue) { return "py -3" }
+  elseif (Get-Command python -ErrorAction SilentlyContinue) { return "python" }
+  elseif (Get-Command python3 -ErrorAction SilentlyContinue) { return "python3" }
+  else {
+    Write-Host "Python が見つかりません。Windows の方は https://www.python.org/downloads/ からインストールしてください。" -ForegroundColor Yellow
+    exit 1
+  }
+}
+$PY = Resolve-Python
+
+if (-not (Test-Path ".venv")) {
+  & $PY -m venv .venv
+}
+& ".\.venv\Scripts\Activate.ps1"
+
+& $PY -m pip install --upgrade pip *> $null
+pip install -r requirements.txt
+
+streamlit run app.py
+
+
