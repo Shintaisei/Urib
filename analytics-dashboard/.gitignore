@@ -7,4 +7,5 @@ __pycache__/
 *.pyc
 .env
 start_dashboard.local.sh
+start_dashboard.local.ps1
 

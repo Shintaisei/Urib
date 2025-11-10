@@ -48,13 +48,25 @@ bash start_dashboard.sh
    echo 'SUPABASE_DB_URL="postgresql://...:...@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"' > Uriv-app/analytics-dashboard/.env
    ```
 
-### C. どうしても環境設定を省略したい場合（ローカル秘密スクリプト）
-- `start_dashboard.local.sh` に接続URLが埋め込まれています（このファイルは `.gitignore` 済みでGitHubに上がりません）
+### C. どうしても環境設定を省略したい場合（ローカル秘密スクリプト：macOS / Windows）
+- 接続URLを埋め込んだローカル専用スクリプトがあります（どちらも `.gitignore` 済みでGitHubに上がりません）
+
+macOS:
 ```bash
 cd Uriv-app/analytics-dashboard
 bash start_dashboard.local.sh
 ```
-※ この方法はローカル限定で安全に扱える環境のみで使用してください（他者に共有しないでください）
+
+Windows（PowerShell）:
+```powershell
+cd Uriv-app/analytics-dashboard
+./start_dashboard.local.ps1
+```
+初回実行でブロックされた場合は、PowerShell をユーザー権限で開き以下を一度だけ実行してください。
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+※ これらのローカル秘密スクリプトは個人用途に限定し、他者へ共有しないでください。
 
 ### B. コマンドラインで取得・集計だけ行う
 ```bash
