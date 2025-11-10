@@ -57,6 +57,20 @@ const DEPARTMENT_OPTIONS = [
   { value: "経済学部 経営学科", label: "経済学部 経営学科" },
   { value: "その他", label: "その他" },
 ]
+// 小樽商科大学 向けの学科・コース（大学=小樽商科大学を選んだ場合に使用）
+const DEPARTMENT_OPTIONS_OTARU = [
+  { value: "一年(昼間コース)", label: "一年(昼間コース)" },
+  { value: "一年(夜間主コース)", label: "一年(夜間主コース)" },
+  { value: "経済学科（昼間コース）", label: "経済学科（昼間コース）" },
+  { value: "商学科（昼間コース）", label: "商学科（昼間コース）" },
+  { value: "企業法学科（昼間コース）", label: "企業法学科（昼間コース）" },
+  { value: "社会情報学科（昼間コース）", label: "社会情報学科（昼間コース）" },
+  { value: "経済学科（夜間主コース）", label: "経済学科（夜間主コース）" },
+  { value: "商学科（夜間主コース）", label: "商学科（夜間主コース）" },
+  { value: "企業法学科（夜間主コース）", label: "企業法学科（夜間主コース）" },
+  { value: "社会情報学科（夜間主コース）", label: "社会情報学科（夜間主コース）" },
+  { value: "グローカルコース", label: "グローカルコース" },
+]
 
 type Summary = {
   id: number
@@ -220,6 +234,11 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
     const allowed = university === 'otaru' ? GRADE_SCORE_OPTIONS_OTARU : GRADE_SCORE_OPTIONS_HOKUDAI
     if (gradeScore && !allowed.includes(gradeScore)) {
       setGradeScore("")
+    }
+    // 学部・学科の候補も大学ごとに異なるため、不整合ならリセット
+    const deptAllowed = (university === 'otaru' ? DEPARTMENT_OPTIONS_OTARU : DEPARTMENT_OPTIONS).map(o => o.value)
+    if (dept && !deptAllowed.includes(dept) && dept !== 'all') {
+      setDept("")
     }
     fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -468,7 +487,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
               </SelectTrigger>
               <SelectContent className="max-h-60">
                 <SelectItem value="all">すべて</SelectItem>
-                {DEPARTMENT_OPTIONS.map(option => (
+                {(university === 'otaru' ? DEPARTMENT_OPTIONS_OTARU : DEPARTMENT_OPTIONS).map(option => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>

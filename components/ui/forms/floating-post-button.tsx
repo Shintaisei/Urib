@@ -68,6 +68,21 @@ const DEPARTMENT_OPTIONS = [
   { value: "その他", label: "その他" },
 ]
 
+// 小樽商科大学 向けの学科・コース（大学=小樽商科大学を選んだ場合に使用）
+const DEPARTMENT_OPTIONS_OTARU = [
+  { value: "一年(昼間コース)", label: "一年(昼間コース)" },
+  { value: "一年(夜間主コース)", label: "一年(夜間主コース)" },
+  { value: "経済学科（昼間コース）", label: "経済学科（昼間コース）" },
+  { value: "商学科（昼間コース）", label: "商学科（昼間コース）" },
+  { value: "企業法学科（昼間コース）", label: "企業法学科（昼間コース）" },
+  { value: "社会情報学科（昼間コース）", label: "社会情報学科（昼間コース）" },
+  { value: "経済学科（夜間主コース）", label: "経済学科（夜間主コース）" },
+  { value: "商学科（夜間主コース）", label: "商学科（夜間主コース）" },
+  { value: "企業法学科（夜間主コース）", label: "企業法学科（夜間主コース）" },
+  { value: "社会情報学科（夜間主コース）", label: "社会情報学科（夜間主コース）" },
+  { value: "グローカルコース", label: "グローカルコース" },
+]
+
 type PostType = 'board' | 'market' | 'course' | 'circle'
 
 export function FloatingPostButton() {
@@ -150,6 +165,15 @@ export function FloatingPostButton() {
       }
     } catch {}
   }, [courseUniversity])
+  // 大学切り替え時に学部・学科の不整合を自動リセット
+  useEffect(() => {
+    const allowed = courseUniversity === 'otaru'
+      ? DEPARTMENT_OPTIONS_OTARU.map(o => o.value)
+      : DEPARTMENT_OPTIONS.map(o => o.value)
+    if (department && !allowed.includes(department)) {
+      setDepartment("")
+    }
+  }, [courseUniversity]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Circle summary fields
   const [circleName, setCircleName] = useState("")
@@ -953,7 +977,7 @@ export function FloatingPostButton() {
                         <SelectValue placeholder="学部・学科・コースを選択" />
                       </SelectTrigger>
                       <SelectContent className="max-h-60">
-                        {DEPARTMENT_OPTIONS.map(option => (
+                        {(courseUniversity === 'otaru' ? DEPARTMENT_OPTIONS_OTARU : DEPARTMENT_OPTIONS).map(option => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
