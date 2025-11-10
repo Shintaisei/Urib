@@ -87,6 +87,15 @@ async def run_migrations():
         except Exception as e:
             print(f"⚠️ universityバックフィルに失敗しました: {e}")
 
+        # normalize existing unexpected values（日本語名など）を正規化
+        try:
+            with engine.begin() as conn:
+                conn.execute(text("UPDATE course_summaries SET university='hokudai' WHERE university IN ('北海道大学','Hokkaido','Hokkaido Univ','hokudai.ac.jp')"))
+                conn.execute(text("UPDATE course_summaries SET university='otaru' WHERE university IN ('小樽商科大学','Otaru','Otaru Univ','otaru-u.ac.jp','otsushou')"))
+            print("✅ university値を正規化しました（日本語表記等→コード）")
+        except Exception as e:
+            print(f"⚠️ university正規化に失敗しました: {e}")
+
         # index for university
         exec_tx("CREATE INDEX IF NOT EXISTS idx_course_summaries_university ON course_summaries(university)", "✅ idx_course_summaries_universityインデックスを追加しました", warn_phrases=("already exists",))
 

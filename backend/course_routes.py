@@ -14,6 +14,16 @@ def get_db():
     finally:
         db.close()
 
+def normalize_university(value: str | None) -> str | None:
+    if not value:
+        return None
+    v = str(value).strip().lower()
+    # 許容表記を正規化
+    if v in ("hokudai", "北海道大学", "hokkaido", "hokkaido univ", "hokudai.ac.jp"):
+        return "hokudai"
+    if v in ("otaru", "小樽商科大学", "otaru univ", "otaru-u.ac.jp", "otsushou"):
+        return "otaru"
+    return v
 @router.get("/summaries", response_model=List[schemas.CourseSummaryResponse])
 def list_summaries(
     request: Request,
@@ -68,10 +78,11 @@ def list_summaries(
         query = db.query(models.CourseSummary)
         # 大学フィルタ（hokudai指定時はNULLも含める＝既存データ互換）
         if university and hasattr(models.CourseSummary, 'university'):
-            if university == "hokudai":
+            uni = normalize_university(university)
+            if uni == "hokudai":
                 query = query.filter(or_(models.CourseSummary.university == "hokudai", models.CourseSummary.university.is_(None)))
             else:
-                query = query.filter(models.CourseSummary.university == university)
+                query = query.filter(models.CourseSummary.university == uni)
         if department:
             query = query.filter(models.CourseSummary.department == department)
         if year_semester:
@@ -169,11 +180,12 @@ def create_summary(payload: schemas.CourseSummaryCreate, request: Request, db: S
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
     anon = get_or_create_anonymous_name(user, db)
+    uni_norm = normalize_university(getattr(payload, 'university', None))
     row = models.CourseSummary(
         title=payload.title or (payload.course_name or "授業まとめ"),
         course_name=payload.course_name,
         instructor=payload.instructor,
-        university=getattr(payload, 'university', None),
+        university=uni_norm,
         department=payload.department,
         year_semester=payload.year_semester,
         tags=payload.tags,
@@ -233,7 +245,8 @@ def update_summary(summary_id: int, payload: schemas.CourseSummaryCreate, reques
         row.reference_pdf = payload.reference_pdf if payload.reference_pdf is not None else row.reference_pdf
     # 新しいフィールド
     if hasattr(row, 'university'):
-        row.university = payload.university if payload.university is not None else row.university
+        new_uni = normalize_university(payload.university) if getattr(payload, 'university', None) is not None else None
+        row.university = (new_uni if new_uni is not None else row.university)
     if hasattr(row, 'grade_level'):
         row.grade_level = payload.grade_level if payload.grade_level is not None else row.grade_level
     if hasattr(row, 'grade_score'):
