@@ -44,6 +44,7 @@ const DEPARTMENTS = [
 // 大学の選択肢
 const UNIVERSITIES = [
   "北海道大学",
+  "小樽商科大学",
   "東北大学",
   "東京大学",
   "東京工業大学",
