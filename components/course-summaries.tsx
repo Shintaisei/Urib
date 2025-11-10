@@ -105,6 +105,8 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [difficultyLevel, setDifficultyLevel] = useState("")
   // university toggle（既存データのNULLは「北海道大学」扱い）
   const [university, setUniversity] = useState<'hokudai' | 'otaru'>('hokudai')
+  const GRADE_SCORE_OPTIONS_HOKUDAI = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "D", "D-", "F"]
+  const GRADE_SCORE_OPTIONS_OTARU = ["秀", "優", "良", "可", "不可"]
 
   // new summary
   const [title, setTitle] = useState("")
@@ -214,6 +216,11 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
 
   // 大学切り替え時は即再取得
   useEffect(() => {
+    // 成績選択が現在の大学の候補に無い場合はリセット
+    const allowed = university === 'otaru' ? GRADE_SCORE_OPTIONS_OTARU : GRADE_SCORE_OPTIONS_HOKUDAI
+    if (gradeScore && !allowed.includes(gradeScore)) {
+      setGradeScore("")
+    }
     fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [university])
@@ -494,17 +501,9 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">すべて</SelectItem>
-                <SelectItem value="A+">A+</SelectItem>
-                <SelectItem value="A">A</SelectItem>
-                <SelectItem value="A-">A-</SelectItem>
-                <SelectItem value="B+">B+</SelectItem>
-                <SelectItem value="B">B</SelectItem>
-                <SelectItem value="B-">B-</SelectItem>
-                <SelectItem value="C+">C+</SelectItem>
-                <SelectItem value="C">C</SelectItem>
-                <SelectItem value="D">D</SelectItem>
-                <SelectItem value="D-">D-</SelectItem>
-                <SelectItem value="F">F</SelectItem>
+                {(university === 'otaru' ? GRADE_SCORE_OPTIONS_OTARU : GRADE_SCORE_OPTIONS_HOKUDAI).map(opt => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             

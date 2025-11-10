@@ -103,6 +103,8 @@ export function FloatingPostButton() {
   const [courseTagSuggestions, setCourseTagSuggestions] = useState<string[]>([])
   // University for course summary（必須・明示選択）
   const [courseUniversity, setCourseUniversity] = useState<'hokudai' | 'otaru' | ''>('')
+  const GRADE_SCORE_OPTIONS_HOKUDAI = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "D", "D-", "F"]
+  const GRADE_SCORE_OPTIONS_OTARU = ["秀", "優", "良", "可", "不可"]
   // 新しい評価フィールド
   const [gradeLevel, setGradeLevel] = useState("")
   const [gradeScore, setGradeScore] = useState("")
@@ -997,17 +999,9 @@ export function FloatingPostButton() {
                           <SelectValue placeholder="選択" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="A+">A+</SelectItem>
-                          <SelectItem value="A">A</SelectItem>
-                          <SelectItem value="A-">A-</SelectItem>
-                          <SelectItem value="B+">B+</SelectItem>
-                          <SelectItem value="B">B</SelectItem>
-                          <SelectItem value="B-">B-</SelectItem>
-                          <SelectItem value="C+">C+</SelectItem>
-                          <SelectItem value="C">C</SelectItem>
-                          <SelectItem value="D">D</SelectItem>
-                          <SelectItem value="D-">D-</SelectItem>
-                          <SelectItem value="F">F</SelectItem>
+                          {(courseUniversity === 'otaru' ? GRADE_SCORE_OPTIONS_OTARU : GRADE_SCORE_OPTIONS_HOKUDAI).map(opt => (
+                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
