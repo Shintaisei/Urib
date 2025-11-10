@@ -103,7 +103,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [gradeLevel, setGradeLevel] = useState("")
   const [gradeScore, setGradeScore] = useState("")
   const [difficultyLevel, setDifficultyLevel] = useState("")
-  // university toggle（暫定：既存データは全て「北海道大学」扱い）
+  // university toggle（既存データのNULLは「北海道大学」扱い）
   const [university, setUniversity] = useState<'hokudai' | 'otaru'>('hokudai')
 
   // new summary
@@ -183,6 +183,23 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
     fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // 大学選択の永続化（タブ移動/再マウントでも維持）
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('course_university') : null
+      if (saved === 'hokudai' || saved === 'otaru') {
+        setUniversity(saved)
+      }
+    } catch {}
+  }, [])
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('course_university', university)
+      }
+    } catch {}
+  }, [university])
 
   // フィルタ変更時の再取得（デバウンス付き）
   useEffect(() => {
@@ -400,7 +417,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           <CardDescription>検索や学部・学期で絞り込めます</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* 大学切り替え（既存は北大） */}
+          {/* 大学切り替え：投稿もこの選択が反映されます */}
           <div className="flex items-center gap-2">
             <div className="text-xs text-muted-foreground whitespace-nowrap">大学</div>
             <div className="inline-flex rounded-md border border-border overflow-hidden">
@@ -417,6 +434,7 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
                 小樽商科大学
               </button>
             </div>
+            <div className="text-[11px] text-muted-foreground">（投稿先もこの選択が保存されます）</div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -494,9 +512,13 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
 
           <LoadingProgress isLoading={loading} text="授業まとめを読み込み中..." />
           {error && <div className="text-sm text-red-500">{error}</div>}
-          {/* 表示用リスト */}
+          {/* 表示用リスト（選択大学でクライアント側でも最終フィルタ） */}
           {(() => {
-            const displayList = list
+            const displayList = list.filter((s: any) => {
+              const u = s?.university
+              if (university === 'hokudai') return (u === 'hokudai' || u === null || typeof u === 'undefined' || u === '')
+              return u === 'otaru'
+            })
             if (!loading && !error && displayList.length === 0) {
               return (
                 <div className="text-sm text-muted-foreground">
@@ -508,7 +530,11 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           })()}
 
           <div className="space-y-3">
-            {list.map((s) => (
+            {list.filter((s: any) => {
+              const u = (s as any)?.university
+              if (university === 'hokudai') return (u === 'hokudai' || u === null || typeof u === 'undefined' || u === '')
+              return u === 'otaru'
+            }).map((s) => (
               <div key={`course-summary-${s.id}`} id={`course-${s.id}`} className="border rounded p-2 sm:p-3">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div className="flex-1 min-w-0">
