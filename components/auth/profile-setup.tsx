@@ -41,6 +41,21 @@ const DEPARTMENTS = [
   "その他"
 ]
 
+// 小樽商科大学 向けの学部・学科・コース選択肢
+const DEPARTMENTS_OTARU = [
+  "一年(昼間コース)",
+  "一年(夜間主コース)",
+  "経済学科（昼間コース）",
+  "商学科（昼間コース）",
+  "企業法学科（昼間コース）",
+  "社会情報学科（昼間コース）",
+  "経済学科（夜間主コース）",
+  "商学科（夜間主コース）",
+  "企業法学科（夜間主コース）",
+  "社会情報学科（夜間主コース）",
+  "グローカルコース",
+]
+
 // 大学の選択肢
 const UNIVERSITIES = [
   "北海道大学",
@@ -81,6 +96,13 @@ export function ProfileSetup({ email, onComplete }: ProfileSetupProps) {
   const [nickname, setNickname] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
+
+  // 大学切替時に学部選択の不整合を自動リセット
+  const currentDepartments = university === "小樽商科大学" ? DEPARTMENTS_OTARU : DEPARTMENTS
+  if (department && !currentDepartments.includes(department)) {
+    // 非同期レンダ時にも暴発しないように軽いガード
+    setTimeout(() => setDepartment(""), 0)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -234,7 +256,7 @@ export function ProfileSetup({ email, onComplete }: ProfileSetupProps) {
                 required
               >
                 <option value="">選択してください</option>
-                {DEPARTMENTS.map((dept) => (
+                {(university === "小樽商科大学" ? DEPARTMENTS_OTARU : DEPARTMENTS).map((dept) => (
                   <option key={dept} value={dept}>
                     {dept}
                   </option>
