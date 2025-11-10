@@ -103,6 +103,8 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
   const [gradeLevel, setGradeLevel] = useState("")
   const [gradeScore, setGradeScore] = useState("")
   const [difficultyLevel, setDifficultyLevel] = useState("")
+  // university toggle（暫定：既存データは全て「北海道大学」扱い）
+  const [university, setUniversity] = useState<'hokudai' | 'otaru'>('hokudai')
 
   // new summary
   const [title, setTitle] = useState("")
@@ -139,6 +141,8 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
       
       const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null
       const headers: HeadersInit = userId ? { 'X-User-Id': String(userId) } : {}
+      // 大学は現状バックエンド未対応のため、パラメータは将来互換のために付与のみ
+      params.set('university', university)
       const res = await fetch(`${API_BASE_URL}/courses/summaries?${params.toString()}`, { 
         cache: 'no-store',
         signal: controller.signal,
@@ -389,6 +393,25 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           <CardDescription>検索や学部・学期で絞り込めます</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* 大学切り替え（既存は北大） */}
+          <div className="flex items-center gap-2">
+            <div className="text-xs text-muted-foreground whitespace-nowrap">大学</div>
+            <div className="inline-flex rounded-md border border-border overflow-hidden">
+              <button
+                onClick={() => setUniversity('hokudai')}
+                className={`px-3 py-1.5 text-xs transition-colors ${university === 'hokudai' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+              >
+                北海道大学
+              </button>
+              <button
+                onClick={() => setUniversity('otaru')}
+                className={`px-3 py-1.5 text-xs transition-colors border-l border-border ${university === 'otaru' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+              >
+                小樽商科大学
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             <Input placeholder="キーワード検索" value={q} onChange={(e) => setQ(e.target.value)} className="text-sm" />
             <Select value={dept} onValueChange={setDept}>
@@ -464,14 +487,28 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
 
           <LoadingProgress isLoading={loading} text="授業まとめを読み込み中..." />
           {error && <div className="text-sm text-red-500">{error}</div>}
-          {!loading && !error && list.length === 0 && <div className="text-sm text-muted-foreground">まだまとめがありません</div>}
+          {/* 表示用リスト（小樽は現状データ未分類のため空扱い） */}
+          {(() => {
+            const displayList = university === 'hokudai' ? list : []
+            if (!loading && !error && displayList.length === 0) {
+              return (
+                <div className="text-sm text-muted-foreground">
+                  {university === 'hokudai' ? 'まだまとめがありません' : '小樽商科大学の授業まとめはまだありません'}
+                </div>
+              )
+            }
+            return null
+          })()}
 
           <div className="space-y-3">
-            {list.map((s) => (
+            {(university === 'hokudai' ? list : []).map((s) => (
               <div key={`course-summary-${s.id}`} id={`course-${s.id}`} className="border rounded p-2 sm:p-3">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm sm:text-base font-semibold text-foreground break-words">{s.title}</div>
+                    <div className="text-sm sm:text-base font-semibold text-foreground break-words">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 mr-2">北海道大学</span>
+                      {s.title}
+                    </div>
                     <div className="text-xs text-muted-foreground mt-1 space-y-1">
                       <div className="break-words">{s.course_name} {s.instructor}</div>
                       <div className="break-words">{s.department} {s.year_semester} {s.tags && `#${s.tags}`}</div>
