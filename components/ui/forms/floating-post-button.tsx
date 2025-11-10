@@ -101,6 +101,8 @@ export function FloatingPostButton() {
   const [courseTags, setCourseTags] = useState("")
   const [courseContent, setCourseContent] = useState("")
   const [courseTagSuggestions, setCourseTagSuggestions] = useState<string[]>([])
+  // University for course summary
+  const [courseUniversity, setCourseUniversity] = useState<'hokudai' | 'otaru'>('hokudai')
   // 新しい評価フィールド
   const [gradeLevel, setGradeLevel] = useState("")
   const [gradeScore, setGradeScore] = useState("")
@@ -129,6 +131,23 @@ export function FloatingPostButton() {
     setCoursePdfName(file.name)
     setCoursePdfDataUrl(dataUrl)
   }
+
+  // 初期大学選択の復元（一覧側と共有: localStorage 'course_university'）
+  useEffect(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('course_university') : null
+      if (saved === 'hokudai' || saved === 'otaru') {
+        setCourseUniversity(saved)
+      }
+    } catch {}
+  }, [])
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('course_university', courseUniversity)
+      }
+    } catch {}
+  }, [courseUniversity])
 
   // Circle summary fields
   const [circleName, setCircleName] = useState("")
@@ -368,6 +387,7 @@ export function FloatingPostButton() {
           title: null,
           course_name: courseName.trim() || null,
           instructor: instructor.trim() || null,
+          university: courseUniversity,
           department: department.trim() || null,
           year_semester: yearSemester.trim() || null,
           tags: courseTags.trim() || null,
@@ -433,6 +453,7 @@ export function FloatingPostButton() {
           saveDraft('course', {
             course_name: (body as any).course_name,
             instructor: (body as any).instructor,
+            university: (body as any).university,
             department: (body as any).department,
             year_semester: (body as any).year_semester,
             tags: (body as any).tags,
@@ -833,6 +854,27 @@ export function FloatingPostButton() {
 
               {postType === 'course' && (
                 <>
+                  {/* 大学選択（投稿単位で明示選択可） */}
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">大学</div>
+                    <div className="inline-flex rounded-md border border-border overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setCourseUniversity('hokudai')}
+                        className={`px-3 py-1.5 text-xs transition-colors ${courseUniversity === 'hokudai' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                      >
+                        北海道大学
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCourseUniversity('otaru')}
+                        className={`px-3 py-1.5 text-xs transition-colors border-l border-border ${courseUniversity === 'otaru' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                      >
+                        小樽商科大学
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                     <div>
                       {(() => {
@@ -848,6 +890,9 @@ export function FloatingPostButton() {
                           const v = d.data || {}
                           setCourseName(v.course_name || '')
                           setInstructor(v.instructor || '')
+                      if (v.university === 'hokudai' || v.university === 'otaru') {
+                        setCourseUniversity(v.university)
+                      }
                           setDepartment(v.department || '')
                           setYearSemester(v.year_semester || '')
                           setCourseTags(v.tags || '')
