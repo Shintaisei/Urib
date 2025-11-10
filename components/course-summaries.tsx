@@ -417,24 +417,40 @@ export function CourseSummaries({ focusId }: { focusId?: number }): React.ReactE
           <CardDescription>検索や学部・学期で絞り込めます</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* 大学切り替え：投稿もこの選択が反映されます */}
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-muted-foreground whitespace-nowrap">大学</div>
-            <div className="inline-flex rounded-md border border-border overflow-hidden">
-              <button
-                onClick={() => setUniversity('hokudai')}
-                className={`px-3 py-1.5 text-xs transition-colors ${university === 'hokudai' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
-              >
-                北海道大学
-              </button>
-              <button
-                onClick={() => setUniversity('otaru')}
-                className={`px-3 py-1.5 text-xs transition-colors border-l border-border ${university === 'otaru' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
-              >
-                小樽商科大学
-              </button>
+          {/* 大学切り替え：視認性を強化（選択中はプライマリ色、右に選択チップ） */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="text-xs text-muted-foreground whitespace-nowrap">大学</div>
+              <div className="inline-flex rounded-md border border-border overflow-hidden">
+                <button
+                  onClick={() => setUniversity('hokudai')}
+                  className={`px-3 py-1.5 text-xs transition-colors ${
+                    university === 'hokudai' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                  aria-pressed={university === 'hokudai'}
+                >
+                  北海道大学
+                </button>
+                <button
+                  onClick={() => setUniversity('otaru')}
+                  className={`px-3 py-1.5 text-xs transition-colors border-l border-border ${
+                    university === 'otaru' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                  aria-pressed={university === 'otaru'}
+                >
+                  小樽商科大学
+                </button>
+              </div>
             </div>
-            <div className="text-[11px] text-muted-foreground">（投稿先もこの選択が保存されます）</div>
+            <div className="text-[11px]">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded ${
+                university === 'otaru'
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-emerald-100 text-emerald-700'
+              }`}>
+                表示中: {university === 'otaru' ? '小樽商科大学' : '北海道大学'}
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
