@@ -101,8 +101,8 @@ export function FloatingPostButton() {
   const [courseTags, setCourseTags] = useState("")
   const [courseContent, setCourseContent] = useState("")
   const [courseTagSuggestions, setCourseTagSuggestions] = useState<string[]>([])
-  // University for course summary
-  const [courseUniversity, setCourseUniversity] = useState<'hokudai' | 'otaru'>('hokudai')
+  // University for course summary（必須・明示選択）
+  const [courseUniversity, setCourseUniversity] = useState<'hokudai' | 'otaru' | ''>('')
   // 新しい評価フィールド
   const [gradeLevel, setGradeLevel] = useState("")
   const [gradeScore, setGradeScore] = useState("")
@@ -144,7 +144,7 @@ export function FloatingPostButton() {
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
-        localStorage.setItem('course_university', courseUniversity)
+        if (courseUniversity) localStorage.setItem('course_university', courseUniversity)
       }
     } catch {}
   }, [courseUniversity])
@@ -381,6 +381,7 @@ export function FloatingPostButton() {
           images: marketImages.slice(0, 3)
         }
       } else if (postType === 'course') {
+        if (!courseUniversity) throw new Error('大学を選択してください')
         if (!courseContent.trim()) throw new Error('内容を入力してください')
         endpoint = `${API_BASE_URL}/courses/summaries${cacheBuster}`
         body = {
@@ -854,21 +855,47 @@ export function FloatingPostButton() {
 
               {postType === 'course' && (
                 <>
-                  {/* 大学選択（投稿単位で明示選択可） */}
-                  <div className="flex items-center gap-2">
-                    <div className="text-xs text-muted-foreground whitespace-nowrap">大学</div>
+                  {/* 大学選択（投稿単位で明示選択・必須） */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs text-muted-foreground whitespace-nowrap">大学</div>
+                        {courseUniversity && (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] ${
+                            courseUniversity === 'otaru'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            投稿先: {courseUniversity === 'otaru' ? '小樽商科大学' : '北海道大学'}
+                          </span>
+                        )}
+                      </div>
+                      {!courseUniversity && (
+                        <span className="text-[11px] text-red-600">必須</span>
+                      )}
+                    </div>
                     <div className="inline-flex rounded-md border border-border overflow-hidden">
                       <button
                         type="button"
                         onClick={() => setCourseUniversity('hokudai')}
-                        className={`px-3 py-1.5 text-xs transition-colors ${courseUniversity === 'hokudai' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                        className={`px-3 py-1.5 text-xs transition-colors ${
+                          courseUniversity === 'hokudai'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted'
+                        }`}
+                        aria-pressed={courseUniversity === 'hokudai'}
                       >
                         北海道大学
                       </button>
                       <button
                         type="button"
                         onClick={() => setCourseUniversity('otaru')}
-                        className={`px-3 py-1.5 text-xs transition-colors border-l border-border ${courseUniversity === 'otaru' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted'}`}
+                        className={`px-3 py-1.5 text-xs transition-colors border-l border-border ${
+                          courseUniversity === 'otaru'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted'
+                        }`}
+                        aria-pressed={courseUniversity === 'otaru'}
                       >
                         小樽商科大学
                       </button>
@@ -1213,7 +1240,7 @@ export function FloatingPostButton() {
                   disabled={submitting || (
                     postType === 'board' && !content.trim() ||
                     postType === 'market' && (!title.trim() || !description.trim() || (type === 'sell' && (price.trim() === '' || isNaN(parseInt(price)) || parseInt(price) < 0))) ||
-                    postType === 'course' && !courseContent.trim() ||
+                    postType === 'course' && (!courseUniversity || !courseContent.trim()) ||
                     postType === 'circle' && !circleContent.trim()
                   )}
                   className="flex-1 text-sm"
