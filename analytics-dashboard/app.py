@@ -906,6 +906,180 @@ def diagnostics_tab():
         use_container_width=True
     )
 
+def kpi_tab():
+    st.subheader("プロトタイプ実績 KPI（数字を並べて一望）")
+    # RAW読み込み
+    pv = load_csv(EXPORT_DIR / "page_views.csv")
+    posts = load_csv(EXPORT_DIR / "board_posts.csv")
+    replies = load_csv(EXPORT_DIR / "board_replies.csv")
+    market = load_csv(EXPORT_DIR / "market_items.csv")
+    course = load_csv(EXPORT_DIR / "course_summaries.csv")
+    circle = load_csv(EXPORT_DIR / "circle_summaries.csv")
+    market_comments = load_csv(EXPORT_DIR / "market_item_comments.csv")
+
+    # 時間列を正規化
+    for df, col in [(pv, "created_at"), (posts, "created_at"), (replies, "created_at"),
+                    (market, "created_at"), (course, "created_at"), (circle, "created_at"),
+                    (market_comments, "created_at")]:
+        if not df.empty and col in df.columns:
+            df[col] = parse_date(df[col])
+            df.dropna(subset=[col], inplace=True)
+
+    # 期間フィルタ
+    now = pd.Timestamp.now()
+    cutoff_24h = now - pd.Timedelta(hours=24)
+    cutoff_7d = now - pd.Timedelta(days=7)
+    cutoff_30d = now - pd.Timedelta(days=30)
+
+    # PV/ユーザー
+    pv_non_admin = pv.copy()
+    if not pv_non_admin.empty:
+        pv_non_admin["email"] = pv_non_admin.get("email", "").astype(str).map(normalize_email)
+        pv_non_admin = pv_non_admin[pv_non_admin["email"].str.contains("@", na=False)]
+        pv_non_admin = pv_non_admin[~pv_non_admin["email"].apply(is_admin_email)]
+    pv_total = len(pv_non_admin) if not pv_non_admin.empty else 0
+    dau_today = 0
+    dau_7d_avg = 0.0
+    unique_users_30d = 0
+    if not pv_non_admin.empty:
+        pv_non_admin["day"] = pv_non_admin["created_at"].dt.date
+        today = now.date()
+        dau_today = int(pv_non_admin[pv_non_admin["day"] == today]["email"].nunique())
+        pv_7d = pv_non_admin[pv_non_admin["created_at"] >= cutoff_7d]
+        dau_by_day = pv_7d.groupby("day")["email"].nunique()
+        dau_7d_avg = float(dau_by_day.mean()) if len(dau_by_day) else 0.0
+        unique_users_30d = int(pv_non_admin[pv_non_admin["created_at"] >= cutoff_30d]["email"].nunique())
+
+    # 掲示板
+    posts_total = len(posts)
+    posts_24h = int((posts["created_at"] >= cutoff_24h).sum()) if not posts.empty else 0
+    replies_total = len(replies)
+    replies_24h = int((replies["created_at"] >= cutoff_24h).sum()) if not replies.empty else 0
+    post_likes_total = 0
+    if not posts.empty and "like_count" in posts.columns:
+        post_likes_total = int(pd.to_numeric(posts["like_count"], errors="coerce").fillna(0).sum())
+    # 初返信までの時間（中央値）
+    median_first_reply_min = None
+    try:
+        if not posts.empty and not replies.empty:
+            p = posts[["id", "created_at"]].copy()
+            p["post_ts"] = p["created_at"]
+            r = replies[["post_id", "created_at"]].copy()
+            r["reply_ts"] = r["created_at"]
+            fr = r.sort_values("reply_ts").dropna(subset=["reply_ts"]).groupby("post_id").first().reset_index()
+            mg = p.merge(fr, left_on="id", right_on="post_id", how="inner")
+            mg["mins"] = (mg["reply_ts"] - mg["post_ts"]).dt.total_seconds() / 60.0
+            mg = mg[(mg["mins"] >= 0) & (mg["mins"].notna())]
+            if not mg.empty:
+                median_first_reply_min = float(mg["mins"].median())
+    except Exception:
+        median_first_reply_min = None
+
+    # マーケット
+    market_total = len(market)
+    market_24h = int((market["created_at"] >= cutoff_24h).sum()) if not market.empty else 0
+    market_like_total = 0
+    market_comment_total = len(market_comments) if not market_comments.empty else 0
+    market_sell = market_buy = market_free = 0
+    market_available = 0
+    price_avg = price_median = 0.0
+    free_rate = 0.0
+    if not market.empty:
+        m = market.copy()
+        m["type"] = m.get("type", "").astype(str).str.lower()
+        market_sell = int((m["type"] == "sell").sum())
+        market_buy = int((m["type"] == "buy").sum())
+        # free: type == 'free' or price == 0
+        m["price"] = pd.to_numeric(m.get("price", 0), errors="coerce").fillna(0)
+        market_free = int((m["type"] == "free").sum() + (m["price"] == 0).sum())
+        if "is_available" in m.columns:
+            market_available = int(m["is_available"].astype(bool).sum())
+        if "like_count" in m.columns:
+            market_like_total = int(pd.to_numeric(m["like_count"], errors="coerce").fillna(0).sum())
+        if len(m):
+            price_avg = float(m["price"].mean())
+            price_median = float(m["price"].median())
+            free_rate = float((m["price"] == 0).mean()) * 100.0
+
+    # 授業まとめ / サークル
+    course_total = len(course)
+    course_24h = int((course["created_at"] >= cutoff_24h).sum()) if not course.empty else 0
+    course_pdf_rate = 0.0
+    if not course.empty and "reference_pdf" in course.columns and len(course):
+        course_pdf_rate = float(course["reference_pdf"].notna().mean()) * 100.0
+    circle_total = len(circle)
+    circle_24h = int((circle["created_at"] >= cutoff_24h).sum()) if not circle.empty else 0
+
+    # 表示（KPIをぎっしり配置）
+    st.markdown("#### ユーザー・来訪")
+    c1 = st.columns(4)
+    with c1[0]:
+        st.metric("総PV(全期間)", f"{pv_total:,}")
+    with c1[1]:
+        st.metric("DAU(本日)", f"{dau_today:,}")
+    with c1[2]:
+        st.metric("平均DAU(7日)", f"{dau_7d_avg:.1f}")
+    with c1[3]:
+        st.metric("ユニークユーザー(30日)", f"{unique_users_30d:,}")
+
+    st.markdown("#### 掲示板")
+    c2 = st.columns(5)
+    with c2[0]:
+        st.metric("投稿(総数)", f"{posts_total:,}")
+    with c2[1]:
+        st.metric("投稿(24h)", f"{posts_24h:,}")
+    with c2[2]:
+        st.metric("返信(総数)", f"{replies_total:,}")
+    with c2[3]:
+        st.metric("返信(24h)", f"{replies_24h:,}")
+    with c2[4]:
+        st.metric("投稿いいね合計", f"{post_likes_total:,}")
+    c2b = st.columns(2)
+    with c2b[0]:
+        st.metric("初返信までの中央値(分)", "-" if median_first_reply_min is None else f"{median_first_reply_min:.1f}")
+
+    st.markdown("#### 中古品（マーケット）")
+    c3 = st.columns(6)
+    with c3[0]:
+        st.metric("出品(総数)", f"{market_total:,}")
+    with c3[1]:
+        st.metric("出品(24h)", f"{market_24h:,}")
+    with c3[2]:
+        st.metric("売りたい", f"{market_sell:,}")
+    with c3[3]:
+        st.metric("買いたい", f"{market_buy:,}")
+    with c3[4]:
+        st.metric("無料(推定)", f"{market_free:,}")
+    with c3[5]:
+        st.metric("出品中(有効)", f"{market_available:,}")
+    c3b = st.columns(4)
+    with c3b[0]:
+        st.metric("平均価格(円)", f"{price_avg:.0f}")
+    with c3b[1]:
+        st.metric("中央値価格(円)", f"{price_median:.0f}")
+    with c3b[2]:
+        st.metric("無料率(%)", f"{free_rate:.1f}")
+    with c3b[3]:
+        st.metric("いいね合計", f"{market_like_total:,}")
+    c3c = st.columns(2)
+    with c3c[0]:
+        st.metric("コメント合計", f"{market_comment_total:,}")
+
+    st.markdown("#### 授業/サークルまとめ")
+    c4 = st.columns(5)
+    with c4[0]:
+        st.metric("授業まとめ(総数)", f"{course_total:,}")
+    with c4[1]:
+        st.metric("授業まとめ(24h)", f"{course_24h:,}")
+    with c4[2]:
+        st.metric("PDF添付率(%)", f"{course_pdf_rate:.1f}")
+    with c4[3]:
+        st.metric("サークルまとめ(総数)", f"{circle_total:,}")
+    with c4[4]:
+        st.metric("サークルまとめ(24h)", f"{circle_24h:,}")
+
+    st.caption("注: 管理者メールは自動除外。CSVが存在しない項目は0表示。")
+
 def ai_tab():
     st.subheader("AI 集計アシスタント")
     # OpenAI import可否
@@ -1426,25 +1600,27 @@ def main():
         st.success("最新データに更新しました。")
         st.rerun()
 
-    tab_names = ["Overview", "Users", "Boards", "Market", "Engagement", "Sessions", "Diagnostics", "AI", "Admins"]
+    tab_names = ["実績KPI", "Overview", "Users", "Boards", "Market", "Engagement", "Sessions", "Diagnostics", "AI", "Admins"]
     tabs = st.tabs(tab_names)
     with tabs[0]:
-        overview_tab()
+        kpi_tab()
     with tabs[1]:
-        users_tab()
+        overview_tab()
     with tabs[2]:
-        boards_tab()
+        users_tab()
     with tabs[3]:
-        market_tab()
+        boards_tab()
     with tabs[4]:
-        engagement_tab()
+        market_tab()
     with tabs[5]:
-        sessions_tab()
+        engagement_tab()
     with tabs[6]:
-        diagnostics_tab()
+        sessions_tab()
     with tabs[7]:
-        ai_tab()
+        diagnostics_tab()
     with tabs[8]:
+        ai_tab()
+    with tabs[9]:
         admins_tab()
 
 if __name__ == "__main__":

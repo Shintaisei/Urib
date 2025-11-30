@@ -7,6 +7,7 @@ import models, schemas, database
 import random
 import string
 import re
+from sqlalchemy.sql import label
 
 router = APIRouter(prefix="/board", tags=["board"])
 
@@ -1004,3 +1005,193 @@ def mark_board_visited(board_id: str, request: Request, db: Session = Depends(da
         db.add(visit)
     db.commit()
     return {"message": "ok", "board_id": board_id, "last_seen": ensure_jst_aware(now).isoformat()}
+
+# =============================
+# 自分の投稿/いいね/返信した投稿
+# =============================
+
+@router.get("/my/posts", response_model=List[schemas.BoardPostResponse])
+def get_my_posts(
+    request: Request,
+    limit: int = Query(50, description="取得件数"),
+    offset: int = Query(0, description="オフセット"),
+    db: Session = Depends(database.get_db)
+):
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    current_user = get_user_by_id(db, current_user_id)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+
+    posts = db.query(models.BoardPost).filter(
+        models.BoardPost.author_id == current_user.id
+    ).order_by(desc(models.BoardPost.created_at)).offset(offset).limit(limit).all()
+
+    # 最終閲覧をまとめ取得
+    user_last_view = {}
+    rows = db.query(models.BoardRepliesView.post_id, models.BoardRepliesView.last_viewed_at).filter(
+        models.BoardRepliesView.user_id == current_user.id
+    ).all()
+    for post_id, last_viewed_at in rows:
+        user_last_view[post_id] = last_viewed_at
+
+    result: List[schemas.BoardPostResponse] = []
+    for post in posts:
+        is_liked = db.query(models.BoardPostLike.id).filter(
+            and_(models.BoardPostLike.post_id == post.id, models.BoardPostLike.user_id == current_user.id)
+        ).first() is not None
+        has_replied = db.query(models.BoardReply.id).filter(
+            and_(models.BoardReply.post_id == post.id, models.BoardReply.author_id == current_user.id)
+        ).first() is not None
+        new_replies_count = 0
+        last_view = user_last_view.get(post.id)
+        if last_view:
+            new_replies_count = db.query(func.count(models.BoardReply.id)).filter(
+                and_(models.BoardReply.post_id == post.id, models.BoardReply.created_at > last_view)
+            ).scalar() or 0
+        result.append(schemas.BoardPostResponse(
+            id=post.id,
+            board_id=post.board_id,
+            content=post.content,
+            hashtags=post.hashtags,
+            author_name=post.author_name,
+            author_year=post.author.year if post.author else None,
+            author_department=post.author.department if post.author else None,
+            like_count=post.like_count,
+            reply_count=post.reply_count,
+            created_at=ensure_jst_aware(post.created_at).isoformat(),
+            is_liked=is_liked,
+            has_replied=has_replied,
+            new_replies_since_my_last_reply=int(new_replies_count),
+            can_edit=True
+        ))
+    return result
+
+@router.get("/my/liked", response_model=List[schemas.BoardPostResponse])
+def get_my_liked_posts(
+    request: Request,
+    limit: int = Query(50, description="取得件数"),
+    offset: int = Query(0, description="オフセット"),
+    db: Session = Depends(database.get_db)
+):
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    current_user = get_user_by_id(db, current_user_id)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+
+    # 自分がいいねした投稿を like 時刻の新しい順で取得
+    liked = db.query(
+        models.BoardPost,
+        models.BoardPostLike.created_at.label("liked_at")
+    ).join(models.BoardPostLike, models.BoardPostLike.post_id == models.BoardPost.id
+    ).filter(models.BoardPostLike.user_id == current_user.id
+    ).order_by(desc("liked_at"), desc(models.BoardPost.created_at)
+    ).offset(offset).limit(limit).all()
+
+    # 最終閲覧をまとめ取得
+    user_last_view = {}
+    rows = db.query(models.BoardRepliesView.post_id, models.BoardRepliesView.last_viewed_at).filter(
+        models.BoardRepliesView.user_id == current_user.id
+    ).all()
+    for post_id, last_viewed_at in rows:
+        user_last_view[post_id] = last_viewed_at
+
+    result: List[schemas.BoardPostResponse] = []
+    for post, _liked_at in liked:
+        has_replied = db.query(models.BoardReply.id).filter(
+            and_(models.BoardReply.post_id == post.id, models.BoardReply.author_id == current_user.id)
+        ).first() is not None
+        new_replies_count = 0
+        last_view = user_last_view.get(post.id)
+        if last_view:
+            new_replies_count = db.query(func.count(models.BoardReply.id)).filter(
+                and_(models.BoardReply.post_id == post.id, models.BoardReply.created_at > last_view)
+            ).scalar() or 0
+        result.append(schemas.BoardPostResponse(
+            id=post.id,
+            board_id=post.board_id,
+            content=post.content,
+            hashtags=post.hashtags,
+            author_name=post.author_name,
+            author_year=post.author.year if post.author else None,
+            author_department=post.author.department if post.author else None,
+            like_count=post.like_count,
+            reply_count=post.reply_count,
+            created_at=ensure_jst_aware(post.created_at).isoformat(),
+            is_liked=True,
+            has_replied=has_replied,
+            new_replies_since_my_last_reply=int(new_replies_count),
+            can_edit=bool(post.author_id == current_user.id)
+        ))
+    return result
+
+@router.get("/my/replied", response_model=List[schemas.BoardPostResponse])
+def get_my_replied_posts(
+    request: Request,
+    limit: int = Query(50, description="取得件数"),
+    offset: int = Query(0, description="オフセット"),
+    db: Session = Depends(database.get_db)
+):
+    current_user_id = get_current_user_id(request)
+    if not current_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーIDが見つかりません")
+    current_user = get_user_by_id(db, current_user_id)
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ユーザーが見つかりません")
+
+    # 自分が返信した投稿の最新返信時刻をサブクエリで求めて並べる
+    sub = db.query(
+        models.BoardReply.post_id,
+        func.max(models.BoardReply.created_at).label("last_replied_at")
+    ).filter(models.BoardReply.author_id == current_user.id
+    ).group_by(models.BoardReply.post_id).subquery()
+
+    q = db.query(
+        models.BoardPost,
+        sub.c.last_replied_at
+    ).join(sub, sub.c.post_id == models.BoardPost.id
+    ).order_by(desc(sub.c.last_replied_at), desc(models.BoardPost.created_at)
+    ).offset(offset).limit(limit)
+
+    rows = q.all()
+
+    # 最終閲覧まとめ
+    user_last_view = {}
+    views = db.query(models.BoardRepliesView.post_id, models.BoardRepliesView.last_viewed_at).filter(
+        models.BoardRepliesView.user_id == current_user.id
+    ).all()
+    for post_id, last_viewed_at in views:
+        user_last_view[post_id] = last_viewed_at
+
+    result: List[schemas.BoardPostResponse] = []
+    for post, _last_replied_at in rows:
+        is_liked = db.query(models.BoardPostLike.id).filter(
+            and_(models.BoardPostLike.post_id == post.id, models.BoardPostLike.user_id == current_user.id)
+        ).first() is not None
+        has_replied = True
+        new_replies_count = 0
+        last_view = user_last_view.get(post.id)
+        if last_view:
+            new_replies_count = db.query(func.count(models.BoardReply.id)).filter(
+                and_(models.BoardReply.post_id == post.id, models.BoardReply.created_at > last_view)
+            ).scalar() or 0
+        result.append(schemas.BoardPostResponse(
+            id=post.id,
+            board_id=post.board_id,
+            content=post.content,
+            hashtags=post.hashtags,
+            author_name=post.author_name,
+            author_year=post.author.year if post.author else None,
+            author_department=post.author.department if post.author else None,
+            like_count=post.like_count,
+            reply_count=post.reply_count,
+            created_at=ensure_jst_aware(post.created_at).isoformat(),
+            is_liked=is_liked,
+            has_replied=has_replied,
+            new_replies_since_my_last_reply=int(new_replies_count),
+            can_edit=bool(post.author_id == current_user.id)
+        ))
+    return result

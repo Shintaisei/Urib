@@ -145,6 +145,10 @@ export function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => router.push("/me")}>
+                <User className="w-4 h-4 mr-2" />
+                マイページ
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push("/profile")}>
                 <User className="w-4 h-4 mr-2" />
                 プロフィール設定
