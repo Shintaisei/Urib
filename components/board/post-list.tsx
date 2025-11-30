@@ -136,7 +136,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         `${API_BASE_URL}/board/posts/${boardId}`,
         { headers },
         cacheKey,
-        600000 // 10分キャッシュ
+        -1 // sticky（無期限。明示的にinvalidateするまで保持）
       )
 
       setPosts(data)
@@ -188,7 +188,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
         `${API_BASE_URL}/board/posts/${postId}/replies`,
         { headers },
         cacheKey,
-        600000 // 10分キャッシュ
+        -1 // sticky
       )
 
       setReplies(prev => ({ ...prev, [postId]: data }))

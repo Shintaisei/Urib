@@ -6,21 +6,54 @@ import { useState, useEffect, useCallback } from 'react'
 type CacheEntry = { data: any; timestamp: number; ttl: number }
 
 const LS_PREFIX = 'apiCache:'
+const MODE_KEY = LS_PREFIX + 'mode' // 'sticky' | 'timed'
 
 class APICache {
   private cache = new Map<string, CacheEntry>()
+  private listenersBound = false
+  
+  private isStickyMode(): boolean {
+    try {
+      const m = localStorage.getItem(MODE_KEY)
+      return (m || 'sticky') === 'sticky' // 既定はsticky（明示的に切替可能）
+    } catch {
+      return true
+    }
+  }
+  
+  private ensureListeners() {
+    if (this.listenersBound) return
+    try {
+      window.addEventListener('storage', (e) => {
+        if (!e.key || !e.key.startsWith(LS_PREFIX)) return
+        // 他タブ更新を反映
+        if (e.newValue) {
+          try {
+            const entry: CacheEntry = JSON.parse(e.newValue)
+            const key = e.key.replace(LS_PREFIX, '')
+            this.cache.set(key, entry)
+          } catch {}
+        } else {
+          const key = e.key.replace(LS_PREFIX, '')
+          this.cache.delete(key)
+        }
+      })
+    } catch {}
+    this.listenersBound = true
+  }
   
   set(key: string, data: any, ttl: number = 30000) { // デフォルト30秒
-    const entry: CacheEntry = { data, timestamp: Date.now(), ttl }
+    this.ensureListeners()
+    const effectiveTtl = this.isStickyMode() ? Number.MAX_SAFE_INTEGER : ttl
+    const entry: CacheEntry = { data, timestamp: Date.now(), ttl: effectiveTtl }
     this.cache.set(key, entry)
     try {
-      if (ttl > 0) {
-        localStorage.setItem(LS_PREFIX + key, JSON.stringify(entry))
-      }
+      localStorage.setItem(LS_PREFIX + key, JSON.stringify(entry))
     } catch {}
   }
   
   get(key: string): any | null {
+    this.ensureListeners()
     let item = this.cache.get(key)
     if (!item) {
       // localStorageから復元
@@ -34,7 +67,8 @@ class APICache {
       } catch {}
     }
     if (!item) return null
-    if (Date.now() - item.timestamp > item.ttl) {
+    // 無期限（sticky）またはMAX_SAFE_INTEGER扱いは期限切れ判定しない
+    if (item.ttl !== Number.MAX_SAFE_INTEGER && (Date.now() - item.timestamp > item.ttl)) {
       this.delete(key)
       return null
     }
@@ -68,6 +102,27 @@ export function useCachedFetch() {
     // キャッシュから取得を試行
     const cached = apiCache.get(key)
     if (cached) {
+      // SWR: 背景で静かに再検証（stickyモードは更新頻度を抑える）
+      try {
+        const sticky = localStorage.getItem(MODE_KEY) !== 'timed'
+        if (!sticky) {
+          ;(async () => {
+            try {
+              const response = await fetch(url, {
+                ...options,
+                headers: {
+                  'Cache-Control': 'no-store',
+                  ...options.headers
+                }
+              })
+              if (response.ok) {
+                const fresh = await response.json()
+                apiCache.set(key, fresh, ttl)
+              }
+            } catch {}
+          })()
+        }
+      } catch {}
       return cached
     }
     
