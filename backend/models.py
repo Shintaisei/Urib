@@ -28,6 +28,9 @@ class User(Base):
     year = Column(String(20), index=True)  # 学年（1年/2年/3年/4年/修士/博士）
     department = Column(String(100), index=True)  # 学部
     anonymous_name = Column(String(100), unique=True)  # 固定の匿名表示名（ニックネーム）
+    # プロフィール拡張
+    profile_image = Column(Text, nullable=True)  # DataURL等を想定（軽量推奨）
+    bio = Column(String(200), nullable=True)  # ひと言（最大200文字程度）
     is_verified = Column(Boolean, default=False)  # 認証済みかどうか
     verification_code = Column(String(255))  # 認証コード
     created_at = Column(DateTime(timezone=True), default=jst_now, index=True)  # 作成日時（日本時間）

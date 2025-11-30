@@ -62,6 +62,7 @@ export default function MePage() {
   const [mine, setMine] = useState<Post[]>([])
   const [liked, setLiked] = useState<Post[]>([])
   const [replied, setReplied] = useState<Post[]>([])
+  const [profile, setProfile] = useState<{ anonymous_name?: string; university?: string; year?: string; department?: string; profile_image?: string; bio?: string } | null>(null)
 
   const headers = useMemo(() => {
     if (typeof window === "undefined") return {}
@@ -77,15 +78,23 @@ export default function MePage() {
     try {
       setLoading(true)
       setError("")
+      // 自分の公開プロフィール
+      const uid = typeof window !== "undefined" ? localStorage.getItem("user_id") : null
+      const pReq = uid ? fetch(`${API_BASE_URL}/users/public/${uid}`, { headers }) : Promise.resolve(null as any)
       const [r1, r2, r3] = await Promise.all([
         fetch(`${API_BASE_URL}/board/my/posts`, { headers }),
         fetch(`${API_BASE_URL}/board/my/liked`, { headers }),
         fetch(`${API_BASE_URL}/board/my/replied`, { headers }),
       ])
+      const pRes = await pReq
       if (!r1.ok || !r2.ok || !r3.ok) throw new Error("データ取得に失敗しました")
       const j1 = await r1.json()
       const j2 = await r2.json()
       const j3 = await r3.json()
+      if (pRes && pRes.ok) {
+        const pj = await pRes.json()
+        setProfile(pj)
+      }
       setMine(Array.isArray(j1) ? j1 : [])
       setLiked(Array.isArray(j2) ? j2 : [])
       setReplied(Array.isArray(j3) ? j3 : [])
@@ -125,6 +134,27 @@ export default function MePage() {
       <Header />
       <main className="container mx-auto px-4 py-6 max-w-3xl">
         <h1 className="text-2xl font-bold text-foreground mb-3">マイページ</h1>
+        {/* プロフィールカード */}
+        {profile && (
+          <div className="mb-4 p-3 border rounded bg-card/60 flex items-center gap-3">
+            <div className="w-14 h-14 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">
+              {profile.profile_image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.profile_image} alt="me" className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-xs text-muted-foreground">No Image</div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold truncate">{profile.anonymous_name || "匿名"}</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {(profile.university || "学校未設定")} / {(profile.department || "学部未設定")} / {(profile.year || "学年未設定")}
+              </div>
+              {profile.bio && <div className="text-xs mt-0.5 text-foreground truncate">“{profile.bio}”</div>}
+            </div>
+            <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => router.push("/profile")}>編集</Button>
+          </div>
+        )}
         <div className="inline-flex items-center rounded border border-border overflow-hidden mb-4">
           <button
             type="button"

@@ -32,6 +32,9 @@ class UserUpdate(BaseModel):
     anonymous_name: Optional[str] = None
     year: Optional[str] = None
     department: Optional[str] = None
+    university: Optional[str] = None
+    profile_image: Optional[str] = None
+    bio: Optional[str] = None
 
 # 市場掲示板関連のスキーマ
 class MarketItemCreate(BaseModel):

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { School, Shield, Save, Check } from "lucide-react"
+import { School, Shield, Save, Check, Image as ImageIcon, Quote } from "lucide-react"
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://urib-backend.onrender.com'
 import { isAdminEmail } from "@/lib/utils"
 
@@ -20,6 +20,9 @@ export function ProfileSettings() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [year, setYear] = useState("")
   const [department, setDepartment] = useState("")
+  const [bio, setBio] = useState("")
+  const [profileImage, setProfileImage] = useState<string>("")
+  const [imagePreview, setImagePreview] = useState<string>("")
 
   useEffect(() => {
     const storedEmail = typeof window !== 'undefined' ? (localStorage.getItem('user_email') || '') : ''
@@ -41,6 +44,9 @@ export function ProfileSettings() {
             setUniversity(p.university || "")
             setYear(p.year || "")
             setDepartment(p.department || "")
+            setBio(p.bio || "")
+            setProfileImage(p.profile_image || "")
+            setImagePreview(p.profile_image || "")
             return
           }
         }
@@ -61,6 +67,25 @@ export function ProfileSettings() {
     loadProfile()
   }, [])
 
+  const handleImageFile = async (file: File) => {
+    if (!file) return
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルを選択してください")
+      return
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      alert("画像は4MB以下にしてください")
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      setProfileImage(dataUrl)
+      setImagePreview(dataUrl)
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleSave = async () => {
     try {
       setIsSaving(true)
@@ -80,6 +105,9 @@ export function ProfileSettings() {
         anonymous_name: nickname,
         year,
         department,
+        university,
+        profile_image: profileImage || null,
+        bio,
       }
       const res = await fetch(`${API_BASE_URL}/users/me`, {
         method: 'PUT',
@@ -113,7 +141,19 @@ export function ProfileSettings() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
             <div>
-              <p className="font-medium text-foreground">{university || '大学未設定'}</p>
+              <div className="flex items-center gap-2">
+                <p className="font-medium text-foreground">{university || '大学未設定'}</p>
+              </div>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="university">学校（自由入力）</Label>
+                  <Input id="university" value={university} onChange={(e) => setUniversity(e.target.value)} placeholder="例: 北海道大学" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="year">学年</Label>
+                  <Input id="year" value={year} onChange={(e) => setYear(e.target.value)} placeholder="例: 1年/2年/3年/4年/修士/博士" />
+                </div>
+              </div>
               {isAdmin && email && (
                 <p className="text-sm text-muted-foreground">{email}</p>
               )}
@@ -133,7 +173,7 @@ export function ProfileSettings() {
       <Card>
         <CardHeader>
           <CardTitle>プロフィール設定</CardTitle>
-          <CardDescription>表示名・学年・学部の設定</CardDescription>
+          <CardDescription>表示名・学部・プロフィール画像・ひと言</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -150,13 +190,37 @@ export function ProfileSettings() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="year">学年</Label>
-              <Input id="year" value={year} onChange={(e) => setYear(e.target.value)} placeholder="例: 1年/2年/3年/4年/修士/博士" />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="department">学部</Label>
               <Input id="department" value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="例: 工学部" />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="bio" className="flex items-center gap-1"><Quote className="w-4 h-4" /> ひと言</Label>
+              <Input id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="例: 今日も頑張る" maxLength={200} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> プロフィール画像</Label>
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                {imagePreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imagePreview} alt="profile" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                )}
+              </div>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) handleImageFile(f)
+                }}
+                className="max-w-xs"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">4MBまで、正方形推奨。画像は端末内に一時保存され、サーバーにはDataURLとして保存されます。</p>
           </div>
 
           <Separator />

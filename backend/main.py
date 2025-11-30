@@ -208,6 +208,20 @@ async def run_migrations():
             )
         exec_tx(circle_comments_sql, "✅ CircleSummaryCommentテーブルを作成（または既存）")
 
+        # users テーブルの拡張カラム（profile_image, bio）を追加
+        try:
+            need_cols = [("profile_image", "TEXT"), ("bio", "VARCHAR(200)")]
+            for col, typ in need_cols:
+                if not column_exists('users', col):
+                    if dialect == 'postgresql':
+                        exec_tx(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {typ}", f"✅ users.{col} を追加しました")
+                    else:
+                        exec_tx(f"ALTER TABLE users ADD COLUMN {col} {typ}", f"✅ users.{col} を追加しました")
+                else:
+                    print(f"⚠️ users.{col} は既に存在します")
+        except Exception as e:
+            print(f"⚠️ users拡張カラム追加に失敗: {e}")
+
         print("✅ マイグレーション完了")
     except Exception as e:
         print(f"❌ マイグレーション実行エラー: {e}")
@@ -371,6 +385,8 @@ def get_user_public(user_id: int, db: Session = Depends(get_db)):
         "university": u.university,
         "year": u.year,
         "department": u.department,
+        "profile_image": getattr(u, "profile_image", None),
+        "bio": getattr(u, "bio", None),
     }
 
 # 簡易ユーザー登録API（認証なし）
@@ -577,7 +593,7 @@ def delete_user_deep(db: Session, target: models.User):
 
 @app.put("/users/me")
 def update_my_profile(payload: schemas.UserUpdate, request: Request, db: Session = Depends(get_db)):
-    """現在のユーザーのプロフィールを更新する（anonymous_name/year/department）"""
+    """現在のユーザーのプロフィールを更新する（表示名/大学/学年/学部/画像/ひと言）"""
     user = resolve_user_from_headers(request, db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="認証が必要です")
@@ -597,6 +613,12 @@ def update_my_profile(payload: schemas.UserUpdate, request: Request, db: Session
         user.year = payload.year
     if payload.department is not None:
         user.department = payload.department
+    if payload.university is not None:
+        user.university = (payload.university or "").strip()
+    if payload.profile_image is not None:
+        user.profile_image = payload.profile_image
+    if payload.bio is not None:
+        user.bio = (payload.bio or "").strip()[:200]
 
     db.commit()
     return {
@@ -605,6 +627,8 @@ def update_my_profile(payload: schemas.UserUpdate, request: Request, db: Session
         "university": user.university,
         "year": user.year,
         "department": user.department,
+        "profile_image": getattr(user, "profile_image", None),
+        "bio": getattr(user, "bio", None),
     }
 
 # 互換: POSTでも同じ更新を受け付ける（古いフロント対応）
