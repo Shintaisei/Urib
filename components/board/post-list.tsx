@@ -7,6 +7,7 @@ import { Heart, MessageCircle, Send, Loader2 } from "lucide-react"
 import { LoadingProgress } from "@/components/loading-progress"
 import { useCachedFetch } from "@/lib/api-cache"
 import { isAdminEmail } from "@/lib/utils"
+import { AvatarWithPopover } from "@/components/ui/avatar-with-popover"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 // 掲示板名マップ（表示用）
@@ -367,6 +368,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
+                  <AvatarWithPopover anonymousName={post.author_name} size={18} />
                   <span className="text-[12px] font-medium text-foreground truncate">{post.author_name}</span>
                   {isRecent && (
                     <span className="inline-flex items-center text-[12px] font-semibold bg-rose-500 text-white px-2 py-0.5 rounded-full shadow-sm">
@@ -458,6 +460,7 @@ export function PostList({ boardId, refreshKey, highlightPostId }: PostListProps
                         <div key={`board-reply-${reply.id}`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0">
+                              <AvatarWithPopover anonymousName={reply.author_name} size={16} />
                               <span className="text-[12px] font-medium text-foreground truncate">{reply.author_name}</span>
                               {reply.author_department && reply.author_year && (
                                 <span className="text-[10px] text-muted-foreground bg-muted/50 px-1 py-0.5 rounded">

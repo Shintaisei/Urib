@@ -5,6 +5,7 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Heart, MessageCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { AvatarWithPopover } from "@/components/ui/avatar-with-popover"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -185,6 +186,7 @@ export default function MePage() {
               <div key={`me-post-${p.id}`} className="px-3 py-2 hover:bg-muted/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 min-w-0">
+                    <AvatarWithPopover anonymousName={p.author_name} size={18} />
                     <span className="text-[12px] font-medium truncate">{p.author_name}</span>
                     {p.author_department && p.author_year && (
                       <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">

@@ -8,6 +8,7 @@ import random
 import string
 import re
 from sqlalchemy.sql import label
+from fastapi import Path
 
 router = APIRouter(prefix="/board", tags=["board"])
 
@@ -1195,3 +1196,92 @@ def get_my_replied_posts(
             can_edit=bool(post.author_id == current_user.id)
         ))
     return result
+
+# =============================
+# 任意ユーザーの投稿/いいね/返信（閲覧用）
+# =============================
+
+def _compose_post_response_for_viewer(db: Session, post: models.BoardPost, viewer_id: int | None):
+    is_liked = False
+    has_replied = False
+    new_replies_count = 0
+    if viewer_id:
+        is_liked = db.query(models.BoardPostLike.id).filter(
+            and_(models.BoardPostLike.post_id == post.id, models.BoardPostLike.user_id == viewer_id)
+        ).first() is not None
+        has_replied = db.query(models.BoardReply.id).filter(
+            and_(models.BoardReply.post_id == post.id, models.BoardReply.author_id == viewer_id)
+        ).first() is not None
+        last_view = db.query(models.BoardRepliesView.last_viewed_at).filter(
+            and_(models.BoardRepliesView.user_id == viewer_id, models.BoardRepliesView.post_id == post.id)
+        ).scalar()
+        if last_view:
+            new_replies_count = db.query(func.count(models.BoardReply.id)).filter(
+                and_(models.BoardReply.post_id == post.id, models.BoardReply.created_at > last_view)
+            ).scalar() or 0
+    return schemas.BoardPostResponse(
+        id=post.id,
+        board_id=post.board_id,
+        content=post.content,
+        hashtags=post.hashtags,
+        author_name=post.author_name,
+        author_year=post.author.year if post.author else None,
+        author_department=post.author.department if post.author else None,
+        like_count=post.like_count,
+        reply_count=post.reply_count,
+        created_at=ensure_jst_aware(post.created_at).isoformat(),
+        is_liked=is_liked,
+        has_replied=has_replied,
+        new_replies_since_my_last_reply=int(new_replies_count),
+        can_edit=False,
+    )
+
+@router.get("/user/{user_id}/posts", response_model=List[schemas.BoardPostResponse])
+def get_user_posts(
+    user_id: int = Path(..., description="対象ユーザーID"),
+    request: Request = None,
+    limit: int = Query(50, description="取得件数"),
+    offset: int = Query(0, description="オフセット"),
+    db: Session = Depends(database.get_db)
+):
+    viewer_id = get_current_user_id(request) if request else None
+    posts = db.query(models.BoardPost).filter(models.BoardPost.author_id == user_id).order_by(desc(models.BoardPost.created_at)).offset(offset).limit(limit).all()
+    return [_compose_post_response_for_viewer(db, p, viewer_id) for p in posts]
+
+@router.get("/user/{user_id}/liked", response_model=List[schemas.BoardPostResponse])
+def get_user_liked_posts(
+    user_id: int = Path(..., description="対象ユーザーID"),
+    request: Request = None,
+    limit: int = Query(50, description="取得件数"),
+    offset: int = Query(0, description="オフセット"),
+    db: Session = Depends(database.get_db)
+):
+    viewer_id = get_current_user_id(request) if request else None
+    rows = db.query(
+        models.BoardPost,
+        models.BoardPostLike.created_at.label("liked_at")
+    ).join(models.BoardPostLike, models.BoardPostLike.post_id == models.BoardPost.id
+    ).filter(models.BoardPostLike.user_id == user_id
+    ).order_by(desc("liked_at"), desc(models.BoardPost.created_at)
+    ).offset(offset).limit(limit).all()
+    return [_compose_post_response_for_viewer(db, p, viewer_id) for (p, _at) in rows]
+
+@router.get("/user/{user_id}/replied", response_model=List[schemas.BoardPostResponse])
+def get_user_replied_posts(
+    user_id: int = Path(..., description="対象ユーザーID"),
+    request: Request = None,
+    limit: int = Query(50, description="取得件数"),
+    offset: int = Query(0, description="オフセット"),
+    db: Session = Depends(database.get_db)
+):
+    viewer_id = get_current_user_id(request) if request else None
+    sub = db.query(
+        models.BoardReply.post_id,
+        func.max(models.BoardReply.created_at).label("last_replied_at")
+    ).filter(models.BoardReply.author_id == user_id
+    ).group_by(models.BoardReply.post_id).subquery()
+    q = db.query(models.BoardPost, sub.c.last_replied_at).join(sub, sub.c.post_id == models.BoardPost.id
+    ).order_by(desc(sub.c.last_replied_at), desc(models.BoardPost.created_at)
+    ).offset(offset).limit(limit)
+    rows = q.all()
+    return [_compose_post_response_for_viewer(db, p, viewer_id) for (p, _at) in rows]
